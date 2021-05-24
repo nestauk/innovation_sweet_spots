@@ -1,4 +1,4 @@
-# innovation_sweet_spots
+# Innovation Sweet Spots
 
 ## Setup
 
@@ -9,6 +9,14 @@
   - Setup the conda environment
   - Configure pre-commit
   - Configure metaflow to use AWS
+
+### Input data
+
+The most recent version of the input data can be fetched from Nesta database by running
+
+```shell
+python innovation_sweet_spots/getters/inputs.py
+```
 
 ## Contributor guidelines
 
