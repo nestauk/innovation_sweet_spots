@@ -6,11 +6,15 @@ To fetch all inputs, simply run "python inputs.py"
 from innovation_sweet_spots import PROJECT_DIR, logging, db_config_path
 from pathlib import Path
 from data_getters.gtr import build_projects
+from data_getters.core import get_engine
+import pandas as pd
 import datetime
 import os
 import json
 
 GTR_PATH = f"{PROJECT_DIR}/inputs/data/gtr_projects.json"
+INPUTS_PATH = f"{PROJECT_DIR}/inputs/data"
+CB_PATH = f"{INPUTS_PATH}/cb_data.csv"
 
 
 def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
@@ -65,6 +69,22 @@ def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
                 f"File {fpath} does not exist! Set use_cached=False to download the data."
             )
     return projects
+
+
+def get_cb_data(fpath=cb_path):
+    """
+    Downloads Crunchbase data from Nesta database and stores them locally.
+    Function can be used from command line as follows:
+        python -c "from innovation_sweet_spots.getters.inputs import get_cb_data; get_cb_data();"
+    """
+    con = get_engine(config["database_config_path"])
+    chunks = pd.read_sql_table(
+        "crunchbase_organizations", con, columns=["company_name"], chunksize=1000
+    )
+    for i, df in enumerate(chunks):
+        print(df.head())
+        if i == 3:
+            break
 
 
 if __name__ == "__main__":
