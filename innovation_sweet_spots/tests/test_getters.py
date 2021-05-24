@@ -1,10 +1,6 @@
 from unittest import mock, TestCase
 import unittest
-from innovation_sweet_spots.getters.inputs import (
-    get_gtr_projects,
-    build_projects,
-    times_two,
-)
+from innovation_sweet_spots.getters.inputs import get_gtr_projects, build_projects
 from pandas import DataFrame, read_csv
 import os
 
