@@ -10,6 +10,7 @@ from data_getters.core import get_engine
 import pandas as pd
 from pandas import read_sql_table
 import yaml
+import urllib.request
 
 INPUTS_PATH = f"{PROJECT_DIR}/inputs/data/"
 GTR_PATH = f"{INPUTS_PATH}gtr_projects.csv"
@@ -57,7 +58,7 @@ def get_cb_data(fpath=INPUTS_PATH, cb_data_spec_path=CB_DATA_SPEC_PATH):
     Parameters
     ----------
     fpath : str
-        Location on disk for saving the projects table
+       Location on disk for saving the tables
     cb_data_spec_path : str
        Path to the config file that specifies which tables and columns to load in
 
@@ -86,7 +87,32 @@ def get_cb_data(fpath=INPUTS_PATH, cb_data_spec_path=CB_DATA_SPEC_PATH):
     return tables
 
 
+def get_hansard_data(fpath=f"{INPUTS_PATH}hansard/"):
+    """
+    Downloads version 3.0.1 of the Hansard Speeches dataset.
+    Find more information here: https://zenodo.org/record/4066772#.YK0WXpPYpTY
+
+    Parameters
+    ----------
+    fpath : str
+        Location on disk for saving the projects table
+    """
+    urls = [
+        "https://zenodo.org/record/4066772/files/government_posts.json?download=1",
+        "https://zenodo.org/record/4066772/files/opposition_posts.json?download=1",
+        "https://zenodo.org/record/4066772/files/parliamentary_posts.json?download=1",
+        "https://zenodo.org/record/4066772/files/hansard-speeches-v301.csv?download=1",
+    ]
+    logging.info(f"Collection and storing of Hansard data in progress")
+    for url in urls:
+        filename = url.split("/")[-1].split("?")[0]
+        logging.info(f"Collecting {filename}")
+        urllib.request.urlretrieve(url, f"{fpath}{filename}")
+    logging.info(f"Data successfully stored in {fpath}")
+
+
 if __name__ == "__main__":
     get_gtr_projects()
     get_cb_data()
+    get_hansard_data()
     # Add other getter functions here
