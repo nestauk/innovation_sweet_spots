@@ -8,6 +8,8 @@ from pathlib import Path
 from data_getters.gtr import build_projects
 from data_getters.core import get_engine
 import pandas as pd
+from pandas import read_sql_table
+import yeaml
 import datetime
 import os
 import json
@@ -71,20 +73,42 @@ def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
     return projects
 
 
-def get_cb_data(fpath=cb_path):
+def get_cb_data(fpath=INPUTS_PATH, cb_data_spec_path=CB_DATA_SPEC_PATH):
     """
-    Downloads Crunchbase data from Nesta database and stores them locally.
+    Downloads Crunchbase data from Nesta database and stores it locally.
     Function can be used from command line as follows:
         python -c "from innovation_sweet_spots.getters.inputs import get_cb_data; get_cb_data();"
+
+    Parameters
+    ----------
+    fpath : str
+        Location on disk for saving the projects table
+    cb_data_spec_path : str
+       Path to the config file that specifies which tables and columns to load in
+
+    Returns
+    -------
+    dict:
+        Dictionary with the requested tables and paths where they have been saved
     """
+    logging.info(f"Collection of business organisation data in progress")
     con = get_engine(config["database_config_path"])
-    chunks = pd.read_sql_table(
-        "crunchbase_organizations", con, columns=["company_name"], chunksize=1000
-    )
-    for i, df in enumerate(chunks):
-        print(df.head())
-        if i == 3:
-            break
+
+    # Import specification of which tables and columns to download
+    with open(cb_data_spec_path, "r", encoding="utf-8") as yaml_file:
+        cb_tables = yaml.safe_load(yaml_file)
+
+    # Download the specified tables one by one
+    tables = {}
+    for table in list(cb_tables.keys()):
+        chunks = read_sql_table(table, con, columns=cb_tables[table], chunksize=1000)
+        # Combine all chunks
+        df = pd.concat([c for c in chunks], axis=0).reset_index()
+        savepath = f"{fpath}{table}.csv"
+        df.to_csv(savepath, index=False)
+        tables[table] = {"path": savepath, "data": df}
+        logging.info(f"Collected {table} ({len(df)} rows) and stored in {savepath}")
+    return tables
 
 
 if __name__ == "__main__":
