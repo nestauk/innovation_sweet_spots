@@ -69,5 +69,8 @@ def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
 
 if __name__ == "__main__":
     """Downloads all input files"""
+    data_folder = f"{PROJECT_DIR}/inputs/data"
+    if not os.path.exists(data_folder):
+        os.makedirs(data_folder)
     get_gtr_projects(use_cached=False)
     # Add other getter functions here
