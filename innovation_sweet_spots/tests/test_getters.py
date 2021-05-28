@@ -16,11 +16,8 @@ class GetterTests(unittest.TestCase):
         ]
         mock_build_projects.return_value = data
         df = get_gtr_projects(fpath=TEST_FILE)
-        assert type(df) == DataFrame
+        assert type(df) is DataFrame
         assert len(df) == len(data)
         assert read_csv(TEST_FILE).equals(df)
         os.remove(TEST_FILE)
 
-
-if __name__ == "__main__":
-    unittest.main()

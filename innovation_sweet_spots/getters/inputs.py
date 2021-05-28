@@ -8,7 +8,7 @@ from pathlib import Path
 from data_getters.gtr import build_projects
 import pandas as pd
 
-gtr_path = f"{PROJECT_DIR}/inputs/data/gtr_projects.csv"
+GTR_PATH = f"{PROJECT_DIR}/inputs/data/gtr_projects.csv"
 
 
 def get_gtr_projects(fpath=gtr_path, fields=["id"]):
@@ -30,17 +30,19 @@ def get_gtr_projects(fpath=gtr_path, fields=["id"]):
         Table with projects
     """
     logging.info(f"Collection of GTR projects in progress")
-    projects = build_projects(
-        config_path=config["database_config_path"],
-        chunksize=5000,
-        table_wildcards=["gtr_projects"],
-        desired_fields=fields,
-    )
-    df = pd.DataFrame(projects)
-    df.to_csv(fpath, index=False)
-    n_projects = len(df)
-    logging.info(f"Collected {n_projects} GTR projects and stored them in {fpath}")
+    if not (use_cached or os.path.exists(fpath)):
+        projects = build_projects(
+            config_path=config["database_config_path"],
+            chunksize=5000,
+            table_wildcards=["gtr_projects"],
+            desired_fields=fields,
+        )
+        with open(fpath, "w") as f:
+            json.dump(projects, f)
+        logging.info(f"Collected {len(projects)} GTR projects and stored them in {fpath}")
+    df = pd.read_json(fpath, orient='records')
     return df
+    return projects
 
 
 if __name__ == "__main__":
