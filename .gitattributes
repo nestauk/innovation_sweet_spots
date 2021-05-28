@@ -1,0 +1,2 @@
+.gitattributes !filter !diff
+innovation_sweet_spots/config/test_config filter=git-crypt diff=git-crypt

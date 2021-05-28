@@ -1,10 +1,7 @@
 from unittest import mock, TestCase
 import unittest
 from innovation_sweet_spots.getters.inputs import get_gtr_projects, build_projects
-from pandas import DataFrame, read_csv
-import os
-
-TEST_FILE = "test.csv"
+from tempfile import NamedTemporaryFile
 
 
 class GetterTests(unittest.TestCase):
@@ -15,9 +12,12 @@ class GetterTests(unittest.TestCase):
             {"id": "X002", "title": "test_project_2"},
         ]
         mock_build_projects.return_value = data
-        df = get_gtr_projects(fpath=TEST_FILE)
-        assert type(df) is DataFrame
-        assert len(df) == len(data)
-        assert read_csv(TEST_FILE).equals(df)
-        os.remove(TEST_FILE)
-
+        # Test the case when use_cached=False
+        with NamedTemporaryFile() as test_file:
+            projects = get_gtr_projects(fpath=test_file.name, use_cached=False)
+            assert type(projects) is list
+            assert type(projects[0]) is dict
+            assert len(projects) == len(data)
+        # Test the case when use_cached=True
+        projects = get_gtr_projects(fpath="non_existent_file.json")
+        assert len(projects) == 0
