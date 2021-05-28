@@ -10,7 +10,7 @@
   - Configure pre-commit
   - Configure metaflow to use AWS
 
-### Data access
+### Data access
 
 To access download data from Nesta database, you will first need to decrypt the config files (if you don't have the key, reach out to Karlis)
 
