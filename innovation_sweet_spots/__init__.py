@@ -37,3 +37,8 @@ config = get_yaml_config(_base_config_path)
 
 # BUCKET and METAFLOW_PROFILE
 load_dotenv(f"{PROJECT_DIR}/.env.shared")
+
+# database config path
+db_config_path = str(
+    Path(__file__).parent.resolve() / f"config/{config['database_config']}"
+)

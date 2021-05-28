@@ -3,7 +3,7 @@ Modules for collecting data analysis inputs.
 
 To fetch all inputs, simply run "python inputs.py"
 """
-from innovation_sweet_spots import PROJECT_DIR, config, logging
+from innovation_sweet_spots import PROJECT_DIR, logging, db_config_path
 from pathlib import Path
 from data_getters.gtr import build_projects
 import datetime
@@ -45,7 +45,7 @@ def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
     if not use_cached:
         logging.info(f"Collection of GTR projects in progress")
         projects = build_projects(
-            config_path=config["database_config_path"],
+            config_path=db_config_path,
             chunksize=5000,
             table_wildcards=["gtr_projects"],
             desired_fields=fields,

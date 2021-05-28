@@ -11,14 +11,13 @@
   - Configure metaflow to use AWS
 
 ### Data access
-To access download data from Nesta database, you will first need to decrypt the config files
+
+To access download data from Nesta database, you will first need to decrypt the config files (if you don't have the key, reach out to Karlis)
 
 ```
 $ git stash
 $ git-crypt unlock /path/to/key
 ```
-
-(if you don't have the key, reach out to Karlis)
 
 The most recent version of the input data can then be fetched by running
 
