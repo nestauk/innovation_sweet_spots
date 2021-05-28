@@ -10,9 +10,17 @@
   - Configure pre-commit
   - Configure metaflow to use AWS
 
-### Input data
+### Data access
+To access download data from Nesta database, you will first need to decrypt the config files
 
-The most recent version of the input data can be fetched from Nesta database by running
+```
+$ git stash
+$ git-crypt unlock /path/to/key
+```
+
+(if you don't have the key, reach out to Karlis)
+
+The most recent version of the input data can then be fetched by running
 
 ```shell
 python innovation_sweet_spots/getters/inputs.py

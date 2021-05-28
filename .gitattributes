@@ -1,2 +1,2 @@
 .gitattributes !filter !diff
-innovation_sweet_spots/config/test_config filter=git-crypt diff=git-crypt
+innovation_sweet_spots/config/mysqldb_team.config filter=git-crypt diff=git-crypt
