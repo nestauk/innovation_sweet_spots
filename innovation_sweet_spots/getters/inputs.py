@@ -181,17 +181,17 @@ def get_hansard_data(fpath=f"{INPUTS_PATH}hansard/"):
     fpath : str
         Location on disk for saving the projects table
     """
-    urls = [
-        "https://zenodo.org/record/4066772/files/government_posts.json?download=1",
-        "https://zenodo.org/record/4066772/files/opposition_posts.json?download=1",
-        "https://zenodo.org/record/4066772/files/parliamentary_posts.json?download=1",
-        "https://zenodo.org/record/4066772/files/hansard-speeches-v301.csv?download=1",
-    ]
-    logging.info(f"Collection and storing of Hansard data in progress")
-    for url in urls:
-        filename = url.split("/")[-1].split("?")[0]
+ZENODO_BASE = "https://zenodo.org/record/4066772/files{}?download=1"
+ZENODO_FILES = ["government_posts.json", "opposition_posts.json", "parliamentary_posts.json", "hansard-speeches-v301.csv"]
+ZENODO_URLS = map(ZENODO_BASE.format, ZENODO_FILES))
+
+...
+
+    filenames = ["government_posts.json", "opposition_posts.json", "parliamentary_posts.json", "hansard-speeches-v301.csv"]
+    logging.info(f"Collection and storing of Hansard data in progress") 
+    for filename, url in zip(ZENODO_FILES, ZENODO_URLS):
         logging.info(f"Collecting {filename}")
-        urllib.request.urlretrieve(url, f"{fpath}{filename}")
+        urllib.request.urlretrieve(url, fpath / filename)
     logging.info(f"Data successfully stored in {fpath}")
 
 
