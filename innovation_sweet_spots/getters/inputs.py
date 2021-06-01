@@ -20,7 +20,7 @@ GTR_PATH = INPUTS_PATH / "gtr_projects.csv"
 CB_PATH = INPUTS_PATH / "cb"
 CB_DATA_SPEC_PATH = PROJECT_DIR / "innovation_sweet_spots/config/cb_data_spec.yaml"
 HANSARD_PATH = INPUTS_PATH / "hansard"
-ZENODO_BASE = "https://zenodo.org/record/4843485/files{}?download=1"
+ZENODO_BASE = "https://zenodo.org/record/4843485/files/{}?download=1"
 ZENODO_FILES = ["hansard-speeches-v310.csv.zip", "parliamentary_posts.json"]
 ZENODO_URLS = map(ZENODO_BASE.format, ZENODO_FILES)
 
@@ -145,7 +145,7 @@ def download_hansard_data(fpath=HANSARD_PATH):
     Find more information about the dataset here: https://zenodo.org/record/4843485
 
     Function can be used from command line as follows:
-        python -c "from innovation_sweet_spots.getters.inputs import get_hansard_data; get_hansard_data(use_cached=False);"
+        python -c "from innovation_sweet_spots.getters.inputs import download_hansard_data; download_hansard_data();"
 
     Parameters
     ----------
@@ -173,7 +173,7 @@ def unzip_files(path_to_zip_archive, extract_path, delete=False):
     with zipfile.ZipFile(path_to_zip_archive, "r") as zip_ref:
         zip_ref.extractall(extract_path)
     if delete:
-        os.remove(filepath)
+        os.remove(path_to_zip_archive)
 
 
 if __name__ == "__main__":

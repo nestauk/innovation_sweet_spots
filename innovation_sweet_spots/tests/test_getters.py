@@ -13,6 +13,8 @@ from pandas import DataFrame, read_csv, DataFrame
 import os
 from tempfile import NamedTemporaryFile
 
+TEST_FILE = "test.csv"
+
 
 class GetterTests(unittest.TestCase):
     @mock.patch("innovation_sweet_spots.getters.inputs.build_projects")
@@ -63,27 +65,29 @@ class GetterTests(unittest.TestCase):
 
     def test_unzip_files(self):
         try:
-            with NamedTemporaryFile() as test_file:
-                test_file_name = test_file.name.split("/")[-1]
-                # Create a mock archive file
-                zip_file_name = "test_archive.zip"
-                with zipfile.ZipFile(zip_file_name, "w") as test_zip:
-                    test_zip.write(filename=test_file.name)
-                # Test unzipping the mock archive
-                unzip_files(zip_file_name, "", delete=False)
-                assert os.path.exists(test_file_name)
-                assert os.path.exists(zip_file_name)
-                os.remove(test_file_name)  # Clean up
-                # Test unzipping and deleting the mock archive
-                unzip_files(zip_file_name, "", delete=True)
-                assert os.path.exists(test_file_name)
-                assert os.path.exists(zip_file_name) is False
-                os.remove(test_file_name)  # Clean up
-        except AssertionError:
+            with open(TEST_FILE, "w") as test_file:
+                test_file.write("")
+            # Create a mock archive file
+            zip_file_name = "test_archive.zip"
+            with zipfile.ZipFile(zip_file_name, "w") as test_zip:
+                test_zip.write(filename=TEST_FILE)
+            os.remove(TEST_FILE)
+            # Test unzipping the mock archive
+            unzip_files(zip_file_name, "", delete=False)
+            assert os.path.exists(TEST_FILE)
+            assert os.path.exists(zip_file_name)
+            os.remove(TEST_FILE)  # Clean up
+            # Test unzipping and deleting the mock archive
+            unzip_files(zip_file_name, "", delete=True)
+            assert os.path.exists(TEST_FILE)
+            assert os.path.exists(zip_file_name) is False
+            os.remove(TEST_FILE)  # Clean up
+        except AssertionError as error:
             # Clean up if some of the tests fail
-            for filename in [test_file_name, zip_file_name]:
+            for filename in [zip_file_name]:
                 if os.path.exists(filename):
                     os.remove(filename)
+            raise error
 
     def tearDown(self):
         if os.path.exists(TEST_FILE):
