@@ -12,12 +12,18 @@ from yaml import safe_load
 import datetime
 import os
 import json
+import zipfile
+import urllib
 
-GTR_PATH = f"{PROJECT_DIR}/inputs/data/gtr_projects.json"
-INPUTS_PATH = f"{PROJECT_DIR}/inputs/data"
-CB_PATH = f"{INPUTS_PATH}/cb"
-CB_DATA_SPEC_PATH = f"{PROJECT_DIR}/innovation_sweet_spots/config/cb_data_spec.yaml"
+INPUTS_PATH = PROJECT_DIR / "inputs/data/"
+GTR_PATH = INPUTS_PATH / "gtr_projects.csv"
+CB_PATH = INPUTS_PATH / "cb"
+CB_DATA_SPEC_PATH = PROJECT_DIR / "innovation_sweet_spots/config/cb_data_spec.yaml"
 HANSARD_PATH = INPUTS_PATH / "hansard"
+ZENODO_BASE = "https://zenodo.org/record/4843485/files{}?download=1"
+ZENODO_FILES = ["hansard-speeches-v310.csv.zip", "parliamentary_posts.json"]
+ZENODO_URLS = map(ZENODO_BASE.format, ZENODO_FILES)
+
 
 def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
     """
@@ -133,76 +139,50 @@ def get_cb_data(fpath=CB_PATH, cb_data_spec_path=CB_DATA_SPEC_PATH, use_cached=T
     return tables
 
 
-def get_cb_data(fpath=INPUTS_PATH, cb_data_spec_path=CB_DATA_SPEC_PATH):
+def download_hansard_data(fpath=HANSARD_PATH):
     """
-    Downloads Crunchbase data from Nesta database and stores it locally.
+    Downloads version 3.1.0 of the Hansard Speeches dataset.
+    Find more information about the dataset here: https://zenodo.org/record/4843485
+
     Function can be used from command line as follows:
-        python -c "from innovation_sweet_spots.getters.inputs import get_cb_data; get_cb_data();"
+        python -c "from innovation_sweet_spots.getters.inputs import get_hansard_data; get_hansard_data(use_cached=False);"
 
     Parameters
     ----------
     fpath : str
-       Location on disk for saving the tables
-    cb_data_spec_path : str
-       Path to the config file that specifies which tables and columns to load in
-
-    Returns
-    -------
-    dict:
-        Dictionary with the requested tables and paths where they have been saved
+        Location on disk for saving the data
     """
-    logging.info(f"Collection of business organisation data in progress")
-    con = get_engine(config["database_config_path"])
-
-    # Import specification of which tables and columns to download
-    with open(cb_data_spec_path, "r", encoding="utf-8") as yaml_file:
-        cb_tables = yaml.safe_load(yaml_file)
-
-    # Download the specified tables one by one
-    tables = {}
-    for table in list(cb_tables.keys()):
-        chunks = read_sql_table(table, con, columns=cb_tables[table], chunksize=1000)
-        # Combine all chunks
-        df = pd.concat([c for c in chunks], axis=0).reset_index()
-        savepath = f"{fpath}{table}.csv"
-        df.to_csv(savepath, index=False)
-        tables[table] = {"path": savepath, "data": df}
-        logging.info(f"Collected {table} ({len(df)} rows) and stored in {savepath}")
-    return tables
-
-
-def get_hansard_data(fpath=f"{INPUTS_PATH}hansard/"):
-    """
-    Downloads version 3.0.1 of the Hansard Speeches dataset.
-    Find more information here: https://zenodo.org/record/4066772#.YK0WXpPYpTY
-
-    Parameters
-    ----------
-    fpath : str
-        Location on disk for saving the projects table
-    """
-ZENODO_BASE = "https://zenodo.org/record/4066772/files{}?download=1"
-ZENODO_FILES = ["government_posts.json", "opposition_posts.json", "parliamentary_posts.json", "hansard-speeches-v301.csv"]
-ZENODO_URLS = map(ZENODO_BASE.format, ZENODO_FILES))
-
-...
-
-    filenames = ["government_posts.json", "opposition_posts.json", "parliamentary_posts.json", "hansard-speeches-v301.csv"]
-    logging.info(f"Collection and storing of Hansard data in progress") 
+    # Download from Zenodo
+    logging.info(f"Collection and storing of Hansard data in progress")
+    zip_files = []
     for filename, url in zip(ZENODO_FILES, ZENODO_URLS):
         logging.info(f"Collecting {filename}")
+        filepath = fpath / filename
         urllib.request.urlretrieve(url, fpath / filename)
+        if filepath.suffix == ".zip":
+            zip_files.append(filepath)
+    # Extract the zip files and delete them
+    for zip_file in zip_files:
+        unzip_files(zip_file, fpath, delete=True)
     logging.info(f"Data successfully stored in {fpath}")
+
+
+def unzip_files(path_to_zip_archive, extract_path, delete=False):
+    """Extracts the zip file and optionally deletes it"""
+    logging.info(f"Extracting the archive {path_to_zip_archive}")
+    with zipfile.ZipFile(path_to_zip_archive, "r") as zip_ref:
+        zip_ref.extractall(extract_path)
+    if delete:
+        os.remove(filepath)
 
 
 if __name__ == "__main__":
     """Downloads all input files"""
     data_folder = f"{PROJECT_DIR}/inputs/data"
-    if not os.path.exists(data_folder):
-        os.makedirs(data_folder)
+    for fpath in [data_folder, CB_PATH, HANSARD_PATH]:
+        if not os.path.exists(fpath):
+            os.makedirs(fpath)
     get_gtr_projects(use_cached=False)
-    if not os.path.exists(CB_PATH):
-        os.makedirs(CB_PATH)
     get_cb_data(use_cached=False)
-    get_hansard_data()
+    download_hansard_data()
     # Add other getter functions here

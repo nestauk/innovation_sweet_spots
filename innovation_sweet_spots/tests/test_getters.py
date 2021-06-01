@@ -6,12 +6,12 @@ from innovation_sweet_spots.getters.inputs import (
     build_projects,
     read_sql_table,
     PROJECT_DIR,
+    unzip_files,
+    zipfile,
 )
 from pandas import DataFrame, read_csv, DataFrame
 import os
 from tempfile import NamedTemporaryFile
-
-TEST_FILE = "test.csv"
 
 
 class GetterTests(unittest.TestCase):
@@ -35,6 +35,7 @@ class GetterTests(unittest.TestCase):
     @mock.patch("innovation_sweet_spots.getters.inputs.safe_load")
     @mock.patch("innovation_sweet_spots.getters.inputs.read_sql_table")
     def test_get_cb_data(self, mock_read_sql_table, mock_safe_load):
+        # Create mock data
         chunk_1 = DataFrame({"id": ["X001"], "title": ["test_project_1"]})
         chunk_2 = DataFrame({"id": ["X002"], "title": ["test_project_2"]})
         data = [chunk_1, chunk_2]
@@ -59,3 +60,27 @@ class GetterTests(unittest.TestCase):
         tables_reloaded = get_cb_data(fpath="non_existent_folder")
         for table in tables_reloaded:
             assert len(table["data"]) == 0
+
+    def test_unzip_files(self):
+        try:
+            with NamedTemporaryFile() as test_file:
+                test_file_name = test_file.name.split("/")[-1]
+                # Create a mock archive file
+                zip_file_name = "test_archive.zip"
+                with zipfile.ZipFile(zip_file_name, "w") as test_zip:
+                    test_zip.write(filename=test_file.name)
+                # Test unzipping the mock archive
+                unzip_files(zip_file_name, "", delete=False)
+                assert os.path.exists(test_file_name)
+                assert os.path.exists(zip_file_name)
+                os.remove(test_file_name)  # Clean up
+                # Test unzipping and deleting the mock archive
+                unzip_files(zip_file_name, "", delete=True)
+                assert os.path.exists(test_file_name)
+                assert os.path.exists(zip_file_name) is False
+                os.remove(test_file_name)  # Clean up
+        except AssertionError:
+            # Clean up if some of the tests fail
+            for filename in [test_file_name, zip_file_name]:
+                if os.path.exists(filename):
+                    os.remove(filename)
