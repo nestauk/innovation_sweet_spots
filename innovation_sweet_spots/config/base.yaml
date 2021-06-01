@@ -1,1 +1,1 @@
-database_config_path: "/Users/karliskanders/Documents/_coding/AWS/mysqldb_team.config"
+database_config: "mysqldb_team.config"

@@ -1,3 +1,9 @@
+"""
+Notebook for exploring Nesta database schemas. It can also be used to manually
+specify the Crunchbase tables and columns of interest that ought to be downloaded.
+
+"""
+
 # -*- coding: utf-8 -*-
 # ---
 # jupyter:
