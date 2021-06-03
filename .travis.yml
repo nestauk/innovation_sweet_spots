@@ -2,6 +2,7 @@
 # Globals / defaults
 dist: xenial
 os: linux
+language: python
 cache: pip
 install: make install
 branches:
