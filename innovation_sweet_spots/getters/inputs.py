@@ -42,6 +42,7 @@ def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
     projects : list of dict
         List of dictionaries with project data
     """
+    use_cached = use_cached or not os.path.exists(fpath)
     if not use_cached:
         logging.info(f"Collection of GTR projects in progress")
         projects = build_projects(
@@ -56,21 +57,14 @@ def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
             f"Collected {len(projects)} GTR projects and stored them in {fpath}"
         )
     else:
-        try:
-            projects = json.load(open(fpath, "r"))
-            logging.info(f"Loaded in the file {fpath}")
-        except FileNotFoundError:
-            projects = []
-            logging.error(
-                f"File {fpath} does not exist! Set use_cached=False to download the data."
-            )
+        projects = json.load(open(fpath, "r"))
+        logging.info(f"Loaded in the file {fpath}")
     return projects
 
 
 if __name__ == "__main__":
     """Downloads all input files"""
-    data_folder = f"{PROJECT_DIR}/inputs/data"
-    if not os.path.exists(data_folder):
-        os.makedirs(data_folder)
+    data_folder = Path(GTR_PATH).parent
+    data_folder.mkdir(parents=True, exist_ok=True)
     get_gtr_projects(use_cached=False)
     # Add other getter functions here
