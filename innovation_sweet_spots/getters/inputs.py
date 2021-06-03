@@ -96,23 +96,21 @@ def get_cb_data(fpath=CB_PATH, cb_data_spec_path=CB_DATA_SPEC_PATH, use_cached=T
     # Import specification of which tables and columns to download
     with open(cb_data_spec_path, "r", encoding="utf-8") as yaml_file:
         cb_tables = safe_load(yaml_file)
-        cb_table_names = list(cb_tables.keys())
 
     tables = []
     if not use_cached:
         logging.info(f"Collection of business organisation data in progress")
         con = get_engine(db_config_path)
         # Download the specified tables one by one
-        for table in cb_table_names:
+        for table_name, columns in cb_tables.items():
             chunks = read_sql_table(
-                table, con, columns=cb_tables[table], chunksize=1000
+                table_name, con, columns=columns, chunksize=1000
             )
             # Combine all chunks
-            df = concat([c for c in chunks], axis=0).reset_index()
-            savepath = f"{fpath}/{table}.csv"
-            df.to_csv(savepath, index=False)
-            tables.append({"name": table, "path": savepath, "data": df})
-            logging.info(f"Collected {table} ({len(df)} rows) and stored in {savepath}")
+            df = concat(chunks, axis=0).reset_index()
+            df.to_csv(f"{fpath}/{table_name}.csv", index=False)
+            tables.append({"name": table_name, "path": savepath, "data": df})
+            logging.info(f"Collected {table_name} ({len(df)} rows) and stored in {savepath}")
     else:
         for table in cb_table_names:
             loadpath = f"{fpath}/{table}.csv"
