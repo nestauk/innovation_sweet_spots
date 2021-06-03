@@ -83,6 +83,7 @@ target/
 .env
 .config
 *.config
+!innovation_sweet_spots/config/mysqldb_team.config
 
 # Database
 *.db

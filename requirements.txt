@@ -9,3 +9,4 @@ tqdm
 filelock
 typer
 sh
+data_getters @ git+https://github.com/nestauk/data_getters.git

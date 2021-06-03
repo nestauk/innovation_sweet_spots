@@ -11,7 +11,7 @@ endif
 PROFILE = default
 # Import env variables
 include .env.shared
-include .env
+-include .env
 
 # Allow us to execute make commands from within our project's conda env
 # TODO: add over-ride based on some environment variable?
@@ -88,7 +88,10 @@ lint:
 .PHONY: pip-install
 ## Install our package and requirements in editable mode (including development dependencies)
 pip-install:
-	$(call execute_in_env, pip install -e ".[dev]" --quiet)
+	# $(call execute_in_env, pip install -e ".[dev]")
+	$(call execute_in_env, pip install -r requirements.txt --quiet)
+	$(call execute_in_env, pip install -r requirements_dev.txt --quiet)
+	$(call execute_in_env, pip install -e . --quiet)
 
 #################################################################################
 # Helper Commands (no need to explicitly document)                              #
