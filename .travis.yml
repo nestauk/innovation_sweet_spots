@@ -3,10 +3,22 @@
 dist: xenial
 os: linux
 language: python
+python: 3.7
 cache: pip
-install: make install
+install:
+  # Install miniconda (taken from https://conda.io/projects/conda/en/latest/user-guide/tasks/use-conda-with-travis-ci.html)
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - source "$HOME/miniconda/etc/profile.d/conda.sh"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  # Install the repo
+  - make install
 branches:
   only:
     - 18_add_travis_ci_support # For testing purposes only; after PR review, switch to dev
-script: pytest
+script:
+  - pytest
 # ---------------------------------
