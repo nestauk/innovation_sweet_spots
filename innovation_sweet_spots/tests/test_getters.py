@@ -1,5 +1,4 @@
 from unittest import mock, TestCase
-import unittest
 from innovation_sweet_spots.getters.inputs import (
     get_gtr_projects,
     get_cb_data,
@@ -10,11 +9,12 @@ from innovation_sweet_spots.getters.inputs import (
 from pandas import DataFrame, read_csv, DataFrame
 import os
 from tempfile import NamedTemporaryFile
+from pathlib import Path
 
-TEST_FILE = "test.csv"
+TEST_CSV = Path("test.csv")
 
 
-class GetterTests(unittest.TestCase):
+class GetterTests(TestCase):
     @mock.patch("innovation_sweet_spots.getters.inputs.build_projects")
     def test_get_gtr_projects(self, mock_build_projects):
         data = [
@@ -48,26 +48,24 @@ class GetterTests(unittest.TestCase):
         data = [chunk_1, chunk_2]
         mock_read_sql_table.return_value = data
         # Mock table specification
-        test_table_name = "test"
+        test_table_name = TEST_CSV.stem
         mock_safe_load.return_value = {test_table_name: ["field_1", "field_2"]}
         # Test the case when use_cached=False
         tables = get_cb_data(fpath=PROJECT_DIR, use_cached=False)
-        assert type(tables) is list
-        for table in tables:
-            assert type(table) is dict
-            assert type(table["name"]) is str
-            assert type(table["path"]) is str
-            assert type(table["data"]) is DataFrame
-            assert table["name"] == test_table_name
-            assert read_csv(table["path"]).equals(table["data"])
+        assert type(tables) is dict
+        for table_name in tables:
+            assert type(table_name) is str
+            assert type(tables[table_name]) is DataFrame
+            assert table_name == test_table_name
+            assert read_csv(TEST_CSV).equals(tables[table_name])
         # Test the case when use_cached=True
         tables_reloaded = get_cb_data(fpath=PROJECT_DIR, use_cached=True)
-        assert tables_reloaded[0]["data"].equals(tables[0]["data"])
+        assert tables_reloaded[test_table_name].equals(tables[test_table_name])
         # Test the case when use_cached=True, but file does not exist
-        tables_reloaded = get_cb_data(fpath="non_existent_folder")
-        for table in tables_reloaded:
-            assert len(table["data"]) == 0
+        os.remove(TEST_CSV)
+        tables_reloaded = get_cb_data(fpath=PROJECT_DIR)
+        assert TEST_CSV.exists()
 
     def tearDown(self):
-        if os.path.exists(TEST_FILE):
-            os.remove(TEST_FILE)
+        if TEST_CSV.exists():
+            os.remove(TEST_CSV)
