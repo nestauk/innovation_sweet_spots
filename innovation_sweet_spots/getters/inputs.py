@@ -42,7 +42,7 @@ def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
     projects : list of dict
         List of dictionaries with project data
     """
-    use_cached = use_cached or not os.path.exists(fpath)
+    use_cached = use_cached and os.path.exists(fpath)
     if not use_cached:
         logging.info(f"Collection of GTR projects in progress")
         projects = build_projects(
