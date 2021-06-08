@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     comment_magics: true
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.11.2
+#   kernelspec:
+#     display_name: Python 3
+#     language: python
+#     name: python3
+# ---
+
+# %%
 """
 Notebook for exploring Nesta database schemas. It can also be used to manually
 specify the Crunchbase tables and columns of interest that ought to be downloaded.
@@ -25,12 +43,12 @@ specify the Crunchbase tables and columns of interest that ought to be downloade
 # # Notebook for exploring database schemas
 
 # %%
-from innovation_sweet_spots import PROJECT_DIR, config
+from innovation_sweet_spots import PROJECT_DIR, db_config_path
 from data_getters.inspector import get_schemas
 from data_getters.core import get_engine
 import pandas as pd
 
-schemas = get_schemas(config["database_config_path"])
+schemas = get_schemas(db_config_path)
 
 
 # %%
@@ -51,6 +69,12 @@ for key in schemas.keys():
 # GTR tables
 for key in schemas["gtr"].keys():
     print(key)
+
+# %%
+print_column_names(schemas["gtr"]["gtr_funds"])
+
+# %%
+print_column_names(schemas["gtr"]["gtr_organisations"])
 
 # %% [markdown]
 # # Crunchbase schemas

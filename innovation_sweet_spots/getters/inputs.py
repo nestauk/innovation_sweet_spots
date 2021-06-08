@@ -16,7 +16,7 @@ import zipfile
 import urllib
 
 INPUTS_PATH = PROJECT_DIR / "inputs/data/"
-GTR_PATH = INPUTS_PATH / "gtr_projects.csv"
+GTR_PATH = INPUTS_PATH / "gtr_projects.json"
 CB_PATH = INPUTS_PATH / "cb"
 CB_DATA_SPEC_PATH = PROJECT_DIR / "innovation_sweet_spots/config/cb_data_spec.yaml"
 HANSARD_PATH = INPUTS_PATH / "hansard"
@@ -25,7 +25,9 @@ ZENODO_FILES = ["hansard-speeches-v310.csv.zip", "parliamentary_posts.json"]
 ZENODO_URLS = map(ZENODO_BASE.format, ZENODO_FILES)
 
 
-def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
+def get_gtr_projects(
+    fpath=GTR_PATH, table_wildcards=["gtr_projects"], fields=["id"], use_cached=True
+):
     """
     Downloads GTR projects from Nesta database and stores them locally.
     Function can be used from command line as follows:
@@ -60,7 +62,7 @@ def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
         projects = build_projects(
             config_path=db_config_path,
             chunksize=5000,
-            table_wildcards=["gtr_projects"],
+            table_wildcards=table_wildcards,
             desired_fields=fields,
         )
         with open(fpath, "w") as f:
