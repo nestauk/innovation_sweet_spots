@@ -20,6 +20,13 @@ define execute_in_env
 	source bin/conda_activate.sh && conda_activate && $1
 endef
 
+.PHONY: fetch-daps1
+## Fetch GtR and crunchbase data from DAPS1
+fetch-daps1:
+	MYSQL_CONFIG=$(MYSQL_CONFIG) python innovation_sweet_spots/pipeline/fetch_daps1_data/flow.py --no-pylint\
+	 --environment=conda\
+	 run
+
 .PHONY: init
 ## Fully initialise a project: install; setup github repo; setup S3 bucket
 init: install setup-github setup-bucket
