@@ -5,6 +5,8 @@ from innovation_sweet_spots.getters.inputs import (
     build_projects,
     read_sql_table,
     PROJECT_DIR,
+    unzip_files,
+    zipfile,
 )
 from pandas import DataFrame, read_csv, DataFrame
 import os
@@ -43,6 +45,7 @@ class GetterTests(TestCase):
     @mock.patch("innovation_sweet_spots.getters.inputs.safe_load")
     @mock.patch("innovation_sweet_spots.getters.inputs.read_sql_table")
     def test_get_cb_data(self, mock_read_sql_table, mock_safe_load):
+        # Create mock data
         chunk_1 = DataFrame({"id": ["X001"], "title": ["test_project_1"]})
         chunk_2 = DataFrame({"id": ["X002"], "title": ["test_project_2"]})
         data = [chunk_1, chunk_2]
@@ -65,6 +68,32 @@ class GetterTests(TestCase):
         os.remove(TEST_CSV)
         tables_reloaded = get_cb_data(fpath=PROJECT_DIR)
         assert TEST_CSV.exists()
+
+    def test_unzip_files(self):
+        try:
+            with open(TEST_CSV, "w") as test_file:
+                test_file.write("")
+            # Create a mock archive file
+            zip_file_name = "test_archive.zip"
+            with zipfile.ZipFile(zip_file_name, "w") as test_zip:
+                test_zip.write(filename=TEST_CSV)
+            os.remove(TEST_CSV)
+            # Test unzipping the mock archive
+            unzip_files(zip_file_name, "", delete=False)
+            assert os.path.exists(TEST_CSV)
+            assert os.path.exists(zip_file_name)
+            os.remove(TEST_CSV)  # Clean up
+            # Test unzipping and deleting the mock archive
+            unzip_files(zip_file_name, "", delete=True)
+            assert os.path.exists(TEST_CSV)
+            assert os.path.exists(zip_file_name) is False
+            os.remove(TEST_CSV)  # Clean up
+        except AssertionError as error:
+            # Clean up if some of the tests fail
+            for filename in [zip_file_name]:
+                if os.path.exists(filename):
+                    os.remove(filename)
+            raise error
 
     def tearDown(self):
         if TEST_CSV.exists():
