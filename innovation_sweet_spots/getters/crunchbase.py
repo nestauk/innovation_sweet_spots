@@ -1,3 +1,7 @@
+"""
+Module for easy access to downloaded GTR data
+
+"""
 import pandas as pd
 import sys
 from innovation_sweet_spots.getters.inputs import CB_PATH

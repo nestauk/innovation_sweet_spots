@@ -1,4 +1,7 @@
-# Fetch GtR tables
+"""
+Module for easy access to downloaded GTR data
+
+"""
 import pandas as pd
 from innovation_sweet_spots.getters.inputs import GTR_PATH
 
