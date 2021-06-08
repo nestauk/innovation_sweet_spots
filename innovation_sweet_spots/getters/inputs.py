@@ -14,7 +14,7 @@ import os
 import json
 
 INPUTS_PATH = PROJECT_DIR / "inputs/data/"
-GTR_PATH = INPUTS_PATH / "gtr_projects.csv"
+GTR_PATH = INPUTS_PATH / "gtr_projects.json"
 CB_PATH = INPUTS_PATH / "cb"
 CB_DATA_SPEC_PATH = PROJECT_DIR / "innovation_sweet_spots/config/cb_data_spec.yaml"
 
