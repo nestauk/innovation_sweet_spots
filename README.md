@@ -9,6 +9,7 @@
   - Setup the conda environment
   - Configure pre-commit
   - Configure metaflow to use AWS
+- Run `conda config --add channels conda-forge`
 
 ### Data access
 
@@ -18,12 +19,9 @@ To download input data from Nesta database, you will first need to decrypt the c
 $ git stash
 $ git-crypt unlock /path/to/key
 ```
+The GtR and CB data can be fetched by running `make fetch-daps1`
 
-The most recent version of the input data can then be fetched by running
-
-```shell
-python innovation_sweet_spots/getters/inputs.py
-```
+For downloading Hansard data, consult documentation in `innovation_sweet_spots/getters/inputs.py`
 
 ## Contributor guidelines
 

@@ -162,10 +162,10 @@ def unzip_files(path_to_zip_archive, extract_path, delete=False):
 
 if __name__ == "__main__":
     """Downloads all input files"""
-    INPUTS_PATH.mkdir(parents=True, exist_ok=True)
-    get_gtr_projects(use_cached=False)
+    GTR_PATH.mkdir(parents=True, exist_ok=True)
+    get_gtr_projects()
     CB_PATH.mkdir(parents=True, exist_ok=True)
-    get_cb_data(use_cached=False)
+    get_cb_data()
     HANSARD_PATH.mkdir(parents=True, exist_ok=True)
     download_hansard_data()
     # Add other getter functions here
