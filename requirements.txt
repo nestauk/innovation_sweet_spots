@@ -9,4 +9,16 @@ tqdm
 filelock
 typer
 sh
-data_getters @ git+https://github.com/nestauk/data_getters.git
+networkx
+spacy
+gensim==3.8
+spacy
+networkx
+cdlib
+altair
+altair-saver
+selenium
+webdriver-manager
+pymysql==0.9.3
+sqlalchemy==1.3.4
+jupyterlab

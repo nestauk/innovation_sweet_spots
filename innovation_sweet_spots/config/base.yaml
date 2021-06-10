@@ -1,1 +1,46 @@
 database_config: "mysqldb_team.config"
+tokenise:
+  threshold: 10
+  min_count: 5
+discipline_classification:
+  discipline_names:
+    [
+      "biotechnology",
+      "physics",
+      "technology",
+      "mathematics_computing_digital",
+      "environment",
+      "biology",
+      "energy_systems",
+      "arts_humanities_1",
+      "social_sciences_1",
+      "arts_humanities_2",
+      "arts_humanities_3",
+      "social_sciences_2",
+    ]
+  model_parametres:
+    - estimator__C: [0.5, 1, 2]
+      estimator__class_weight: [None, "balanced"]
+      estimator__penalty: ["l2", "l1"]
+    - estimator__class_weight: [None, "balanced"]
+      estimator__min_samples_leaf: [2, 5]
+      estimator__n_estimators: [20, 50, 100]
+    # - estimator__n_estimators: [20, 50, 100]
+    #   estimator__learning_rate: [0.15, 0.1]
+    #   estimator__max_depth: [3, 5, 7]
+gtr_organisations:
+  filter_terms:
+    [
+      "council",
+      "university",
+      "department",
+      "agency",
+      "institute",
+      "school",
+      "ministry",
+      "college",
+      "hospital",
+      "association",
+      " sch ",
+      "centre",
+    ]

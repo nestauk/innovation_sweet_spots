@@ -86,3 +86,13 @@ def save_daps_table(table: pd.DataFrame, name: str, path: str):
         path: directory where we store the table
     """
     table.to_csv(f"{path}/{name}.csv", index=False)
+
+
+def get_daps_table(name: str, path: str) -> pd.DataFrame:
+    """Get DAPS table
+    Args:
+        name: table name
+        path: storage path
+    """
+    table = pd.read_csv(f"{path}/{name}.csv")
+    return table
