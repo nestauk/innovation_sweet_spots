@@ -11,6 +11,7 @@ def get_gtr_projects():
 
 
 def get_link_table():
+    """NB: Large table with 34M+ rows"""
     return pd.read_csv(f"{GTR_PATH}/gtr_link_table.csv")
 
 
@@ -20,3 +21,7 @@ def get_gtr_funds():
 
 def get_gtr_topics():
     return pd.read_csv(f"{GTR_PATH}/gtr_topics.csv")
+
+
+def get_gtr_organisations():
+    return pd.read_csv(f"{GTR_PATH}/gtr_organisations.csv")

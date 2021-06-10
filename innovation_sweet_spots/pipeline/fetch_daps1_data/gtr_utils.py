@@ -61,6 +61,9 @@ def fetch_save_gtr_tables():
     topics = fetch_daps_table("gtr_topic")
     stream_df_to_csv(topics, f"{GTR_PATH}/gtr_topics.csv", index=False)
 
+    link = fetch_daps_table("gtr_organisations")
+    stream_df_to_csv(link, f"{GTR_PATH}/gtr_organisations.csv", index=False)
+
     link = fetch_daps_table("gtr_link_table")
     stream_df_to_csv(link, f"{GTR_PATH}/gtr_link_table.csv", index=False)
 
