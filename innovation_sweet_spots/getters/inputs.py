@@ -6,11 +6,17 @@ To fetch all inputs, simply run "python inputs.py"
 from innovation_sweet_spots import PROJECT_DIR, logging, db_config_path
 from pathlib import Path
 from data_getters.gtr import build_projects
+from data_getters.core import get_engine
+from pandas import read_sql_table, read_csv, concat
+from yaml import safe_load
 import datetime
 import os
 import json
 
-GTR_PATH = f"{PROJECT_DIR}/inputs/data/gtr_projects.json"
+INPUTS_PATH = PROJECT_DIR / "inputs/data/"
+GTR_PATH = INPUTS_PATH / "gtr_projects.json"
+CB_PATH = INPUTS_PATH / "cb"
+CB_DATA_SPEC_PATH = PROJECT_DIR / "innovation_sweet_spots/config/cb_data_spec.yaml"
 
 
 def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
@@ -33,8 +39,8 @@ def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
     fields : list of str
         Use the default value; for additional functionality see 'data_getters' documentation
     use_cached: bool
-        If use_cached=True, the function will load in the local version of the dataset;
-        set use_cached=False to download (and overwrite the existing) data
+        If use_cached=True, the function will load in the local version of the dataset, if possible;
+        set use_cached=False to download (and overwrite the existing) data.
 
 
     Returns
@@ -62,9 +68,57 @@ def get_gtr_projects(fpath=GTR_PATH, fields=["id"], use_cached=True):
     return projects
 
 
+def get_cb_data(fpath=CB_PATH, cb_data_spec_path=CB_DATA_SPEC_PATH, use_cached=True):
+    """
+    Downloads Crunchbase data from Nesta database and stores it locally.
+    Function can be used from command line as follows:
+        python -c "from innovation_sweet_spots.getters.inputs import get_cb_data; get_cb_data(use_cached=False);"
+
+    Parameters
+    ----------
+    fpath : str
+        Location on disk for saving the projects table
+    cb_data_spec_path : str
+       Path to the config file that specifies which tables and columns to load in
+    use_cached: bool
+        If use_cached=True, the function will load in the local version of the dataset, if possible;
+        set use_cached=False to download (and overwrite the existing) data
+
+    Returns
+    -------
+    dict of str: pandas.DataFrame:
+        Dictionary with dataframes with keys corresponding to table names
+    """
+    # Import specification of which tables and columns to download
+    with open(cb_data_spec_path, "r", encoding="utf-8") as yaml_file:
+        cb_tables = safe_load(yaml_file)
+    tables = {}
+
+    logging.info(f"Collection of business organisation data in progress")
+    con = get_engine(db_config_path)
+    # Download (or load in from the local storage) the specified tables one by one
+    for table_name, columns in cb_tables.items():
+        savepath = f"{fpath}/{table_name}.csv"
+        use_cached_table = use_cached and os.path.exists(savepath)
+        if not use_cached_table:
+            chunks = read_sql_table(table_name, con, columns=columns, chunksize=1000)
+            # Combine all chunks
+            df = concat(chunks, axis=0).reset_index()
+            df.to_csv(savepath, index=False)
+            logging.info(
+                f"Downloaded {table_name} ({len(df)} rows) and stored in {savepath}"
+            )
+        else:
+            df = read_csv(savepath)
+            logging.info(f"Loaded in the file {savepath}")
+        tables[table_name] = df
+    return tables
+
+
 if __name__ == "__main__":
     """Downloads all input files"""
-    data_folder = Path(GTR_PATH).parent
-    data_folder.mkdir(parents=True, exist_ok=True)
+    INPUTS_PATH.mkdir(parents=True, exist_ok=True)
     get_gtr_projects(use_cached=False)
+    CB_PATH.mkdir(parents=True, exist_ok=True)
+    get_cb_data(use_cached=False)
     # Add other getter functions here
