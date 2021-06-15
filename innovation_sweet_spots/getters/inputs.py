@@ -4,6 +4,13 @@ Modules for collecting data analysis inputs.
 To fetch all inputs, simply run "python inputs.py"
 """
 from innovation_sweet_spots import PROJECT_DIR, logging, db_config_path
+from innovation_sweet_spots.getters.path_utils import (
+    PROJECT_DIR,
+    INPUTS_PATH,
+    GTR_PATH,
+    CB_PATH,
+    HANSARD_PATH,
+)
 from pathlib import Path
 from data_getters.gtr import build_projects
 from data_getters.core import get_engine
@@ -15,11 +22,9 @@ import json
 import zipfile
 import urllib
 
-INPUTS_PATH = PROJECT_DIR / "inputs/data/"
-GTR_PATH = INPUTS_PATH / "gtr"
-CB_PATH = INPUTS_PATH / "cb"
+# Specification of which Crunchbase tables to download
 CB_DATA_SPEC_PATH = PROJECT_DIR / "innovation_sweet_spots/config/cb_data_spec.yaml"
-HANSARD_PATH = INPUTS_PATH / "hansard"
+# Specification of where to find the Hansard files
 ZENODO_BASE = "https://zenodo.org/record/4843485/files/{}?download=1"
 ZENODO_FILES = ["hansard-speeches-v310.csv.zip", "parliamentary_posts.json"]
 ZENODO_URLS = map(ZENODO_BASE.format, ZENODO_FILES)

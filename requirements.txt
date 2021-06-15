@@ -22,3 +22,6 @@ webdriver-manager
 pymysql==0.9.3
 sqlalchemy==1.3.4
 jupyterlab
+umap-learn
+corextopic
+git+https://github.com/nestauk/wiki_topic_labels.git

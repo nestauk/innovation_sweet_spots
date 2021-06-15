@@ -1,10 +1,10 @@
 """
-Module for easy access to downloaded GTR data
+Module for easy access to downloaded CB data
 
 """
 import pandas as pd
 import sys
-from innovation_sweet_spots.getters.inputs import CB_PATH
+from innovation_sweet_spots.getters.path_utils import CB_PATH
 
 
 def get_crunchbase_orgs():

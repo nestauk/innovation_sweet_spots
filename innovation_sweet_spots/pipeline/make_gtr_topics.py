@@ -3,17 +3,20 @@ import logging
 
 from numpy.random import seed
 
-from createch import PROJECT_DIR
-from createch.getters.gtr import (
+from innovation_sweet_spots import PROJECT_DIR
+from innovation_sweet_spots.getters.gtr import (
     get_cis_lookup,
     get_gtr_projects,
     get_gtr_tokenised,
     get_link_table,
     get_organisations,
 )
-from createch.getters.processing import save_model
-from createch.pipeline.topic_modelling import post_process_model_clusters, train_model
-from createch.utils.io import save_lookup
+from innovation_sweet_spots.getters.processing import save_model
+from innovation_sweet_spots.pipeline.topic_modelling import (
+    post_process_model_clusters,
+    train_model,
+)
+from innovation_sweet_spots.utils.io import save_lookup
 
 
 def make_creative_tokenised(projects, orgs):
