@@ -25,3 +25,4 @@ jupyterlab
 umap-learn
 corextopic
 git+https://github.com/nestauk/wiki_topic_labels.git
+vaderSentiment

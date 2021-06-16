@@ -268,6 +268,8 @@ def get_speech_breakdown_by_person(search_term):
     return df
 
 
+# %%
+
 # %% [markdown]
 # ## 1. Setup the analysis
 
@@ -310,7 +312,7 @@ df = pd.read_csv(filename, nrows=1000, skiprows=range(1, 1750000))
 # 2008 starts around 1.75M rows
 
 # %%
-hans = pd.read_csv(filename, skiprows=range(1, 2000000))
+hans = pd.read_csv(filename, skiprows=range(1, 1700000))
 
 # %%
 hans.info()

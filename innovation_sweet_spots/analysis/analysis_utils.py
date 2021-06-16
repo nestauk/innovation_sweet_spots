@@ -5,6 +5,8 @@ Utils for doing data analysis
 from typing import Iterator
 import pandas as pd
 import numpy as np
+import re
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 import altair as alt
 
@@ -79,6 +81,31 @@ def convert_date_to_year(str_date: str) -> int:
         return int(str_date[0:4])
     else:
         return str_date
+
+
+def split_sentences(doc):
+    return [sent.strip() for sent in re.split("\.|\?|\!", doc)]
+
+
+def get_sentences_with_term(search_term, docs):
+    """ """
+    sentences_with_term = []
+    for doc in docs:
+        for sent in split_sentences(doc):
+            if search_term in sent:
+                sentences_with_term.append(sent)
+    return sentences_with_term
+
+
+def get_sentence_sentiment(sentences: Iterator[str]) -> pd.DataFrame:
+    """Calculates sentiment for each sentence in the list, and sorts them"""
+    analyzer = SentimentIntensityAnalyzer()
+    sentiments = [analyzer.polarity_scores(sentence) for sentence in sentences]
+    # Optional: output as a dataframe
+    sentiment_df = pd.DataFrame(sentiments)
+    sentiment_df["sentences"] = sentences
+    sentiment_df = sentiment_df.sort_values("compound")
+    return sentiment_df
 
 
 ### Visualisations
@@ -216,16 +243,61 @@ def get_org_stats(project_orgs_and_funds: pd.DataFrame) -> pd.DataFrame:
 
 
 ### Hansard specific utils
+
+
+def get_hansard_mentions_per_year(
+    speeches: pd.DataFrame, min_year: int = 2007, max_year: int = 2020
+) -> pd.DataFrame:
+    """ """
+    min_year = max(speeches.year.min(), min_year)
+    max_year = min(speeches.year.max(), max_year)
+
+    yearly_mentions = speeches.groupby("year").agg(counts=("id", "count")).reset_index()
+    # Add zero values for years without projects
+    yearly_mentions_imputed = (
+        pd.DataFrame(data={"year": range(min_year, max_year + 1)})
+        .merge(yearly_mentions, how="left")
+        .fillna(0)
+        .astype({"counts": int})
+    )
+    return yearly_mentions_imputed
+
+
+def get_hansard_mentions_per_party(speeches):
+    mentions = (
+        speeches.groupby("party")
+        .agg(counts=("id", "count"))
+        .reset_index()
+        .sort_values("party")
+    )
+    return mentions
+
+
+def get_hansard_mentions_per_person(speeches):
+    mentions = (
+        speeches.groupby("speakername")
+        .agg(counts=("id", "count"))
+        .reset_index()
+        .sort_values("speakername")
+    )
+    return mentions
+
+
+### Guardian specific utils
+
 """
 TODO:
 PROJECTS
 - Organisational network
 
 HANSARD
-- Break down by year, by person, by party
-- Think about a baseline comparison
+- x Perhaps of value to check also months when there is more mentions about particular topics?
+- x Find words or phrases associated with positive and negative sentiments
+- x Sentiment over time
+- x Maybe check also how others have done this
 
-- Same sentiment analysis as with Guardian news
+GUARDIAN
+- Articles per year
 
 ~~~~~~~~
 Prelim analysis for detecting green documents

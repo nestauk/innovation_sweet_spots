@@ -1,4 +1,14 @@
 database_config: "mysqldb_team.config"
+guardian_api:
+  data-format: "json"
+  from-date: "2007-01-01"
+  to-date: "2021-06-01"
+  page-size: 100
+  order-by: "newest"
+  lang: "en"
+  show-tags: "contributor"
+  show-fields: "body,headline,trailText"
+# Juan's parameters
 tokenise:
   threshold: 10
   min_count: 5
