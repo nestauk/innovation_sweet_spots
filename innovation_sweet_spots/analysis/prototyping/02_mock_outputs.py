@@ -186,6 +186,48 @@ def get_org_stats(project_df):
 
 
 # %%
+importlib.reload(au)
+
+# %%
+gtr_project_funds = au.link_gtr_projects_and_funds(gtr_funds, link_gtr_funds)
+funded_projects = au.get_gtr_project_funds(gtr_projects, gtr_project_funds)
+
+# %%
+search_term = "heat pump"
+proj = au.search_via_docs(search_term, gtr_docs, funded_projects)
+search_term_funding = au.gtr_funding_per_year(proj)
+
+# %%
+search_term_funding
+
+# %%
+au.show_time_series(search_term_funding, y="amount_median")
+
+# %%
+au.estimate_funding_level(search_term_funding)
+
+# %%
+au.estimate_growth_level(search_term_funding, column="amount_median")
+
+# %%
+importlib.reload(au)
+
+# %%
+project_to_org = au.link_gtr_projects_and_orgs(
+    gtr_organisations, link_gtr_organisations
+)
+
+# %%
+project_orgs = au.get_gtr_project_orgs(proj, project_to_org)
+
+# %%
+au.get_org_stats(project_orgs).head(15)
+
+
+# %%
+# au.search_via_docs(search_term, hans_docs, hans)
+
+# %%
 ### SPEECHES
 def search_in_speeches(search_term):
     bool_mask = is_term_present(search_term, hans_docs)
@@ -326,6 +368,9 @@ gtr_funded_projects = (
 
 
 # %%
+gtr_funded_projects.head(2)
+
+# %%
 link_gtr_organisations.info()
 
 # %%
@@ -347,7 +392,7 @@ gtr_funded_projects.info()
 # ## Research projects
 
 # %%
-search_term = "heating"
+search_term = "heat pump"
 
 df = get_breakdown_by_year(search_term)
 
@@ -743,7 +788,7 @@ len(proj_docs)
 # %%
 # Transform data into a sparse matrix
 vectorizer = CountVectorizer(
-    stop_words="english", max_features=10000, binary=True, ngram_range=(1, 2)
+    stop_words="english", max_features=20000, binary=True, ngram_range=(1, 2)
 )
 doc_word = vectorizer.fit_transform(proj_docs)
 doc_word = ss.csr_matrix(doc_word)
@@ -775,7 +820,7 @@ topic_model.fit(
 
 # %%
 # Print a single topic from CorEx topic model
-topic_model.get_topics(topic=1, n_words=10)
+topic_model.get_topics(topic=1, n_words=20)
 
 # %%
 # Print all topics from the CorEx topic model
