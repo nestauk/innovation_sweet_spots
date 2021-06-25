@@ -74,6 +74,7 @@ def search_content(
     use_cached: bool = True,
     save_to_cache: bool = True,
     fpath=API_RESULTS_DIR,
+    only_first_page: bool = False,
 ):
     # Check if we have already made such a search
     if use_cached:
@@ -93,7 +94,7 @@ def search_content(
         current_page = response["currentPage"]  # should always = 1
         results_list = [response["results"]]
         # Get results from all pages
-        if n_pages_total > 1:
+        if (n_pages_total > 1) and (not only_first_page):
             while current_page < n_pages_total:
                 # Update url and call again
                 current_page += 1

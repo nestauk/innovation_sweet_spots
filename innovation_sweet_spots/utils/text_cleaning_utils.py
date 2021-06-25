@@ -11,6 +11,9 @@ import re
 import nltk
 from functools import lru_cache
 
+nltk.download("stopwords")
+nltk.download("wordnet")
+
 ### Compiling regex patterns as they might get used many times over ###
 
 # Hardcoded rules for dealing with punctuation marks and other custom symbols
@@ -34,7 +37,6 @@ compiled_padded_punctuation_pattern = re.compile(r"( )([^a-zA-Z0-9 #(++)+])")
 ### Components of the text preprocessing pipeline ###
 @lru_cache()
 def WordNetLemmatizer():
-    nltk.download("wordnet")
     return nltk.WordNetLemmatizer()
 
 
@@ -104,7 +106,6 @@ def lemmatize_paragraph(text):
 @lru_cache()
 def remove_stopwords(text):
     """Removes stopwords"""
-    nltk.download("stopwords")
     from nltk.corpus import stopwords
 
     text = " ".join(

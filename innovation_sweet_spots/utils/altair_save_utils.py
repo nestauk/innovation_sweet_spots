@@ -5,8 +5,8 @@ from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 import os
 
-import createch
-from createch import PROJECT_DIR
+import innovation_sweet_spots
+from innovation_sweet_spots import PROJECT_DIR
 
 
 FIG_PATH = f"{PROJECT_DIR}/outputs/figures"

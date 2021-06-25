@@ -114,6 +114,7 @@ def test_create_url():
 def test_search_content(mock_get_request):
     mock_query = "mock query"
     mock_output_file = "mock%20query.json"
+
     # Set up a mock API get request response
     mock_results = [{"one": 1}, {"two": 2}]
     mock_response_json = {
@@ -126,9 +127,11 @@ def test_search_content(mock_get_request):
     mock_response.status_code = 200
     mock_response.json = lambda: {"response": mock_response_json}
     mock_get_request.return_value = mock_response
+
     # Test the case when searching for a new term
     results = search_content(mock_query, api_key=None, save_to_cache=False)
     assert results == mock_results
+
     # Test the case when caching the results
     results = search_content(
         mock_query, api_key=None, save_to_cache=True, fpath=Path("")
@@ -143,7 +146,8 @@ def test_search_content(mock_get_request):
     except AssertionError as error:
         remove_file(mock_output_file)
         raise error
-    # Test the case when a result already is in the cache
+
+    # Test the case when a result is already in the cache
     cached_results = [{"cached": 1, "result": 2}]
     with open(mock_output_file, "w") as outfile:
         json.dump(cached_results, outfile)
@@ -155,13 +159,19 @@ def test_search_content(mock_get_request):
     except AssertionError as error:
         remove_file(mock_output_file)
         raise error
+
     # Test the case when the call fails
     mock_response.status_code = 404
     results = search_content(mock_query, api_key=None, fpath=Path(""))
     assert results.status_code == mock_response.status_code
+
     # Test the case when more than one page of results
-    results = search_content(mock_query, api_key=None, save_to_cache=False)
     mock_response.status_code = 200
     mock_response_json["pages"] = 3
     results = search_content(mock_query, api_key=None, save_to_cache=False)
     assert results == (mock_results + mock_results + mock_results)
+    # Test the case when more than one page of results, but just checking
+    results = search_content(
+        mock_query, api_key=None, save_to_cache=False, only_first_page=True
+    )
+    assert results == mock_results

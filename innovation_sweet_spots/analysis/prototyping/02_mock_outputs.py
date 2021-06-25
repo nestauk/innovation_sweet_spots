@@ -281,9 +281,7 @@ def get_speech_breakdown_by_person(search_term):
 # Crunchbase
 cb_df = crunchbase.get_crunchbase_orgs()
 # GTR
-gtr_projects = gtr.get_gtr_projects()
-gtr_funds = gtr.get_gtr_funds()
-gtr_organisations = gtr.get_gtr_organisations()
+
 
 # %%
 gtr_topics = gtr.get_gtr_topics()
@@ -292,12 +290,8 @@ gtr_topics = gtr.get_gtr_topics()
 gtr_projects.info()
 
 # %%
-# Links tables
-link_gtr_funds = gtr.get_link_table("gtr_funds")
-link_gtr_organisations = gtr.get_link_table("gtr_organisations")
 
 # %%
-link_gtr_topics = gtr.get_link_table("gtr_topic")
 
 # %% [markdown]
 # ### 1.2 Hansard
@@ -571,9 +565,9 @@ topic_lists_ = [topics for topics in topic_lists if len(topics) > 1]
 unique_topics = sorted(
     np.unique([topic for topics in topic_lists_ for topic in topics])
 )
+len(unique_topics)
 
 # %%
-len(unique_topics)
 
 # %%
 topics_word2vec_model = token_2_vec(topic_lists_)
@@ -689,12 +683,13 @@ find_most_similar_topics(dfdf.iloc[3].topics).head(10)
 # %%
 from sklearn.cluster import KMeans
 
-# %%
 kmeans = KMeans(n_clusters=20, random_state=0).fit(topics_embeddings)
-
-# %%
 clust_labels = kmeans.predict(topics_embeddings)
 df_viz["cluster"] = [str(c) for c in clust_labels]
+
+# %%
+
+# %%
 
 # %%
 alt.Chart(df_viz).mark_circle(size=50).encode(
@@ -832,10 +827,10 @@ for n, topic in enumerate(topics):
     print("{}: ".format(n) + ", ".join(topic_words))
 
 # %%
-topic_model.get_top_docs(topic=0, n_docs=10, sort_by="log_prob")
+topic_model.get_top_docs(topic=3, n_docs=10, sort_by="log_prob")
 
 # %%
-proj_docs[727]
+proj_docs[3]
 
 # %% [markdown]
 # ## 4. Speeches

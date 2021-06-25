@@ -2,10 +2,13 @@
 Utils for doing data analysis
 
 """
+from innovation_sweet_spots import logging
+
 from typing import Iterator
 import pandas as pd
 import numpy as np
 import re
+from collections import Counter
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 import altair as alt
@@ -69,6 +72,11 @@ def is_term_present(search_term: str, docs: Iterator[str]) -> Iterator[bool]:
     return [search_term in doc for doc in docs]
 
 
+def get_docs_with_term(search_term: str, docs: Iterator[str]):
+    is_term = is_term_present(search_term, docs)
+    return [doc for i, doc in enumerate(docs) if is_term[i]]
+
+
 def search_via_docs(search_term: str, docs: Iterator[str], item_table: pd.DataFrame):
     """Returns table with only the items whose documents contain the search term"""
     bool_mask = is_term_present(search_term, docs)
@@ -83,8 +91,22 @@ def convert_date_to_year(str_date: str) -> int:
         return str_date
 
 
+def impute_years(
+    yearly_stats: pd.DataFrame, min_year: int, max_year: int, trim_bounds: bool = False
+):
+    """Add zero values for years without data"""
+    if trim_bounds:
+        min_year = max(yearly_stats.year.min(), min_year)
+        max_year = min(yearly_stats.year.max(), max_year)
+    return (
+        pd.DataFrame(data={"year": range(min_year, max_year + 1)})
+        .merge(yearly_stats, how="left")
+        .fillna(0)
+    )
+
+
 def split_sentences(doc):
-    return [sent.strip() for sent in re.split("\.|\?|\!", doc)]
+    return [sent.strip() for sent in re.split("\.|\?|\!|\;|\•", doc)]
 
 
 def get_sentences_with_term(search_term, docs):
@@ -94,6 +116,18 @@ def get_sentences_with_term(search_term, docs):
         for sent in split_sentences(doc):
             if search_term in sent:
                 sentences_with_term.append(sent)
+    return sentences_with_term
+
+
+def get_document_sentences_with_term(search_term, docs):
+    """Test out!"""
+    sentences_with_term = []
+    for doc in docs:
+        doc_sentences = []
+        for sent in split_sentences(doc):
+            if search_term in sent:
+                doc_sentences.append(sent)
+        sentences_with_term.append(doc_sentences)
     return sentences_with_term
 
 
@@ -108,15 +142,83 @@ def get_sentence_sentiment(sentences: Iterator[str]) -> pd.DataFrame:
     return sentiment_df
 
 
+def cleanhtml(raw_html: str) -> str:
+    cleanr = re.compile("<.*?>")
+    cleantext = re.sub(cleanr, "", raw_html)
+    return cleantext
+
+
 ### Visualisations
+
+
+def capitalise_label(text, units=None):
+    new_text = " ".join(text.split("_")).capitalize()
+    if units is not None:
+        new_text += f" ({units})"
+    return new_text
 
 
 def show_time_series(data, y, x="year"):
     chart = (
-        alt.Chart(data, width=500).mark_line(point=True).encode(x=f"{x}:O", y=f"{y}:Q")
+        alt.Chart(data, width=500, height=200)
+        .mark_line(point=True)
+        .encode(x=f"{x}:O", y=f"{y}:Q")
     )
     # return chart + chart.transform_loess(x, y, bandwidth=0.35).mark_line()
     return chart
+
+
+def show_time_series_fancier(data, y, x="year", show_trend=True):
+    chart = (
+        alt.Chart(data, width=400, height=200)
+        .mark_line(point=False, stroke="#3e0c59", strokeWidth=1.5)
+        .encode(alt.X(f"{x}:O"), alt.Y(f"{y}:Q"))
+    )
+    chart.encoding.x.title = capitalise_label(x)
+    capitalise_label
+    if "amount" in y:
+        chart.encoding.y.title = capitalise_label(y, units="thousands")
+    else:
+        chart.encoding.y.title = capitalise_label(y)
+    if show_trend:
+        chart_trend = chart.transform_regression(x, y).mark_line(
+            stroke="black", strokeDash=[2, 2], strokeWidth=0.5
+        )
+        chart = alt.layer(chart, chart_trend)
+
+    return chart
+
+
+def show_time_series_points(data, y, x="year", ymax=None, clip=True):
+    if ymax is None:
+        ymax = data[y].max()
+    base = (
+        alt.Chart(data, width=400, height=200)
+        .mark_point(opacity=0.8, size=20, clip=clip, color="#6295c4")
+        .encode(
+            alt.X("year:O"),
+            alt.Y("amount:Q", scale=alt.Scale(domain=(0, ymax))),
+            tooltip=["title"],
+        )
+    )
+    base.encoding.x.title = capitalise_label(x)
+    base.encoding.y.title = capitalise_label(y, "thousands")
+    base
+    composite = alt.layer(
+        base,
+        base.transform_loess("year", "amount").mark_line(color="#3e0c59", size=1.5),
+    )
+    fig = nicer_axis(composite)
+    return fig
+
+
+def nicer_axis(fig):
+    return fig.configure_axis(
+        labelFontSize=13,
+        titleFontSize=13,
+        labelFontWeight="lighter",
+        titleFontWeight="normal",
+    )
 
 
 ### GTR specific utils
@@ -174,6 +276,8 @@ def gtr_funding_per_year(
         .query(f"year>={min_year}")
         .query(f"year<={max_year}")
     )
+    yearly_stats.amount_total = yearly_stats.amount_total / 1000
+    yearly_stats.amount_median = yearly_stats.amount_median / 1000
     # Add zero values for years without projects
     yearly_stats_imputed = (
         pd.DataFrame(data={"year": range(min_year, max_year + 1)})
@@ -194,10 +298,10 @@ def estimate_funding_level(
 def estimate_growth_level(
     yearly_stats: pd.DataFrame, year_cycle: int = 5, column: str = "amount_total"
 ):
-    """Compare two time periods (year cycles) and estimate growth"""
+    """Compare two time periods (year cycles) and estimate growth percentage"""
     first_cycle = yearly_stats.iloc[-year_cycle * 2 : -year_cycle][column].sum()
     second_cycle = yearly_stats.iloc[-year_cycle:][column].sum()
-    growth = (second_cycle - first_cycle) / first_cycle
+    growth = (second_cycle - first_cycle) / first_cycle * 100
     return growth
 
 
@@ -242,6 +346,197 @@ def get_org_stats(project_orgs_and_funds: pd.DataFrame) -> pd.DataFrame:
     return org_stats
 
 
+def link_gtr_projects_and_topics(gtr_projects, gtr_topics, link_gtr_topics):
+    gtr_project_topics = (
+        gtr_projects.merge(link_gtr_topics, how="left")
+        .merge(gtr_topics, how="left")
+        .drop(["id", "table_name", "rel"], axis=1)
+    )
+    return gtr_project_topics
+
+
+#################################
+### GTR landscape analysis utils
+#################################
+
+from gensim.models import Word2Vec
+
+
+def token_2_vec(lists_of_tokens):
+    """ """
+    n_tokens_per_list = [len(x) for x in lists_of_tokens]
+    max_window = max(n_tokens_per_list)
+
+    # Build the model
+    model = Word2Vec(
+        sentences=lists_of_tokens,
+        size=200,
+        window=max_window,
+        min_count=1,
+        workers=4,
+        sg=1,
+        seed=123,
+        iter=30,
+    )
+
+    # filepath = f"models/sf2vec_{clustering_params['session_name']}.model"
+    # model.save(f'{DATA_PATH.parent / filepath}')
+    return model
+
+
+def get_token_vectors(model, unique_tokens):
+    """extract vectors from model"""
+    token2vec_emb = [model.wv[token] for token in unique_tokens]
+    token2vec_emb = np.array(token2vec_emb)
+    return token2vec_emb
+
+
+### Crunchbase specific utils
+
+
+def fill_na_funds(orgs):
+    for col in ["raised_amount", "total_funding"]:
+        if col in orgs.columns:
+            orgs[col] = orgs[col].fillna(0).astype(float)
+            orgs[col + "_usd"] = orgs[col + "_usd"].fillna(0).astype(float)
+    return orgs
+
+
+def cb_orgs_with_most_funding(orgs):
+    columns = [
+        "name",
+        "city",
+        "founded_on",
+        "num_funding_rounds",
+        "total_funding",
+        "total_funding_currency_code",
+        "total_funding_usd",
+    ]
+    orgs = (
+        fill_na_funds(orgs.copy())
+        .sort_values("total_funding_usd", ascending=False)
+        .reset_index(drop=True)
+    )
+    return orgs[columns]
+
+
+def cb_orgs_funded_by_year(
+    orgs: pd.DataFrame, min_year: int = 2007, max_year: int = 2020
+):
+    orgs = orgs[
+        -orgs.founded_on.isnull()
+    ].copy()  # Some orgs don't have year when they were founded...
+    orgs["year"] = orgs.founded_on.apply(convert_date_to_year).astype(int)
+    yearly_founded_orgs = (
+        orgs.groupby("year").agg(no_of_orgs_founded=("id", "count")).reset_index()
+    )
+    yearly_founded_orgs = impute_years(yearly_founded_orgs, min_year, max_year)
+    return yearly_founded_orgs
+
+
+def get_cb_org_funding_rounds(
+    orgs: pd.DataFrame, cb_funding_rounds: pd.DataFrame
+) -> pd.DataFrame:
+    """Add funding round information to crunchbase organisations"""
+    fund_rounds = (
+        orgs[["id", "name"]]
+        .rename(columns={"id": "org_id"})
+        .merge(
+            cb_funding_rounds[
+                [
+                    "id",
+                    "org_id",
+                    "announced_on",
+                    "investment_type",
+                    "raised_amount",
+                    "raised_amount_currency_code",
+                    "raised_amount_usd",
+                ]
+            ],
+            on="org_id",
+        )
+        .rename(columns={"id": "funding_round_id"})
+        .sort_values("announced_on")
+    )
+    return fund_rounds
+
+
+def check_currencies(fund_rounds):
+    """# Check if there are different currencies present"""
+    currencies = fund_rounds[
+        -fund_rounds.raised_amount_currency_code.isnull()
+    ].raised_amount_currency_code.unique()
+    if len(currencies) > 1:
+        logging.warning(f"More than one unique currency: {list(currencies)}")
+
+
+def get_cb_funding_per_year(
+    fund_rounds: pd.DataFrame, min_year: int = 2007, max_year: int = 2020
+) -> pd.DataFrame:
+    """Calculate raised amount of money across all orgs"""
+    fund_rounds["year"] = fund_rounds.announced_on.apply(convert_date_to_year)
+
+    check_currencies(fund_rounds)
+
+    yearly_stats = (
+        fund_rounds.groupby("year")
+        .agg(
+            no_of_rounds=("funding_round_id", "count"),
+            raised_amount_total=("raised_amount", "sum"),
+            raised_amount_usd_total=("raised_amount_usd", "sum"),
+        )
+        .reset_index()
+        .query(f"year>={min_year}")
+        .query(f"year<={max_year}")
+    )
+
+    yearly_stats_imputed = impute_years(
+        yearly_stats, min_year, max_year, trim_bounds=False
+    ).astype(
+        {
+            "no_of_rounds": int,
+            "raised_amount_total": float,
+            "raised_amount_usd_total": float,
+        }
+    )
+    return yearly_stats_imputed
+
+
+def get_funding_round_investors(
+    fund_rounds: pd.DataFrame, cb_investments: pd.DataFrame
+) -> pd.DataFrame:
+    """ """
+    fund_rounds_investors = fund_rounds.merge(
+        cb_investments[
+            ["funding_round_id", "investor_name", "id", "investor_type", "partner_name"]
+        ],
+        on="funding_round_id",
+    )
+    fund_rounds_investors.raised_amount = fund_rounds_investors.raised_amount.fillna(0)
+    fund_rounds_investors.raised_amount = (
+        fund_rounds_investors.raised_amount_usd.fillna(0)
+    )
+    return fund_rounds_investors
+
+
+def investor_raised_amounts(
+    fund_rounds_investors: pd.DataFrame,
+) -> pd.DataFrame:
+    """NB: Raised amounts are inflated at the moment, showing the rounds"""
+    check_currencies(fund_rounds_investors)
+    investors = (
+        fund_rounds_investors.groupby(["investor_name"])
+        .agg(
+            no_of_rounds=("funding_round_id", "count"),
+            total_round_value=("raised_amount", "sum"),
+            total_round_value_usd=("raised_amount_usd", "sum"),
+        )
+        .reset_index()
+        .sort_values("total_round_value_usd", ascending=False)
+    )
+    return investors
+
+
 ### Hansard specific utils
 
 
@@ -252,13 +547,15 @@ def get_hansard_mentions_per_year(
     min_year = max(speeches.year.min(), min_year)
     max_year = min(speeches.year.max(), max_year)
 
-    yearly_mentions = speeches.groupby("year").agg(counts=("id", "count")).reset_index()
+    yearly_mentions = (
+        speeches.groupby("year").agg(mentions=("id", "count")).reset_index()
+    )
     # Add zero values for years without projects
     yearly_mentions_imputed = (
         pd.DataFrame(data={"year": range(min_year, max_year + 1)})
         .merge(yearly_mentions, how="left")
         .fillna(0)
-        .astype({"counts": int})
+        .astype({"mentions": int})
     )
     return yearly_mentions_imputed
 
@@ -266,7 +563,7 @@ def get_hansard_mentions_per_year(
 def get_hansard_mentions_per_party(speeches):
     mentions = (
         speeches.groupby("party")
-        .agg(counts=("id", "count"))
+        .agg(mentions=("id", "count"))
         .reset_index()
         .sort_values("party")
     )
@@ -285,29 +582,89 @@ def get_hansard_mentions_per_person(speeches):
 
 ### Guardian specific utils
 
+
+def get_guardian_mentions_per_year(
+    articles: Iterator[dict], min_year: int = 2007, max_year: int = 2020
+) -> pd.DataFrame:
+    """ """
+    dates = [
+        convert_date_to_year(article["webPublicationDate"]) for article in articles
+    ]
+    counts = dict(Counter(dates))
+    yearly_mentions = pd.DataFrame(
+        data={"year": counts.keys(), "articles": counts.values()}
+    )
+    # Add zero values for years without mentions
+    min_year = max(yearly_mentions.year.min(), min_year)
+    max_year = min(yearly_mentions.year.max(), max_year)
+    yearly_mentions_imputed = (
+        pd.DataFrame(data={"year": range(min_year, max_year + 1)})
+        .merge(yearly_mentions, how="left")
+        .fillna(0)
+        .astype({"articles": int})
+    )
+    return yearly_mentions_imputed
+
+
+def get_guardian_contributors(articles):
+    tags = (a["tags"] for a in articles)
+    contributors = (tag[0]["webTitle"] for tag in tags if len(tag) > 0)
+    counts = dict(Counter(contributors))
+    contributor_table = pd.DataFrame(
+        data={"contributor": counts.keys(), "no_of_articles": counts.values()}
+    ).sort_values("no_of_articles", ascending=False)
+    return contributor_table
+
+
+def get_guardian_sentences_with_term(search_term, articles, field="body"):
+    article_texts = get_article_field(articles, field=field)
+    sentences = get_sentences_with_term(search_term, article_texts)
+    return sentences
+
+
+def get_article_field(articles, field="headline"):
+    article_texts = (cleanhtml(preprocess_text(a["fields"][field])) for a in articles)
+    return article_texts
+
+
+def news_sentiment_over_years(search_term, articles):
+    article_docs = list(get_article_field(articles, field="body"))
+    doc_sents = get_document_sentences_with_term(search_term, article_docs)
+    doc_years = [convert_date_to_year(a["webPublicationDate"]) for a in articles]
+    # more_than_once = np.array([len(d) for d in doc_sents])>1
+    df = pd.DataFrame(
+        [(doc_years[i], sent) for i, doc in enumerate(doc_sents) for sent in doc],
+        columns=["year", "sentences"],
+    )
+    df = df.merge(get_sentence_sentiment(df.sentences.to_list()))
+    df = df.groupby("year").agg(mean_sentiment=("compound", "mean")).reset_index()
+    return df
+
+
 """
 TODO:
-PROJECTS
-- Organisational network
 
-HANSARD
+CRUNCHBASE
+~ Will probably be noisy, as the descriptions are short
+
+GTR PROJECTS / CRUNCHBASE
+- x Organisational network
+
+HANSARD / GUARDIAN
 - x Perhaps of value to check also months when there is more mentions about particular topics?
 - x Find words or phrases associated with positive and negative sentiments
 - x Sentiment over time
 - x Maybe check also how others have done this
 
-GUARDIAN
-- Articles per year
+- Sentiment of the headline or trailText
 
 ~~~~~~~~
 Prelim analysis for detecting green documents
 - Use my clustering algo with small kNN (perhaps = 5)
 - Select clusters that are link to preselected Green topics
 - TF_IDF vectorise and train the model
+++ Organisational networks
 
 ~~~~~~~~
-Crunchbase > check keyword analysis, and get the same stats as projects
-Add also VC names
-
 
 """

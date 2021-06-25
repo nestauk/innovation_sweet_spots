@@ -17,7 +17,7 @@ def node_layer(
 ):
     """Creates node_layer in the plot"""
     node_chart = (
-        alt.Chart(node_df)
+        alt.Chart(node_df, width=800, height=800)
         .mark_point(filled=True, stroke="black", strokeWidth=0.5)
         .encode(x=alt.X("x", axis=None), y=alt.Y("y", axis=None))
     )
@@ -46,7 +46,7 @@ def node_layer(
                 node_color,
                 title=kwargs["node_color_title"],
                 legend=alt.Legend(columns=2),
-                scale=alt.Scale(scheme="tableau20"),
+                scale=alt.Scale(scheme="category10"),
                 sort="descending",
             )
         )
@@ -66,9 +66,11 @@ def node_layer(
         }
         node_df["neighbors"] = node_df["node"].map(neighbors)
 
-        node_chart = node_chart.encode(tooltip=[node_label, "neighbors"])
+        node_chart = node_chart.encode(
+            tooltip=[node_label, "no_of_projects", "neighbors"]
+        )
     else:
-        node_chart = node_chart.encode(tooltip=[node_label])
+        node_chart = node_chart.encode(tooltip=[node_label, "no_of_projects"])
 
     return node_chart
 
@@ -178,7 +180,7 @@ def plot_altair_network(
     # Combine plots
 
     net_plot = (
-        (node_plot + edge_plot).properties(title=kwargs["title"])
+        (edge_plot + node_plot).properties(title=kwargs["title"])
         # .configure_axis(grid=False)
         # .configure_view(strokeWidth=0)
     )

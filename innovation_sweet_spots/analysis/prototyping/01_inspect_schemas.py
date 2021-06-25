@@ -8,7 +8,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.2
+#       jupytext_version: 1.11.3
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -47,6 +47,7 @@ from innovation_sweet_spots import PROJECT_DIR, db_config_path
 from data_getters.inspector import get_schemas
 from data_getters.core import get_engine
 import pandas as pd
+import yaml
 
 schemas = get_schemas(db_config_path)
 
@@ -55,6 +56,10 @@ schemas = get_schemas(db_config_path)
 def print_column_names(table):
     for x in list(table.columns):
         print(x.name)
+
+
+def get_column_names(table):
+    return [str(x.name) for x in list(table.columns)]
 
 
 # %%
@@ -85,6 +90,12 @@ for key in schemas["crunchbase"].keys():
     print(key)
 
 # %%
+get_column_names(schemas["crunchbase"]["crunchbase_investors"])
+
+# %%
+print_column_names(schemas["crunchbase"]["crunchbase_investments"])
+
+# %%
 print_column_names(schemas["crunchbase"]["crunchbase_funds"])
 
 # %%
@@ -103,28 +114,46 @@ df = pd.concat(chunks, axis=0)
 # %%
 # Relevant tables and their fields, follows the format: [{'table_name': ['field_1', 'field_2'...]}]
 cb_data_spec = {
-    "crunchbase_organizations": [
-        "name",
-        "city",
-        "country",
-        "country_code",
-        "employee_count",
-        "founded_on",
-        "closed_on",
-        "short_description",
-        "long_description",
-        "primary_role",
-        "roles",
-        "status",
-        "updated_at",
-        "total_funding",
-        "total_funding_currency_code",
-        "total_funding_usd",
-        "num_exits",
-        "num_funding_rounds",
-    ],
-    "crunchbase_organizations_categories": ["category_name", "organization_id"],
+    #     "crunchbase_organizations": [
+    #         "name",
+    #         "city",
+    #         "country",
+    #         "country_code",
+    #         "employee_count",
+    #         "founded_on",
+    #         "closed_on",
+    #         "short_description",
+    #         "long_description",
+    #         "primary_role",
+    #         "roles",
+    #         "status",
+    #         "updated_at",
+    #         "total_funding",
+    #         "total_funding_currency_code",
+    #         "total_funding_usd",
+    #         "num_exits",
+    #         "num_funding_rounds",
+    #     ],
+    "crunchbase_organizations": get_column_names(
+        schemas["crunchbase"]["crunchbase_organizations"]
+    ),
+    "crunchbase_organizations_categories": get_column_names(
+        schemas["crunchbase"]["crunchbase_organizations_categories"]
+    ),
+    "crunchbase_investments": get_column_names(
+        schemas["crunchbase"]["crunchbase_investments"]
+    ),
+    "crunchbase_investors": get_column_names(
+        schemas["crunchbase"]["crunchbase_investors"]
+    ),
+    "crunchbase_funding_rounds": get_column_names(
+        schemas["crunchbase"]["crunchbase_funding_rounds"]
+    ),
+    "crunchbase_category_groups": get_column_names(
+        schemas["crunchbase"]["crunchbase_category_groups"]
+    ),
 }
+
 
 # %%
 # Export the spec as yaml
