@@ -4,8 +4,9 @@ Module for easy access to downloaded GTR data
 """
 import pandas as pd
 from innovation_sweet_spots import logging
-from innovation_sweet_spots.getters.path_utils import GTR_PATH
+from innovation_sweet_spots.getters.path_utils import GTR_PATH, OUTPUT_GTR_PATH
 from typing import Iterable
+from ast import literal_eval
 
 
 def get_gtr_projects():
@@ -53,3 +54,9 @@ def pullout_gtr_links(tables: Iterable[str]):
         logging.info(
             f"Links between GTR projects and items in {table} saved in {fpath}"
         )
+
+
+def get_cleaned_project_texts():
+    df = pd.read_csv(f"{OUTPUT_GTR_PATH}/gtr_project_clean_text.csv")
+    df["project_text"] = df["project_text"].apply(lambda x: literal_eval(x))
+    return df

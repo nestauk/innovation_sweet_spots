@@ -3,6 +3,7 @@ Utils for doing data analysis
 
 """
 from innovation_sweet_spots import logging
+from innovation_sweet_spots.utils.text_cleaning_utils import clean_text
 
 from typing import Iterator
 import pandas as pd
@@ -17,7 +18,7 @@ import altair as alt
 
 
 def create_documents_from_dataframe(
-    df: pd.DataFrame, columns: Iterator[str]
+    df: pd.DataFrame, columns: Iterator[str], preprocessor=None
 ) -> Iterator[str]:
     """Build documents from texts in the table columns"""
     # Select columns to include in the document
@@ -25,7 +26,7 @@ def create_documents_from_dataframe(
     # Preprocess project text
     text_lists = [df_[col].to_list() for col in columns]
     # Create project documents
-    docs = [preprocess_text(text) for text in create_documents(text_lists)]
+    docs = [preprocessor(text) for text in create_documents(text_lists)]
     return docs
 
 
@@ -53,7 +54,7 @@ def create_documents(lists_of_texts: Iterator[str]) -> Iterator[str]:
         transposed_lists_of_texts = map(list, zip(*lists_of_texts))
         # Join up the skill texts for each skills entity
         return (
-            " ".join(document_texts) for document_texts in transposed_lists_of_texts
+            ". ".join(document_texts) for document_texts in transposed_lists_of_texts
         )
     else:
         raise ValueError("All lists in lists_of_texts should have the same length")
@@ -64,12 +65,32 @@ def preprocess_text(text: str) -> str:
     return text.lower().strip()
 
 
+def preprocess_text_clean(text: str) -> str:
+    return clean_text(text)
+
+
+def preprocess_text_clean_sentences(text: str) -> Iterator[str]:
+    # Split text into sentences
+    sents = (text for text in split_sentences(text) if len(text.split(" ")) > 2)
+    # Clean each sentence
+    clean_sents = [clean_text(sent) for sent in sents]
+    return clean_sents
+
+
 ### Search term analysis
 
 
 def is_term_present(search_term: str, docs: Iterator[str]) -> Iterator[bool]:
     """Simple method to check if a keyword or keyphrase is in the set of documents"""
     return [search_term in doc for doc in docs]
+
+
+def is_term_present_in_sentences(
+    search_term: str, docs: Iterator[Iterator[str]], min_mentions: int = 1
+) -> Iterator[bool]:
+    """Simple method to check if a keyword or keyphrase is in the set of documents"""
+    is_term_in_doc = (is_term_present(search_term, sentences) for sentences in docs)
+    return [sum(s) >= min_mentions for s in is_term_in_doc]
 
 
 def get_docs_with_term(search_term: str, docs: Iterator[str]):
@@ -117,6 +138,16 @@ def get_sentences_with_term(search_term, docs):
             if search_term in sent:
                 sentences_with_term.append(sent)
     return sentences_with_term
+
+
+# def get_span_with_term(search_term, docs):
+#     """ """
+#     spans_with_term = []
+#     for doc in docs:
+#         for sent in split_sentences(doc):
+#             if search_term in sent:
+#                 sentences_with_term.append(sent)
+#     return sentences_with_term
 
 
 def get_document_sentences_with_term(search_term, docs):
@@ -353,42 +384,6 @@ def link_gtr_projects_and_topics(gtr_projects, gtr_topics, link_gtr_topics):
         .drop(["id", "table_name", "rel"], axis=1)
     )
     return gtr_project_topics
-
-
-#################################
-### GTR landscape analysis utils
-#################################
-
-from gensim.models import Word2Vec
-
-
-def token_2_vec(lists_of_tokens):
-    """ """
-    n_tokens_per_list = [len(x) for x in lists_of_tokens]
-    max_window = max(n_tokens_per_list)
-
-    # Build the model
-    model = Word2Vec(
-        sentences=lists_of_tokens,
-        size=200,
-        window=max_window,
-        min_count=1,
-        workers=4,
-        sg=1,
-        seed=123,
-        iter=30,
-    )
-
-    # filepath = f"models/sf2vec_{clustering_params['session_name']}.model"
-    # model.save(f'{DATA_PATH.parent / filepath}')
-    return model
-
-
-def get_token_vectors(model, unique_tokens):
-    """extract vectors from model"""
-    token2vec_emb = [model.wv[token] for token in unique_tokens]
-    token2vec_emb = np.array(token2vec_emb)
-    return token2vec_emb
 
 
 ### Crunchbase specific utils

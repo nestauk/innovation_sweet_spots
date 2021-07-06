@@ -2,13 +2,16 @@ import logging
 
 import pandas as pd
 from innovation_sweet_spots.hSBM_Topicmodel.sbmtm import sbmtm
+from innovation_sweet_spots import logging
 
 
 def train_model(corpus, doc_ids):
     """Trains top sbm model on tokenised corpus"""
     model = sbmtm()
     model.make_graph(corpus, documents=doc_ids)
+    logging.info(f"Fitting a topic model using {len(corpus)} documents")
     model.fit()
+    logging.info(f"Topic model ready")
     return model
 
 

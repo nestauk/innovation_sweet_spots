@@ -4,7 +4,7 @@ Module for easy access to downloaded CB data
 """
 import pandas as pd
 import sys
-from innovation_sweet_spots.getters.path_utils import CB_PATH
+from innovation_sweet_spots.getters.path_utils import CB_PATH, OUTPUT_CB_PATH
 
 
 def get_crunchbase_category_groups():
@@ -33,3 +33,7 @@ def get_crunchbase_investments():
 
 def get_crunchbase_investors():
     return pd.read_csv(f"{CB_PATH}/crunchbase_investors.csv")
+
+
+def get_cleaned_green_crunchbase_texts():
+    return pd.read_csv(f"{OUTPUT_CB_PATH}/cb_green_org_clean_text.csv")
