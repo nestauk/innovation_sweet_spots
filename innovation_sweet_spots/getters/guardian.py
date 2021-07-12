@@ -12,6 +12,7 @@ import os
 import dotenv
 
 dotenv.load_dotenv(PROJECT_DIR)
+dotenv.load_dotenv(PROJECT_DIR / ".env")
 
 from urllib.parse import urlencode, quote
 import requests

@@ -60,6 +60,7 @@ def create_documents(lists_of_texts: Iterator[str]) -> Iterator[str]:
         raise ValueError("All lists in lists_of_texts should have the same length")
 
 
+# Text preprocessors
 def preprocess_text(text: str) -> str:
     """Placeholder for some more serious text preprocessing"""
     return text.lower().strip()
@@ -633,6 +634,17 @@ def news_sentiment_over_years(search_term, articles):
     )
     df = df.merge(get_sentence_sentiment(df.sentences.to_list()))
     df = df.groupby("year").agg(mean_sentiment=("compound", "mean")).reset_index()
+    return df
+
+
+def articles_table(articles: Iterator[dict]):
+    """Creates a dataframe with article headlines and dates"""
+    df = pd.DataFrame(
+        data={
+            "headline": [a["fields"]["headline"] for a in articles],
+            "date": [a["webPublicationDate"] for a in articles],
+        }
+    ).sort_values("date", ascending=False)
     return df
 
 
