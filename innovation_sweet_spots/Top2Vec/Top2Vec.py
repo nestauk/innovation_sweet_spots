@@ -1,7 +1,8 @@
-# Author: Dimo Angelov
+# Author: Dimo Angelov, with adjustments by KK
 #
 # License: BSD 3 clause
-import logging
+from innovation_sweet_spots import logging
+
 import numpy as np
 import pandas as pd
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
@@ -17,6 +18,14 @@ import tempfile
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import normalize
 from scipy.special import softmax
+
+
+DEFAULT_UMAP_ARGS = {"n_neighbors": 15, "n_components": 5, "metric": "cosine"}
+DEFAULT_HDBSCAN_ARGS = {
+    "min_cluster_size": 15,
+    "metric": "euclidean",
+    "cluster_selection_method": "eom",
+}
 
 try:
     import hnswlib
@@ -40,14 +49,6 @@ try:
     _HAVE_TORCH = True
 except ImportError:
     _HAVE_TORCH = False
-
-logger = logging.getLogger("top2vec")
-logger.setLevel(logging.WARNING)
-sh = logging.StreamHandler()
-sh.setFormatter(
-    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-)
-logger.addHandler(sh)
 
 
 def default_tokenizer(doc):
@@ -187,28 +188,43 @@ class Top2Vec:
         workers=None,
         tokenizer=None,
         use_embedding_model_tokenizer=False,
+        doc2vec_args=None,
         umap_args=None,
         hdbscan_args=None,
         verbose=True,
+        random_state=1,
     ):
 
-        if verbose:
-            logger.setLevel(logging.DEBUG)
-            self.verbose = True
+        # if verbose:
+        #     logger.setLevel(logging.DEBUG)
+        #     self.verbose = True
+        # else:
+        #     logger.setLevel(logging.WARNING)
+        #     self.verbose = False
+
+        if umap_args is None:
+            umap_args = DEFAULT_UMAP_ARGS
         else:
-            logger.setLevel(logging.WARNING)
-            self.verbose = False
+            self.umap_args = umap_args
+
+        if hdbscan_args is None:
+            self.hdbscan_args = DEFAULT_HDBSCAN_ARGS
+        else:
+            self.hdbscan_args = hdbscan_args
 
         if tokenizer is None:
             tokenizer = default_tokenizer
+        elif tokenizer == "preprocessed":
+            tokenizer = lambda x: x
 
+        self.random_state = random_state
         # validate documents
-        if not (isinstance(documents, list) or isinstance(documents, np.ndarray)):
-            raise ValueError("Documents need to be a list of strings")
-        if not all(
-            (isinstance(doc, str) or isinstance(doc, np.str_)) for doc in documents
-        ):
-            raise ValueError("Documents need to be a list of strings")
+        # if not (isinstance(documents, list) or isinstance(documents, np.ndarray)):
+        #     raise ValueError("Documents need to be a list of strings")
+        # if not all(
+        #     (isinstance(doc, str) or isinstance(doc, np.str_)) for doc in documents
+        # ):
+        #     raise ValueError("Documents need to be a list of strings")
         if keep_documents:
             self.documents = np.array(documents, dtype="object")
         else:
@@ -291,22 +307,24 @@ class Top2Vec:
             else:
                 raise ValueError("workers needs to be an int")
 
-            doc2vec_args = {
-                "vector_size": 300,
-                "min_count": min_count,
-                "window": 15,
-                "sample": 1e-5,
-                "negative": negative,
-                "hs": hs,
-                "epochs": epochs,
-                "dm": 0,
-                "dbow_words": 1,
-            }
+            if doc2vec_args is None:
+                doc2vec_args = {
+                    "vector_size": 300,
+                    "min_count": min_count,
+                    "window": 15,
+                    "sample": 1e-5,
+                    "negative": negative,
+                    "hs": hs,
+                    "epochs": epochs,
+                    "dm": 0,
+                    "dbow_words": 1,
+                    "seed": random_state,
+                }
 
             if workers is not None:
                 doc2vec_args["workers"] = workers
 
-            logger.info("Pre-processing documents for training")
+            logging.info("Pre-processing documents for training")
 
             if use_corpus_file:
                 processed = [" ".join(tokenizer(doc)) for doc in documents]
@@ -322,7 +340,7 @@ class Top2Vec:
                 ]
                 doc2vec_args["documents"] = train_corpus
 
-            logger.info("Creating joint document/word embedding")
+            logging.info("Creating joint document/word embedding")
             self.embedding_model = "doc2vec"
             self.model = Doc2Vec(**doc2vec_args)
 
@@ -336,7 +354,7 @@ class Top2Vec:
 
             self._check_import_status()
 
-            logger.info("Pre-processing documents for training")
+            logging.info("Pre-processing documents for training")
 
             # preprocess documents
             tokenized_corpus = [tokenizer(doc) for doc in documents]
@@ -360,7 +378,7 @@ class Top2Vec:
 
             self._check_model_status()
 
-            logger.info("Creating joint document/word embedding")
+            logging.info("Creating joint document/word embedding")
 
             # embed words
             self.word_indexes = dict(zip(self.vocab, range(len(self.vocab))))
@@ -376,50 +394,11 @@ class Top2Vec:
         else:
             raise ValueError(f"{embedding_model} is an invalid embedding model.")
 
-        # create 5D embeddings of documents
-        logger.info("Creating lower dimension embedding of documents")
-
-        if umap_args is None:
-            umap_args = {"n_neighbors": 15, "n_components": 5, "metric": "cosine"}
-
-        umap_model = umap.UMAP(**umap_args).fit(self._get_document_vectors(norm=False))
-
-        # find dense areas of document vectors
-        logger.info("Finding dense areas of documents")
-
-        if hdbscan_args is None:
-            hdbscan_args = {
-                "min_cluster_size": 15,
-                "metric": "euclidean",
-                "cluster_selection_method": "eom",
-            }
-
-        cluster = hdbscan.HDBSCAN(**hdbscan_args).fit(umap_model.embedding_)
-
-        # calculate topic vectors from dense areas of documents
-        logger.info("Finding topics")
-
-        # create topic vectors
-        self._create_topic_vectors(cluster.labels_)
-
-        # deduplicate topics
-        self._deduplicate_topics()
-
-        # find topic words and scores
-        self.topic_words, self.topic_word_scores = self._find_topic_words_and_scores(
-            topic_vectors=self.topic_vectors
-        )
-
-        # assign documents to topic
-        self.doc_top, self.doc_dist = self._calculate_documents_topic(
-            self.topic_vectors, self._get_document_vectors()
-        )
-
-        # calculate topic sizes
-        self.topic_sizes = self._calculate_topic_sizes(hierarchy=False)
-
-        # re-order topics
-        self._reorder_topics(hierarchy=False)
+        # UMAP: create 5D embeddings of documents
+        self.generate_umap_model()
+        # HDBSCAN: find dense areas of document vectors
+        self.cluster_docs()
+        self.process_topics()
 
         # initialize variables for hierarchical topic reduction
         self.topic_vectors_reduced = None
@@ -441,6 +420,52 @@ class Top2Vec:
         self.word_index = None
         self.serialized_word_index = None
         self.words_indexed = False
+
+    def process_topics(self):
+        """Calculate topic vectors from dense areas of documents"""
+
+        logging.info("Finding topics")
+
+        # Create topic vectors
+        self._create_topic_vectors(self.cluster.labels_)
+
+        # Deduplicate topics
+        self._deduplicate_topics()
+
+        # Find topic words and scores
+        self.topic_words, self.topic_word_scores = self._find_topic_words_and_scores(
+            topic_vectors=self.topic_vectors
+        )
+
+        # Assign documents to topic
+        self.doc_top, self.doc_dist = self._calculate_documents_topic(
+            self.topic_vectors, self._get_document_vectors()
+        )
+
+        # Calculate topic sizes
+        self.topic_sizes = self._calculate_topic_sizes(hierarchy=False)
+
+        # Re-order topics
+        self._reorder_topics(hierarchy=False)
+
+    def generate_umap_model(self):
+        logging.info("Creating lower dimension embedding of documents")
+        self.umap_model = umap.UMAP(**self.umap_args).fit(
+            self._get_document_vectors(norm=False)
+        )
+        return self.umap_model
+
+    def cluster_docs(self):
+        """find dense areas of document vectors"""
+        # Set the random seed for reproducibility
+        np.random.seed(self.random_state)
+        logging.info("Finding dense areas of documents")
+        self.cluster = hdbscan.HDBSCAN(**self.hdbscan_args).fit(
+            self.umap_model.embedding_
+        )
+        # Reset the seed to a random one again
+        np.random.seed()
+        return self.cluster
 
     def save(self, file):
         """
@@ -769,6 +794,7 @@ class Top2Vec:
             return doc_top
 
     def _find_topic_words_and_scores(self, topic_vectors):
+        """ """
         topic_words = []
         topic_word_scores = []
 
@@ -777,8 +803,19 @@ class Top2Vec:
         top_scores = np.flip(np.sort(res, axis=1), axis=1)
 
         for words, scores in zip(top_words, top_scores):
-            topic_words.append([self._index2word(i) for i in words[0:50]])
-            topic_word_scores.append(scores[0:50])
+            topic_words.append([self._index2word(i) for i in words[0:100]])
+            topic_word_scores.append(scores[0:100])
+
+            # best_words = [self._index2word(i) for i in words[0:50]]
+            #
+            # best_word_counts = [self.model.wv.vocab[w].count for w in best_words]
+            # indexes = np.flip(np.argsort(best_word_counts))
+            # best_words = [best_words[i] for i in indexes]
+            # best_scores = [best_word_counts[i] for i in indexes]
+            #
+            # topic_words.append(best_words)
+            # topic_word_scores.append(best_scores)
+            # # topic_word_scores.append(scores[0:50])
 
         topic_words = np.array(topic_words)
         topic_word_scores = np.array(topic_word_scores)
@@ -914,12 +951,12 @@ class Top2Vec:
 
     def _check_model_status(self):
         if self.embed is None:
-            if self.verbose is False:
-                logger.setLevel(logging.DEBUG)
+            # if self.verbose is False:
+            #     logging.setLevel(logging.DEBUG)
 
             if self.embedding_model != "distiluse-base-multilingual-cased":
                 if self.embedding_model_path is None:
-                    logger.info(f"Downloading {self.embedding_model} model")
+                    logging.info(f"Downloading {self.embedding_model} model")
                     if (
                         self.embedding_model
                         == "universal-sentence-encoder-multilingual"
@@ -928,7 +965,7 @@ class Top2Vec:
                     else:
                         module = "https://tfhub.dev/google/universal-sentence-encoder/4"
                 else:
-                    logger.info(
+                    logging.info(
                         f"Loading {self.embedding_model} model at {self.embedding_model_path}"
                     )
                     module = self.embedding_model_path
@@ -936,18 +973,18 @@ class Top2Vec:
 
             else:
                 if self.embedding_model_path is None:
-                    logger.info(f"Downloading {self.embedding_model} model")
+                    logging.info(f"Downloading {self.embedding_model} model")
                     module = "distiluse-base-multilingual-cased"
                 else:
-                    logger.info(
+                    logging.info(
                         f"Loading {self.embedding_model} model at {self.embedding_model_path}"
                     )
                     module = self.embedding_model_path
                 model = SentenceTransformer(module)
                 self.embed = model.encode
 
-        if self.verbose is False:
-            logger.setLevel(logging.WARNING)
+        # if self.verbose is False:
+        #     logger.setLevel(logging.WARNING)
 
     @staticmethod
     def _less_than_zero(num, var_name):

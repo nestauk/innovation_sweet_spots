@@ -10,6 +10,7 @@ def train_model(corpus, doc_ids):
     model = sbmtm()
     model.make_graph(corpus, documents=doc_ids)
     logging.info(f"Fitting a topic model using {len(corpus)} documents")
+    # gt.seed_rng(32) ## seed for graph-tool's random number generator --> same results
     model.fit()
     logging.info(f"Topic model ready")
     return model

@@ -8,12 +8,12 @@ import numpy as np
 
 
 def save_lookup(name, path_name):
-    with open(f"{PROJECT_DIR}/{path_name}.json", "w") as outfile:
-        json.dump(name, outfile)
+    with open(path_name, "w") as outfile:
+        json.dump(name, outfile, indent=4)
 
 
 def get_lookup(path_name):
-    with open(f"{PROJECT_DIR}/{path_name}.json", "r") as infile:
+    with open(path_name, "r") as infile:
         return json.load(infile)
 
 

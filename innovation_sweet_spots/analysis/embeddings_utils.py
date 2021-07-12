@@ -18,6 +18,13 @@ def find_most_similar(vect_id: int, vects: np.ndarray) -> Iterator[int]:
     return list(np.argsort(sims[0]))
 
 
+def find_most_similar_vect(
+    vect: np.ndarray, vects: np.ndarray, metric="cosine"
+) -> Iterator[int]:
+    sims = cdist(vect.reshape(1, -1), vects, metric=metric)
+    return list(np.argsort(sims[0]))
+
+
 ### BERT
 
 

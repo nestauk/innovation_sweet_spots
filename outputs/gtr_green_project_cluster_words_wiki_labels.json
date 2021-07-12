@@ -1,0 +1,1348 @@
+[
+  {
+    "id": 0,
+    "terms": [
+      "records",
+      "reconstruct",
+      "glacial_interglacial",
+      "interval",
+      "iodp_expedition",
+      "ice_volume"
+    ],
+    "labels": [
+      "Amelia E. Shevenell",
+      "Dinocyst",
+      "Quaternary glaciation",
+      "Interglacial"
+    ]
+  },
+  {
+    "id": 1,
+    "terms": [
+      "waste",
+      "recycling",
+      "materials",
+      "products",
+      "plastic",
+      "plastics"
+    ],
+    "labels": ["Plastic recycling", "Plastic pollution", "Recycling", "Plastic"]
+  },
+  {
+    "id": 2,
+    "terms": [
+      "solar_cells",
+      "pv",
+      "devices",
+      "photovoltaic",
+      "solar_cell",
+      "thin_film"
+    ],
+    "labels": [
+      "Thin-film solar cell",
+      "Solar panel",
+      "Perovskite solar cell",
+      "Organic solar cell"
+    ]
+  },
+  {
+    "id": 3,
+    "terms": ["epsrc", "funding", "academic", "engagement", "academics", "cdt"],
+    "labels": [
+      "Engineering and Physical Sciences Research Council",
+      "Innovation and Entrepreneurship Group",
+      "Northwestern University",
+      "Xi Jinping"
+    ]
+  },
+  {
+    "id": 4,
+    "terms": ["policy", "social", "governance", "political", "arts", "actors"],
+    "labels": ["Governance", "Global governance", "Bad governance", "Policy"]
+  },
+  {
+    "id": 5,
+    "terms": [
+      "ecosystem_services",
+      "farmers",
+      "poverty_alleviation",
+      "pollinators",
+      "pollinator",
+      "espa"
+    ],
+    "labels": [
+      "Payment for ecosystem services",
+      "Pollination",
+      "Food security",
+      "Thistle"
+    ]
+  },
+  {
+    "id": 6,
+    "terms": [
+      "enzymes",
+      "biofuels",
+      "lignin",
+      "fermentation",
+      "lignocellulose",
+      "feedstocks"
+    ],
+    "labels": [
+      "Lignin",
+      "Lignocellulosic biomass",
+      "Second-generation biofuels",
+      "Inbicon"
+    ]
+  },
+  {
+    "id": 7,
+    "terms": [
+      "energy",
+      "heat",
+      "thermal",
+      "power",
+      "waste_heat",
+      "electricity"
+    ],
+    "labels": [
+      "Waste heat",
+      "Thermal energy storage",
+      "Waste heat recovery unit",
+      "Thermal power station"
+    ]
+  },
+  {
+    "id": 8,
+    "terms": [
+      "treatment",
+      "wastewater",
+      "wastewater_treatment",
+      "water_treatment",
+      "drinking_water",
+      "contaminants"
+    ],
+    "labels": [
+      "Industrial wastewater treatment",
+      "Water treatment",
+      "Wastewater treatment",
+      "Agricultural wastewater treatment"
+    ]
+  },
+  {
+    "id": 9,
+    "terms": [
+      "species",
+      "populations",
+      "population",
+      "individuals",
+      "evolutionary",
+      "offspring"
+    ],
+    "labels": [
+      "Species",
+      "Population",
+      "Population genetics",
+      "Inclusive fitness"
+    ]
+  },
+  {
+    "id": 10,
+    "terms": [
+      "flooding",
+      "flood",
+      "flood_risk",
+      "flood_hazard",
+      "flood_defences",
+      "cofee"
+    ],
+    "labels": [
+      "Flood mitigation",
+      "North Sea flood of 1953",
+      "History of flooding in Canada",
+      "Flood"
+    ]
+  },
+  {
+    "id": 11,
+    "terms": [
+      "offshore_wind",
+      "wind_turbine",
+      "wind",
+      "turbine",
+      "offshore",
+      "wind_turbines"
+    ],
+    "labels": [
+      "Wind turbine",
+      "Vertical-axis wind turbine",
+      "Savonius wind turbine",
+      "Floating wind turbine"
+    ]
+  },
+  {
+    "id": 12,
+    "terms": [
+      "energy",
+      "electricity",
+      "power",
+      "demand",
+      "grid",
+      "energy_storage"
+    ],
+    "labels": [
+      "Grid energy storage",
+      "Energy storage",
+      "Electrical grid",
+      "Smart grid"
+    ]
+  },
+  {
+    "id": 13,
+    "terms": ["wave", "tidal", "offshore", "wind", "offshore_wind", "waves"],
+    "labels": [
+      "Marine energy",
+      "Offshore wind power",
+      "Wind wave",
+      "Floating wind turbine"
+    ]
+  },
+  {
+    "id": 14,
+    "terms": ["crop", "traits", "wheat", "breeding", "varieties", "miscanthus"],
+    "labels": [
+      "Miscanthus x giganteus",
+      "Plant breeding",
+      "Wheat",
+      "Miscanthus sinensis"
+    ]
+  },
+  {
+    "id": 15,
+    "terms": [
+      "forest",
+      "forests",
+      "vegetation",
+      "trees",
+      "tree",
+      "tropical_forests"
+    ],
+    "labels": ["Tropical vegetation", "Tropical forest", "Forest", "Tree"]
+  },
+  {
+    "id": 16,
+    "terms": [
+      "north_atlantic",
+      "climate_models",
+      "circulation",
+      "amoc",
+      "ocean_circulation",
+      "subpolar_north"
+    ],
+    "labels": [
+      "Atlantic meridional overturning circulation",
+      "Shutdown of thermohaline circulation",
+      "Atlantic Ocean",
+      "Ocean gyre"
+    ]
+  },
+  {
+    "id": 17,
+    "terms": [
+      "nuclear",
+      "reactor",
+      "reactors",
+      "alloys",
+      "nuclear_power",
+      "nuclear_reactors"
+    ],
+    "labels": [
+      "Nuclear reactor",
+      "EPR (nuclear reactor)",
+      "Control rod",
+      "Chernobyl Nuclear Power Plant"
+    ]
+  },
+  {
+    "id": 18,
+    "terms": [
+      "policy",
+      "stakeholders",
+      "knowledge_exchange",
+      "workshops",
+      "engagement",
+      "ncpt"
+    ],
+    "labels": [
+      "Public engagement",
+      "Stakeholder analysis",
+      "Kenya Institute for Public Policy Research and Analysis",
+      "Participatory development"
+    ]
+  },
+  {
+    "id": 19,
+    "terms": [
+      "ice",
+      "sea_level",
+      "ice_sheet",
+      "glacier",
+      "ice_shelf",
+      "glaciers"
+    ],
+    "labels": ["Ice shelf", "Ross Ice Shelf", "Ice sheet", "Sea level rise"]
+  },
+  {
+    "id": 20,
+    "terms": [
+      "urban",
+      "buildings",
+      "urban_areas",
+      "heat_island",
+      "ukcip08",
+      "uhi"
+    ],
+    "labels": [
+      "Urban heat island",
+      "Urban resilience",
+      "Urban green space",
+      "Urban climate"
+    ]
+  },
+  {
+    "id": 21,
+    "terms": [
+      "battery",
+      "batteries",
+      "energy_storage",
+      "lithium_ion",
+      "electric_vehicles",
+      "lithium"
+    ],
+    "labels": [
+      "Lithium-ion battery",
+      "Electric vehicle battery",
+      "Lithium polymer battery",
+      "Lithium-titanate battery"
+    ]
+  },
+  {
+    "id": 22,
+    "terms": [
+      "technology",
+      "power",
+      "vehicle",
+      "vehicles",
+      "engine",
+      "electric"
+    ],
+    "labels": [
+      "Electric vehicle",
+      "Hybrid vehicle",
+      "Hydrogen internal combustion engine vehicle",
+      "Diesel\u2013electric transmission"
+    ]
+  },
+  {
+    "id": 23,
+    "terms": [
+      "cell",
+      "proteins",
+      "autophagy",
+      "receptors",
+      "receptor",
+      "trafficking"
+    ],
+    "labels": [
+      "Autophagy",
+      "AMPA receptor",
+      "G protein-coupled receptor",
+      "Chaperone-mediated autophagy"
+    ]
+  },
+  {
+    "id": 24,
+    "terms": [
+      "carbon_capture",
+      "combustion",
+      "ccs",
+      "co2_capture",
+      "coal",
+      "power_plants"
+    ],
+    "labels": [
+      "Carbon capture and storage",
+      "Carbon capture and utilization",
+      "Bioenergy with carbon capture and storage",
+      "Oxy-fuel combustion process"
+    ]
+  },
+  {
+    "id": 25,
+    "terms": [
+      "building",
+      "insulation",
+      "buildings",
+      "performance",
+      "market",
+      "homes"
+    ],
+    "labels": [
+      "Cellulose insulation",
+      "Building insulation",
+      "Exterior insulation finishing system",
+      "Modular building"
+    ]
+  },
+  {
+    "id": 26,
+    "terms": [
+      "fuel_cell",
+      "hydrogen",
+      "fuel_cells",
+      "catalysts",
+      "catalyst",
+      "electrochemical"
+    ],
+    "labels": [
+      "Fuel cell",
+      "Electrochemical cell",
+      "Proton-exchange membrane fuel cell",
+      "Hydrogen vehicle"
+    ]
+  },
+  {
+    "id": 27,
+    "terms": [
+      "urban",
+      "cities",
+      "policy",
+      "social",
+      "waste_management",
+      "governance"
+    ],
+    "labels": [
+      "Waste management",
+      "Urban planning",
+      "Bad governance",
+      "Social policy"
+    ]
+  },
+  {
+    "id": 28,
+    "terms": [
+      "disease",
+      "parasite",
+      "infection",
+      "pathogens",
+      "parasites",
+      "pathogen"
+    ],
+    "labels": [
+      "Infection",
+      "Fish disease and parasites",
+      "Pathogen",
+      "Obligate parasite"
+    ]
+  },
+  {
+    "id": 29,
+    "terms": [
+      "flood",
+      "disaster",
+      "forecasts",
+      "disaster_risk",
+      "ews",
+      "humanitarian"
+    ],
+    "labels": [
+      "Premiership of Narendra Modi",
+      "Early warning system",
+      "Disaster risk reduction",
+      "Humanitarian Logistics"
+    ]
+  },
+  {
+    "id": 30,
+    "terms": [
+      "catalysts",
+      "catalyst",
+      "catalytic",
+      "reaction",
+      "metal",
+      "enzymes"
+    ],
+    "labels": ["Catalysis", "Enzyme", "Catalytic converter", "Enzyme catalysis"]
+  },
+  {
+    "id": 31,
+    "terms": [
+      "soil",
+      "soils",
+      "fungi",
+      "soil_microbial",
+      "organic_matter",
+      "rhizosphere"
+    ],
+    "labels": ["Rhizosphere", "Soil microbiology", "Soil", "Soil biology"]
+  },
+  {
+    "id": 32,
+    "terms": [
+      "charging",
+      "electric_vehicle",
+      "electric_vehicles",
+      "ev",
+      "vehicles",
+      "infrastructure"
+    ],
+    "labels": [
+      "Electric vehicle",
+      "Charging station",
+      "Electric vehicle charging network",
+      "Electric vehicle industry in India"
+    ]
+  },
+  {
+    "id": 33,
+    "terms": [
+      "storage",
+      "ccs",
+      "geological",
+      "reservoir",
+      "subsurface",
+      "oil_gas"
+    ],
+    "labels": [
+      "Carbon capture and storage",
+      "Petroleum reservoir",
+      "Carbon sequestration",
+      "Timeline of carbon capture and storage"
+    ]
+  },
+  {
+    "id": 34,
+    "terms": [
+      "peatlands",
+      "peat",
+      "peatland",
+      "organic_matter",
+      "permafrost_thaw",
+      "bog"
+    ],
+    "labels": ["Peat", "Mire", "Permafrost", "Bog"]
+  },
+  {
+    "id": 35,
+    "terms": [
+      "energy",
+      "buildings",
+      "homes",
+      "energy_efficiency",
+      "home",
+      "household"
+    ],
+    "labels": [
+      "Efficient energy use",
+      "Zero-energy building",
+      "Home",
+      "Home appliance"
+    ]
+  },
+  {
+    "id": 36,
+    "terms": [
+      "cloud",
+      "aerosol",
+      "clouds",
+      "aerosol_particles",
+      "aerosols",
+      "aerosol_cloud"
+    ],
+    "labels": [
+      "Aerosol",
+      "Cloud",
+      "Noctilucent cloud",
+      "Deposition (aerosol physics)"
+    ]
+  },
+  {
+    "id": 37,
+    "terms": [
+      "atmosphere",
+      "aerosol",
+      "aerosols",
+      "oh",
+      "sea_salt",
+      "troposphere"
+    ],
+    "labels": [
+      "Sea salt aerosol",
+      "Stratospheric sulfur aerosols",
+      "Troposphere",
+      "Aerosol"
+    ]
+  },
+  {
+    "id": 38,
+    "terms": [
+      "species",
+      "biodiversity",
+      "conservation",
+      "habitat",
+      "populations",
+      "habitats"
+    ],
+    "labels": [
+      "Habitat conservation",
+      "Habitat destruction",
+      "Habitat",
+      "Habitat fragmentation"
+    ]
+  },
+  {
+    "id": 39,
+    "terms": [
+      "power",
+      "electrical",
+      "grid",
+      "dc",
+      "power_electronics",
+      "voltage"
+    ],
+    "labels": [
+      "Power electronics",
+      "Power supply",
+      "Electrical grid",
+      "Electric power transmission"
+    ]
+  },
+  {
+    "id": 40,
+    "terms": [
+      "power",
+      "energy_efficiency",
+      "energy_efficient",
+      "wireless",
+      "cache",
+      "energy_consumption"
+    ],
+    "labels": [
+      "Apple M1",
+      "Efficient energy use",
+      "Wireless power transfer",
+      "Energy-Efficient Ethernet"
+    ]
+  },
+  {
+    "id": 41,
+    "terms": [
+      "groundwater",
+      "africa",
+      "groundwater_resources",
+      "irrigation",
+      "ssa",
+      "sub_saharan"
+    ],
+    "labels": [
+      "Sub-Saharan Africa",
+      "Water scarcity",
+      "Water supply and sanitation in Sub-Saharan Africa",
+      "Water scarcity in Africa"
+    ]
+  },
+  {
+    "id": 42,
+    "terms": [
+      "solar",
+      "photosynthesis",
+      "proteins",
+      "photosynthetic",
+      "protein",
+      "membrane"
+    ],
+    "labels": [
+      "Photosynthesis",
+      "Photosynthetic efficiency",
+      "Photosystem",
+      "Thylakoid"
+    ]
+  },
+  {
+    "id": 43,
+    "terms": [
+      "ocean_acidification",
+      "oa",
+      "marine_organisms",
+      "coastal_habitats",
+      "carbonate_chemistry",
+      "oceans_absorbing"
+    ],
+    "labels": [
+      "Ocean acidification",
+      "Climate variability and change",
+      "Urbanization",
+      "Human impact on marine life"
+    ]
+  },
+  {
+    "id": 44,
+    "terms": [
+      "waste",
+      "nuclear",
+      "radioactive",
+      "disposal",
+      "radionuclides",
+      "nuclear_waste"
+    ],
+    "labels": [
+      "Radioactive waste",
+      "Ocean disposal of radioactive waste",
+      "Radionuclide",
+      "High-level radioactive waste management"
+    ]
+  },
+  {
+    "id": 45,
+    "terms": [
+      "ocean",
+      "iron",
+      "phytoplankton",
+      "oceans",
+      "nitrogen_fixation",
+      "oceanic"
+    ],
+    "labels": ["Nitrogen cycle", "Phytoplankton", "Ocean", "Iron fertilization"]
+  },
+  {
+    "id": 46,
+    "terms": [
+      "river",
+      "rivers",
+      "water_quality",
+      "catchment",
+      "land_use",
+      "catchments"
+    ],
+    "labels": [
+      "Drainage basin",
+      "Water resources in India",
+      "Rainwater harvesting",
+      "Water quality"
+    ]
+  },
+  {
+    "id": 47,
+    "terms": [
+      "ocean",
+      "southern_ocean",
+      "eddies",
+      "circulation",
+      "ocean_circulation",
+      "turbulence"
+    ],
+    "labels": [
+      "Eddy (fluid dynamics)",
+      "Eddy saturation and eddy compensation",
+      "Physical oceanography",
+      "Turbulence"
+    ]
+  },
+  {
+    "id": 48,
+    "terms": [
+      "evolutionary",
+      "fossils",
+      "extinction",
+      "extinct",
+      "lice",
+      "ancient_dna"
+    ],
+    "labels": ["Louse", "Living fossil", "Extinction", "Ancient DNA"]
+  },
+  {
+    "id": 49,
+    "terms": [
+      "bioenergy",
+      "crops",
+      "vertical_farming",
+      "shocks",
+      "prices",
+      "imta_systems"
+    ],
+    "labels": [
+      "Intensive animal farming",
+      "Agricultural policy of the United States",
+      "Industrial agriculture",
+      "Seaweed farming"
+    ]
+  },
+  {
+    "id": 50,
+    "terms": [
+      "convection",
+      "met_office",
+      "convective",
+      "clouds",
+      "numerical_weather",
+      "mesoscale"
+    ],
+    "labels": [
+      "Numerical weather prediction",
+      "Mesoscale convective system",
+      "Weather forecasting",
+      "List of cloud types"
+    ]
+  },
+  {
+    "id": 51,
+    "terms": [
+      "ggr",
+      "carbon_capture",
+      "based_ggrs",
+      "beccs",
+      "paris_agreement",
+      "ggr_technologies"
+    ],
+    "labels": [
+      "Actions of 30 September \u2013 4 October 1917",
+      "Sharon Robinson (scientist)",
+      "Magnesite",
+      "History of climate change policy and politics"
+    ]
+  },
+  {
+    "id": 52,
+    "terms": [
+      "arctic",
+      "ecosystem",
+      "food_web",
+      "arctic_ocean",
+      "food_webs",
+      "food_chain"
+    ],
+    "labels": ["Food web", "Marine food web", "River ecosystem", "Food chain"]
+  },
+  {
+    "id": 53,
+    "terms": ["waste", "wastes", "metals", "metal", "mining", "rare_earth"],
+    "labels": [
+      "Rare-earth element",
+      "Mining",
+      "Radioactive waste",
+      "Heavy metals"
+    ]
+  },
+  {
+    "id": 54,
+    "terms": ["urban", "cities", "city", "smart", "smart_city", "smart_cities"],
+    "labels": [
+      "Smart city",
+      "Smart Cities Mission",
+      "Smart Fortwo",
+      "List of largest cities"
+    ]
+  },
+  {
+    "id": 55,
+    "terms": [
+      "biodiversity",
+      "edna",
+      "dna",
+      "lotic_edna",
+      "dna_edna",
+      "metabarcoding"
+    ],
+    "labels": ["Environmental DNA", "Metabarcoding", "DNA barcoding", "DNA"]
+  },
+  {
+    "id": 56,
+    "terms": [
+      "sea_ice",
+      "arctic",
+      "ice",
+      "snow",
+      "arctic_ocean",
+      "climate_models"
+    ],
+    "labels": [
+      "Climate of the Arctic",
+      "Arctic sea ice decline",
+      "Arctic Ocean",
+      "Sea ice"
+    ]
+  },
+  {
+    "id": 57,
+    "terms": [
+      "noise",
+      "aircraft",
+      "wind_turbine",
+      "wind_turbines",
+      "aerodynamic",
+      "blades"
+    ],
+    "labels": [
+      "Wind turbine design",
+      "Aircraft noise pollution",
+      "Wind turbine syndrome",
+      "Vertical-axis wind turbine"
+    ]
+  },
+  {
+    "id": 58,
+    "terms": [
+      "drought",
+      "decision_making",
+      "stakeholders",
+      "hydrological",
+      "water_scarcity",
+      "droughts"
+    ],
+    "labels": [
+      "Water scarcity",
+      "Drought in India",
+      "Water scarcity in Africa",
+      "United Nations Convention to Combat Desertification"
+    ]
+  },
+  {
+    "id": 59,
+    "terms": [
+      "lower_stratosphere",
+      "ozone",
+      "global_hawk",
+      "upper_troposphere",
+      "atmospheric_composition",
+      "transport_ttl"
+    ],
+    "labels": [
+      "Stratosphere",
+      "Atmosphere of Earth",
+      "Troposphere",
+      "Polar stratospheric cloud"
+    ]
+  },
+  {
+    "id": 60,
+    "terms": [
+      "climate_models",
+      "clouds",
+      "atmosphere_coupling",
+      "amcws",
+      "futures_capstone",
+      "informed_intervention"
+    ],
+    "labels": [
+      "Timeline of LGBT Mormon history in the 21st century",
+      "Cloud",
+      "Solar geoengineering",
+      "Urban green space"
+    ]
+  },
+  {
+    "id": 61,
+    "terms": [
+      "carbon",
+      "ocean",
+      "deep_ocean",
+      "southern_ocean",
+      "organic_matter",
+      "phytoplankton"
+    ],
+    "labels": [
+      "Particulate organic matter",
+      "Dissolved organic carbon",
+      "Phytoplankton",
+      "Oceanic carbon cycle"
+    ]
+  },
+  {
+    "id": 62,
+    "terms": [
+      "landslides",
+      "landslide",
+      "mountain",
+      "slope",
+      "landslide_risk",
+      "glaciers"
+    ],
+    "labels": [
+      "Landslide",
+      "List of landslides",
+      "1997 Thredbo landslide",
+      "2010 Mount Meager landslide"
+    ]
+  },
+  {
+    "id": 63,
+    "terms": [
+      "ocean",
+      "arctic_ocean",
+      "ice",
+      "antarctica",
+      "sea_ice",
+      "fresh_water"
+    ],
+    "labels": [
+      "Arctic Ocean",
+      "Sea ice",
+      "Antarctica",
+      "Arctic sea ice decline"
+    ]
+  },
+  {
+    "id": 64,
+    "terms": [
+      "industry",
+      "industrial",
+      "decarbonisation",
+      "low_carbon",
+      "infrastructure",
+      "sector"
+    ],
+    "labels": [
+      "Low-carbon economy",
+      "Decarbonisation measures in proposed UK electricity market reform",
+      "Secondary sector of the economy",
+      "Infrastructure"
+    ]
+  },
+  {
+    "id": 65,
+    "terms": [
+      "methane",
+      "methane_budget",
+      "isotopic_signatures",
+      "anthropogenic_sources",
+      "suggests_increase",
+      "verde_ascension"
+    ],
+    "labels": [
+      "Greenhouse gas emissions",
+      "Atmospheric methane",
+      "Fugitive gas emissions",
+      "Carbon cycle"
+    ]
+  },
+  {
+    "id": 66,
+    "terms": [
+      "bacteria",
+      "dms",
+      "dmsp",
+      "microbes",
+      "microorganisms",
+      "dmsp_dms"
+    ],
+    "labels": [
+      "Methanethiol",
+      "Dimethylsulfoniopropionate",
+      "Mary Ann Moran",
+      "Sulfur cycle"
+    ]
+  },
+  {
+    "id": 67,
+    "terms": [
+      "radiation",
+      "nuclear",
+      "detector",
+      "reactor",
+      "diamond",
+      "fuel_debris"
+    ],
+    "labels": [
+      "Chernobyl disaster",
+      "Chernobyl New Safe Confinement",
+      "Americium",
+      "Diamond battery"
+    ]
+  },
+  {
+    "id": 68,
+    "terms": [
+      "atmosphere",
+      "space_weather",
+      "upper_atmosphere",
+      "magnetic_field",
+      "radar",
+      "ionospheric"
+    ],
+    "labels": [
+      "Ionosphere",
+      "High-frequency Active Auroral Research Program",
+      "Space weather",
+      "Atmosphere of Mars"
+    ]
+  },
+  {
+    "id": 69,
+    "terms": [
+      "earth_system",
+      "co_evolutionary",
+      "surge_events",
+      "securing_multidisciplinary",
+      "prediction_hiatus",
+      "emitted_human"
+    ],
+    "labels": [
+      "Global warming hiatus",
+      "Cretaceous\u2013Paleogene extinction event",
+      "India",
+      "Environmental psychology"
+    ]
+  },
+  {
+    "id": 70,
+    "terms": [
+      "coastal",
+      "salt_marshes",
+      "bedforms",
+      "coastal_wetlands",
+      "coastal_margins",
+      "hierarchical_approach"
+    ],
+    "labels": ["Salt marsh", "Dune", "Street hierarchy", "Sedimentary budget"]
+  },
+  {
+    "id": 71,
+    "terms": ["coral", "corals", "reefs", "reef", "coral_reefs", "coral_reef"],
+    "labels": [
+      "Coral reef fish",
+      "Coral",
+      "Great Barrier Reef",
+      "Coral reef protection"
+    ]
+  },
+  {
+    "id": 72,
+    "terms": [
+      "lake",
+      "lakes",
+      "phytoplankton",
+      "lake_baikal",
+      "globolakes",
+      "sw_greenland"
+    ],
+    "labels": [
+      "Lake ecosystem",
+      "Ikaite",
+      "Climate change and ecosystems",
+      "Great Lakes"
+    ]
+  },
+  {
+    "id": 73,
+    "terms": [
+      "food_security",
+      "trade",
+      "risk_assessments",
+      "knowledge_hub",
+      "european_agriculture",
+      "networking_exchanges"
+    ],
+    "labels": [
+      "Risk assessment",
+      "Food security",
+      "International trade",
+      "Risk"
+    ]
+  },
+  {
+    "id": 74,
+    "terms": [
+      "carbon_cycle",
+      "fluxes",
+      "amazon",
+      "atmospheric_concentration",
+      "co2_ch4",
+      "largest_reservoir"
+    ],
+    "labels": [
+      "Carbon cycle",
+      "Oceanic carbon cycle",
+      "Carbon dioxide in Earth's atmosphere",
+      "Reservoir"
+    ]
+  },
+  {
+    "id": 75,
+    "terms": [
+      "artificial_intelligence",
+      "ai",
+      "fully_exploit",
+      "exceptional_opportunity",
+      "outputs_integrate",
+      "evidence_informed"
+    ],
+    "labels": [
+      "Deep learning",
+      "Creativity",
+      "Artificial intelligence",
+      "Existential risk from artificial general intelligence"
+    ]
+  },
+  {
+    "id": 76,
+    "terms": [
+      "amr",
+      "bacteria",
+      "antibiotics",
+      "genes",
+      "antibiotic_resistance",
+      "antimicrobial_resistance"
+    ],
+    "labels": [
+      "Antimicrobial resistance",
+      "Antibiotic use in livestock",
+      "Antibiotic sensitivity testing",
+      "Comprehensive Antibiotic Resistance Database"
+    ]
+  },
+  {
+    "id": 77,
+    "terms": [
+      "emissions",
+      "ghg_emissions",
+      "ghgs",
+      "ghg",
+      "quot;top_down&quot",
+      "ghg_ods"
+    ],
+    "labels": [
+      "Greenhouse gas emissions by Turkey",
+      "Human impact on the environment",
+      "Carbon footprint",
+      "Emissions trading"
+    ]
+  },
+  {
+    "id": 78,
+    "terms": [
+      "materials",
+      "waste_heat",
+      "devices",
+      "quantum_interference",
+      "thermoelectric",
+      "electrodes"
+    ],
+    "labels": [
+      "Thermoelectric materials",
+      "Thermoelectric effect",
+      "Thermoelectric generator",
+      "Quantum tunnelling"
+    ]
+  },
+  {
+    "id": 79,
+    "terms": [
+      "reacting_flows",
+      "modelling_turbulent",
+      "environmentally_friendly",
+      "consortium_turbulent",
+      "energy_efficient",
+      "fundamental_physical"
+    ],
+    "labels": [
+      "KIVA (software)",
+      "Computational fluid dynamics",
+      "Piracy",
+      "History of Germany"
+    ]
+  },
+  {
+    "id": 80,
+    "terms": [
+      "ecosystem_services",
+      "deltas",
+      "delta",
+      "poverty",
+      "livelihoods",
+      "delta_regions"
+    ],
+    "labels": [
+      "Niger Delta",
+      "Environmental issues in the Niger Delta",
+      "Sustainable Development Goals",
+      "Okavango Delta"
+    ]
+  },
+  {
+    "id": 81,
+    "terms": ["light", "leds", "lighting", "gan", "blue", "gallium_nitride"],
+    "labels": [
+      "Light-emitting diode",
+      "Gallium nitride",
+      "LED lamp",
+      "Blue laser"
+    ]
+  },
+  {
+    "id": 82,
+    "terms": [
+      "ocean",
+      "bubbles",
+      "aerosol",
+      "bubble",
+      "atmosphere",
+      "wave_breaking"
+    ],
+    "labels": ["Sea spray", "Sea foam", "Cavitation", "Breaking wave"]
+  },
+  {
+    "id": 83,
+    "terms": [
+      "sea_level",
+      "rise",
+      "antarctica",
+      "gps",
+      "grace",
+      "amundsen_sector"
+    ],
+    "labels": [
+      "Sea level rise",
+      "GRACE and GRACE-FO",
+      "Antarctica",
+      "Post-glacial rebound"
+    ]
+  },
+  {
+    "id": 84,
+    "terms": [
+      "coastal_communities",
+      "low_income",
+      "current_theories",
+      "adaptive_capacity",
+      "solstice_wio",
+      "wio"
+    ],
+    "labels": [
+      "Climate change adaptation",
+      "Poverty",
+      "Climate change vulnerability",
+      "Northern Michigan"
+    ]
+  },
+  {
+    "id": 85,
+    "terms": [
+      "soil",
+      "crops",
+      "bioenergy",
+      "bioenergy_crops",
+      "perennial_bioenergy",
+      "ghg"
+    ],
+    "labels": ["Bioenergy", "Biomass", "Energy crop", "Biofuel"]
+  },
+  {
+    "id": 86,
+    "terms": ["water", "groundwater", "rural", "failure", "fluoride", "africa"],
+    "labels": [
+      "Groundwater pollution",
+      "Water fluoridation",
+      "Fluoride toxicity",
+      "Water fluoridation controversy"
+    ]
+  }
+]

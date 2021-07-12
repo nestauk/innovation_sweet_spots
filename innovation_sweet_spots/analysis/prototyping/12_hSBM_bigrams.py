@@ -98,6 +98,29 @@ import matplotlib.pyplot as plt
 # len(topic_model.topics(l=2))
 
 # %%
-topic_model.clusters(l=1, n=5)
+clusts = topic_model.clusters(l=1, n=15)
+
+# %%
+import innovation_sweet_spots.getters.gtr as gtr
+
+gtr_projects = gtr.get_gtr_projects()
+
+
+# %%
+all_Titles = []
+for i in range(len(clusts)):
+    clust_projects = [c[0] for c in clusts[i]]
+    titles = gtr_projects[gtr_projects.project_id.isin(clust_projects)].title.to_list()
+    all_Titles.append(titles)
+
+# %%
+len(clusts)
+
+# %%
+i = -1
+
+# %%
+i += 1
+sorted(all_Titles[i])
 
 # %%

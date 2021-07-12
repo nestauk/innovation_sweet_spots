@@ -56,10 +56,10 @@ importlib.reload(iss_green)
 importlib.reload(gtr)
 
 # %%
-green_keywords = iss_green.get_green_keywords(clean=True)
-green_projects = iss_green.find_green_gtr_projects(green_keywords)
 
 # %%
+green_keywords = iss_green.get_green_keywords(clean=True)
+green_projects = iss_green.find_green_gtr_projects(green_keywords)
 green_companies = iss_green.find_green_cb_companies()
 
 # %% [markdown]
@@ -86,6 +86,9 @@ fpath = PROJECT_DIR / "outputs/models/bigram_phraser_gtr_cb_v1.p"
 
 # %%
 pickle.dump(ngram_phraser, open(fpath, "wb"))
+
+# %%
+ngram_phraser = pickle.load(ngram_phraser, open(fpath, "rb"))
 
 # %% [markdown]
 # ## Word2vec expansions

@@ -1,4 +1,8 @@
-""" Utils for finding green docs """
+"""
+Utils for finding ""green" documents
+
+
+"""
 
 from innovation_sweet_spots import PROJECT_DIR, logging
 from innovation_sweet_spots.getters import crunchbase as cb
@@ -32,6 +36,9 @@ GREEN_TOPICS = [
     "Wind Power",
 ]
 
+DEF_GREEN_GTR_PROJECTS = DATA_OUTPUTS / "gtr/green_gtr_project_ids.txt"
+DEF_GREEN_CB_PROJECTS = DATA_OUTPUTS / "cb/green_cb_company_ids.txt"
+
 
 def collect_green_keywords(
     save: bool = False,
@@ -53,6 +60,27 @@ def collect_green_keywords(
     if save:
         iss_io.save_list_of_terms(keywords, DATA_OUTPUTS / fpath)
     return keywords
+
+
+def get_chunks_from_tech_navigator(
+    save=False, fpath=misc.MISC_PATH / "green_keywords_TechNav_before_review.txt"
+) -> Iterator[str]:
+    """NB: The list of keyword chunks requires subsequent manual revision"""
+    # Relevant tech navigator columns
+    cols = ["Technology Name", "Short Descriptor", "Brief description "]
+    # Get tech navigator table
+    tech_nav = misc.get_tech_navigator()
+    # Get all chunks
+    nlp = iss_text_analysis.setup_spacy_model()
+    tech_chunks = []
+    for col in cols:
+        techs = tech_nav[col].to_list()
+        techs = [s for s in techs if type(s) is str]
+        tech_chunks += list(iss_text_analysis.chunk_forms(techs, nlp))
+    tech_chunks_flat = sorted(set([t for ts in tech_chunks for t in ts]))
+    if save:
+        iss_io.save_list_of_terms(tech_chunks_flat, fpath)
+    return tech_chunks_flat
 
 
 def get_green_keywords(fpath=DATA_OUTPUTS / "aux/green_keywords_all.txt", clean=True):
@@ -107,12 +135,23 @@ def find_green_gtr_projects_by_research_topic(research_topics=GREEN_TOPICS):
     return unique_green_ids
 
 
-def find_green_gtr_projects(keywords, research_topics=GREEN_TOPICS):
-    ids_by_keywords = find_green_gtr_projects_by_keywords(keywords)
-    ids_by_topics = find_green_gtr_projects_by_research_topic(research_topics)
-    unique_green_ids = list(set(ids_by_keywords).union(set(ids_by_topics)))
+def find_green_gtr_projects(
+    keywords,
+    research_topics=GREEN_TOPICS,
+    use_cached=True,
+    fpath=DEF_GREEN_GTR_PROJECTS,
+) -> pd.DataFrame:
+    if not use_cached or (fpath.exists() is False):
+        logging.info(f"Searching for green projects")
+        ids_by_keywords = find_green_gtr_projects_by_keywords(keywords)
+        ids_by_topics = find_green_gtr_projects_by_research_topic(research_topics)
+        unique_green_ids = list(set(ids_by_keywords).union(set(ids_by_topics)))
+        logging.info(f"Saving {len(unique_green_ids)} project IDs in {fpath}")
+        iss_io.save_list_of_terms(unique_green_ids, fpath)
+    else:
+        unique_green_ids = iss_io.read_list_of_terms(fpath)
+    logging.info(f"Found {len(unique_green_ids)} green projects")
     gtr_projects = gtr.get_gtr_projects()
-    logging.info(f"Found {len(unique_green_ids)} unique projects in total")
     return gtr_projects[gtr_projects.project_id.isin(unique_green_ids)]
 
 
@@ -135,34 +174,21 @@ def cb_category_groups(cb_categories):
     return groups
 
 
-def find_green_cb_companies():
+def find_green_cb_companies(use_cached=True, fpath=DEF_GREEN_CB_PROJECTS):
     cb_orgs = cb.get_crunchbase_orgs_full()
-    cb_categories = cb.get_crunchbase_category_groups()
-    cb_org_categories = cb.get_crunchbase_organizations_categories()
-    green_tags = cb_categories_for_group(cb_categories, "Sustainability")
-    green_orgs = cb_org_categories[cb_org_categories.category_name.isin(green_tags)]
-    green_org_ids = list(green_orgs.organization_id.unique())
+    if not use_cached or (fpath.exists() is False):
+        logging.info(f"Searching for green companies")
+        # Find organisation categories
+        cb_categories = cb.get_crunchbase_category_groups()
+        cb_org_categories = cb.get_crunchbase_organizations_categories()
+        # Find organisations and subgroups within the 'green' category
+        green_tags = cb_categories_for_group(cb_categories, "Sustainability")
+        green_orgs = cb_org_categories[cb_org_categories.category_name.isin(green_tags)]
+        green_org_ids = list(green_orgs.organization_id.unique())
+        logging.info(f"Saving {len(green_org_ids)} project IDs in {fpath}")
+        iss_io.save_list_of_terms(green_org_ids, fpath)
+    else:
+        green_org_ids = iss_io.read_list_of_terms(fpath)
     green_orgs_table = cb_orgs[cb_orgs.id.isin(green_org_ids)]
-    logging.info(f"Found {len(green_orgs_table)} unique projects in total")
+    logging.info(f"Found {len(green_orgs_table)} green companies")
     return green_orgs_table
-
-
-def get_chunks_from_tech_navigator(
-    save=False, fpath=misc.MISC_PATH / "green_keywords_TechNav_before_review.txt"
-) -> Iterator[str]:
-    """NB: The list of keyword chunks requires subsequent manual revision"""
-    # Relevant tech navigator columns
-    cols = ["Technology Name", "Short Descriptor", "Brief description "]
-    # Get tech navigator table
-    tech_nav = misc.get_tech_navigator()
-    # Get all chunks
-    nlp = iss_text_analysis.setup_spacy_model()
-    tech_chunks = []
-    for col in cols:
-        techs = tech_nav[col].to_list()
-        techs = [s for s in techs if type(s) is str]
-        tech_chunks += list(iss_text_analysis.chunk_forms(techs, nlp))
-    tech_chunks_flat = sorted(set([t for ts in tech_chunks for t in ts]))
-    if save:
-        iss_io.save_list_of_terms(tech_chunks_flat, fpath)
-    return tech_chunks_flat
