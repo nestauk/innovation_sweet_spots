@@ -143,6 +143,7 @@ def download_hansard_data(fpath=HANSARD_PATH):
     """
     # Download from Zenodo
     logging.info(f"Collection and storing of Hansard data in progress")
+    fpath.mkdir(parents=True, exist_ok=True)
     zip_files = []
     for filename, url in zip(ZENODO_FILES, ZENODO_URLS):
         logging.info(f"Collecting {filename}")

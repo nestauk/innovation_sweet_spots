@@ -5,11 +5,14 @@
 - Meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter), in brief:
   - Install: `git-crypt`
   - Have a Nesta AWS account configured with `awscli`
-- Run `make install` to configure the development environment:
+- Clone this repo (for now, install from this specific branch: `git clone -b 29_public_discourse https://github.com/nestauk/innovation_sweet_spots/`)
+- Run `make install` which will automatically configure the development environment, i.e.
   - Setup the conda environment
   - Configure pre-commit
   - Configure metaflow to use AWS
 - Run `conda config --add channels conda-forge`
+
+Note that there might be some pip's dependency resolver errors due to the `data_getters` package during installation. These shouldn't cause any issues, and will be resolved in the near future with phasing out the dependency on `data_getters`.
 
 ### Data access
 
@@ -23,8 +26,8 @@ $ git-crypt unlock /path/to/key
 #### Research project and business data
 
 The GtR and CB data can be fetched by running `make fetch-daps1`. Note that at the moment
-there are two data fetching pipelines (the other using `innovation_sweet_spots.getters.inputs`)
-that will have to be integrated in the near future.
+there are two data fetching pipelines (the other is using `innovation_sweet_spots.getters.inputs`)
+that will have to be integrated into one solution, in the near future.
 
 #### Parliamentary speech data
 
