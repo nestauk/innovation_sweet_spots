@@ -11,7 +11,7 @@ DEF_WIKI_ARGS = {
     "boost_with_categories": False,
     "contextual_anchors": [],
 }
-
+MAX_LABELS = 5
 DEF_ANCHORS = []
 
 
@@ -38,11 +38,11 @@ def get_labels(fpath, save=True, outfile=None):
 
     logging.info(f"Suggesting labels for {len(cluster_terms)} sets of terms")
 
-    term_lists = [d["terms"] for d in cluster_terms]
+    term_lists = [d["terms"][0:MAX_LABELS] for d in cluster_terms]
     labels = get_wiki_topic_labels(term_lists)
 
     for i, label_set in enumerate(labels):
-        cluster_terms[i]["labels"] = label_set
+        cluster_terms[i]["labels"] = label_set[0:MAX_LABELS]
 
     if save:
         if outfile is None:

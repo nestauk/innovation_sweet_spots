@@ -23,8 +23,19 @@ from innovation_sweet_spots import PROJECT_DIR, logging
 import innovation_sweet_spots.Top2Vec.Top2Vec as top2vec
 import innovation_sweet_spots.utils.text_pre_processing as iss_preproc
 import innovation_sweet_spots.analysis.text_analysis as iss_text_analysis
-import innovation_sweet_spots.analysis.green_docs as iss_green
+import innovation_sweet_spots.analysis.green_document_utils as iss_green
 import innovation_sweet_spots.analysis.analysis_utils as iss
+
+# %%
+import innovation_sweet_spots.utils.io as iss_io
+
+# %%
+import importlib
+
+importlib.reload(iss_io)
+
+# %%
+# iss_io.load_pickle('test.p')
 
 # %%
 import pickle
@@ -80,6 +91,9 @@ pickle.dump(
 pickle.dump(
     corpus_cb, open(PROJECT_DIR / "outputs/data/cb/cb_green_docs_tokenised.p", "wb")
 )
+
+# %% [markdown]
+# ## Testing the tokeniser
 
 # %%
 ngram_phraser_load = pickle.load(open(fpath, "rb"))
@@ -625,9 +639,9 @@ model.add_documents
 # green_company_texts
 
 # %%
-uk_green_corpus = [corpus_cb[i] for i in uk_green_cb.index]
 
 # %%
+uk_green_corpus = [corpus_cb[i] for i in uk_green_cb.index]
 uk_green_company_texts = [green_company_texts[i] for i in uk_green_cb.index]
 
 # %%

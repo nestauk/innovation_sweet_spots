@@ -8,6 +8,30 @@ guardian_api:
   lang: "en"
   show-tags: "contributor"
   show-fields: "body,headline,trailText"
+# top2vec parameters
+top2vec_parameters:
+  umap_args:
+    n_neighbors: 15
+    n_components": 5
+    metric: "cosine"
+  hdbscan_args:
+    min_cluster_size: 15
+    min_samples: 5
+    metric: "euclidean"
+    cluster_selection_method: "leaf"
+  doc2vec_args:
+    vector_size: 300
+    min_count: 10
+    window: 15
+    sample: 1e-5
+    negative: 0
+    hs: 1
+    epochs: 50
+    dm: 0,
+    dbow_words: 1
+    workers: 1
+    corpus_file: None
+  random_state: 123
 # Juan's parameters
 tokenise:
   threshold: 10

@@ -12,6 +12,7 @@ from innovation_sweet_spots.utils.text_cleaning_utils import clean_text
 import innovation_sweet_spots.analysis.text_analysis as iss_text_analysis
 import innovation_sweet_spots.utils.io as iss_io
 from typing import Iterator
+import pandas as pd
 
 DATA_OUTPUTS = PROJECT_DIR / "outputs/data"
 
@@ -136,7 +137,7 @@ def find_green_gtr_projects_by_research_topic(research_topics=GREEN_TOPICS):
 
 
 def find_green_gtr_projects(
-    keywords,
+    keywords=None,
     research_topics=GREEN_TOPICS,
     use_cached=True,
     fpath=DEF_GREEN_GTR_PROJECTS,

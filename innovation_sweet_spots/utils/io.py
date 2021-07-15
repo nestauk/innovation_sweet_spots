@@ -5,6 +5,7 @@ import json
 from innovation_sweet_spots import PROJECT_DIR, logging
 from typing import Iterator
 import numpy as np
+import pickle
 
 
 def save_lookup(name, path_name):
@@ -38,3 +39,17 @@ def save_array(embeddings: np.ndarray, fpath):
 def load_array(fpath):
     embeddings = np.load(fpath)
     logging.info(f"Loaded in array of shape {embeddings.shape}")
+    return embeddings
+
+
+def save_pickle(data, fpath):
+    with open(fpath, "wb") as outfile:
+        pickle.dump(data, outfile)
+    logging.info(f"Saved a pickle file in {fpath}")
+
+
+def load_pickle(fpath):
+    with open(fpath, "rb") as infile:
+        data = pickle.load(infile)
+    logging.info(f"Loaded data from a pickle file in {fpath}")
+    return data

@@ -1,6 +1,8 @@
-# Author: Dimo Angelov, with adjustments by KK
-#
-# License: BSD 3 clause
+"""
+Original method and code: https://github.com/ddangelov/Top2Vec;
+adjustments by Karlis Kanders
+"""
+
 from innovation_sweet_spots import logging
 
 import numpy as np
@@ -21,10 +23,25 @@ from scipy.special import softmax
 
 
 DEFAULT_UMAP_ARGS = {"n_neighbors": 15, "n_components": 5, "metric": "cosine"}
+
 DEFAULT_HDBSCAN_ARGS = {
     "min_cluster_size": 15,
     "metric": "euclidean",
     "cluster_selection_method": "eom",
+}
+
+DEFAULT_DOC2VEC_ARGS = {
+    "vector_size": 300,
+    "min_count": 10,
+    "window": 15,
+    "sample": 1e-5,
+    "negative": 0,
+    "hs": 1,
+    "epochs": 100,
+    "dm": 0,
+    "dbow_words": 1,
+    "workers": 1,
+    "corpus_file": None,
 }
 
 try:
@@ -178,20 +195,18 @@ class Top2Vec:
     def __init__(
         self,
         documents,
-        min_count=50,
         embedding_model="doc2vec",
         embedding_model_path=None,
         speed="learn",
         use_corpus_file=False,
         document_ids=None,
         keep_documents=True,
-        workers=None,
         tokenizer=None,
         use_embedding_model_tokenizer=False,
         doc2vec_args=None,
         umap_args=None,
         hdbscan_args=None,
-        verbose=True,
+        # verbose=True,
         random_state=1,
     ):
 
@@ -203,7 +218,7 @@ class Top2Vec:
         #     self.verbose = False
 
         if umap_args is None:
-            umap_args = DEFAULT_UMAP_ARGS
+            self.umap_args = DEFAULT_UMAP_ARGS
         else:
             self.umap_args = umap_args
 
@@ -218,6 +233,7 @@ class Top2Vec:
             tokenizer = lambda x: x
 
         self.random_state = random_state
+        self.setup_random_seeds()
         # validate documents
         # if not (isinstance(documents, list) or isinstance(documents, np.ndarray)):
         #     raise ValueError("Documents need to be a list of strings")
@@ -230,7 +246,7 @@ class Top2Vec:
         else:
             self.documents = None
 
-        # validate document ids
+        # Validate document ids
         if document_ids is not None:
             if not (
                 isinstance(document_ids, list) or isinstance(document_ids, np.ndarray)
@@ -276,77 +292,26 @@ class Top2Vec:
 
         self.embedding_model_path = embedding_model_path
 
+        ### DOC2VEC ###
         if embedding_model == "doc2vec":
 
-            # validate training inputs
-            if speed == "fast-learn":
-                hs = 0
-                negative = 5
-                epochs = 40
-            elif speed == "learn":
-                hs = 1
-                negative = 0
-                epochs = 40
-            elif speed == "deep-learn":
-                hs = 1
-                negative = 0
-                epochs = 400
-            elif speed == "test-learn":
-                hs = 0
-                negative = 5
-                epochs = 1
-            else:
-                raise ValueError(
-                    "speed parameter needs to be one of: fast-learn, learn or deep-learn"
-                )
-
-            if workers is None:
-                pass
-            elif isinstance(workers, int):
-                pass
-            else:
-                raise ValueError("workers needs to be an int")
-
-            if doc2vec_args is None:
-                doc2vec_args = {
-                    "vector_size": 300,
-                    "min_count": min_count,
-                    "window": 15,
-                    "sample": 1e-5,
-                    "negative": negative,
-                    "hs": hs,
-                    "epochs": epochs,
-                    "dm": 0,
-                    "dbow_words": 1,
-                    "seed": random_state,
-                }
-
-            if workers is not None:
-                doc2vec_args["workers"] = workers
-
-            logging.info("Pre-processing documents for training")
-
-            if use_corpus_file:
-                processed = [" ".join(tokenizer(doc)) for doc in documents]
-                lines = "\n".join(processed)
-                temp = tempfile.NamedTemporaryFile(mode="w+t")
-                temp.write(lines)
-                doc2vec_args["corpus_file"] = temp.name
-
-            else:
-                train_corpus = [
-                    TaggedDocument(tokenizer(doc), [i])
-                    for i, doc in enumerate(documents)
-                ]
-                doc2vec_args["documents"] = train_corpus
-
-            logging.info("Creating joint document/word embedding")
             self.embedding_model = "doc2vec"
-            self.model = Doc2Vec(**doc2vec_args)
+
+            self.setup_doc2vec_parameters(speed, doc2vec_args)
+
+            logging.info("Preprocessing documents for training")
+            if use_corpus_file:
+                temp = self.prepare_corpus_file(tokenizer, documents)
+            else:
+                self.prepare_documents(tokenizer, documents)
+
+            logging.info("Creating a joint document/word embedding")
+            self.model = Doc2Vec(**self.doc2vec_args)
 
             if use_corpus_file:
                 temp.close()
 
+        ### PRETRAINED EMBEDDINGS ###
         elif embedding_model in acceptable_embedding_models:
 
             self.embed = None
@@ -421,6 +386,42 @@ class Top2Vec:
         self.serialized_word_index = None
         self.words_indexed = False
 
+    def setup_random_seeds(self):
+        np.random.seed(self.random_state)
+        self.doc2vec_seed = np.random.randint(1e6)
+        self.umap_seed = np.random.randint(1e6)
+        self.hdbscan_seed = np.random.randint(1e6)
+
+    def setup_doc2vec_parameters(self, speed, doc2vec_args):
+        if doc2vec_args is None:
+            self.doc2vec_args = DEFAULT_DOC2VEC_ARGS.copy()
+        else:
+            self.doc2vec_args = doc2vec_args
+        # Override parameters for testing
+        if speed == "fast-learn":
+            self.doc2vec_args["hs"] = 0
+            self.doc2vec_args["negative"] = 5
+            self.doc2vec_args["epochs"] = 40
+        elif speed == "test-learn":
+            self.doc2vec_args["hs"] = 0
+            self.doc2vec_args["negative"] = 5
+            self.doc2vec_args["epochs"] = 1
+        self.doc2vec_args["seed"] = self.doc2vec_seed
+
+    def prepare_corpus_file(self, tokenizer, documents):
+        processed = [" ".join(tokenizer(doc)) for doc in documents]
+        lines = "\n".join(processed)
+        temp = tempfile.NamedTemporaryFile(mode="w+t")
+        temp.write(lines)
+        self.doc2vec_args["corpus_file"] = temp.name
+        return temp
+
+    def prepare_documents(self, tokenizer, documents):
+        train_corpus = [
+            TaggedDocument(tokenizer(doc), [i]) for i, doc in enumerate(documents)
+        ]
+        self.doc2vec_args["documents"] = train_corpus
+
     def process_topics(self):
         """Calculate topic vectors from dense areas of documents"""
 
@@ -450,6 +451,7 @@ class Top2Vec:
 
     def generate_umap_model(self):
         logging.info("Creating lower dimension embedding of documents")
+        self.umap_args["random_state"] = self.umap_seed
         self.umap_model = umap.UMAP(**self.umap_args).fit(
             self._get_document_vectors(norm=False)
         )
@@ -458,13 +460,13 @@ class Top2Vec:
     def cluster_docs(self):
         """find dense areas of document vectors"""
         # Set the random seed for reproducibility
-        np.random.seed(self.random_state)
         logging.info("Finding dense areas of documents")
+        np.random.seed(self.hdbscan_seed)
         self.cluster = hdbscan.HDBSCAN(**self.hdbscan_args).fit(
             self.umap_model.embedding_
         )
         # Reset the seed to a random one again
-        np.random.seed()
+        np.random.seed(self.random_state)
         return self.cluster
 
     def save(self, file):
