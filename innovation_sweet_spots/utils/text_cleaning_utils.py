@@ -21,11 +21,14 @@ punctuation_replacement_rules = {
     # old patterns: replacement pattern
     "[\u2022,\u2023,\u25E6,\u2043,\u2219\:]": ",",  # Convert bullet points to commas
     r"[-/\\]": " ",  # Convert colon, hyphens and forward and backward slashes to spaces
-    r"[^a-zA-Z0-9,.; #(++)]": "",  # Preserve spaces, commas, full stops, semicollons for discerning noun chunks
+    r"’": "'",  # Standardise single quote
+    r"[^a-zA-Z0-9,.;' #(++)]": "",  # Preserve spaces, commas, full stops, semicollons, and single quotes for discerning noun chunks
     r"\s\(": ", ",  # Replace open parentheses with comma
     r"\)\s": r", ",  # Replace closing parentheses followed by sapce, with commas
     r"(\))(?!\s)": r"",  # Remove closing parentheses not followed by space
     r"\.{2,}": ".",  # Replace multiple periods with one
+    # r"[\x60, \xe2\x80\x98,\xe2\x80\x99, \xe2\x80\x9b]": "'",  # Catch funny single quotes
+    # r"[„“]|(\'\')|(,,)": '"',  # Standardise double quotes
 }
 
 # Patterns for cleaning punctuation, for clean_punctuation()
@@ -174,3 +177,36 @@ def split_string(string, separator="\n"):
         return [s.strip() for s in string.split(separator)]
     else:
         return []
+
+
+def clean_text_minimal(text, keep_punct=True):
+    """
+    Pipeline for preprocessing newspaper articles.
+    NB: If 'keep_punct' is True, then commas, full stops and semicollons are preserved
+    Keeping this by default to aid spacy's sentence detection'
+
+    Args:
+        text (str): Text to be processed via the pipeline
+    """
+    if keep_punct is False:
+        return pipe(
+            text,
+            detect_sentences,
+            lowercase,
+            remove_punctuation,
+            # lemmatize_paragraph,
+            # remove_stopwords,
+            clean_up,
+        )
+    elif keep_punct is True:
+        return pipe(
+            text,
+            detect_sentences,
+            lowercase,
+            clean_punctuation,
+            # pad_punctuation,
+            # lemmatize_paragraph,
+            # remove_stopwords,
+            # unpad_punctuation,
+            clean_up,
+        )
