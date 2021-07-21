@@ -64,7 +64,7 @@ category_count = sorted(Counter(article_categories).items(),
 # 3.1 Extracting content from specified html tags to avoid irrelevant in-text links 
 # to other articles
 
-article_segments = disc.get_text_segments(articles, tags)
+article_segments = disc.get_text_segments(articles, TAGS)
 article_text = [' '.join(segment) for segment in article_segments]
 
 #%%
@@ -126,13 +126,15 @@ count_dict = dict(zip(names,count_list))
 ngrams = np.sum(Xc.todense())/2
 search_index = names.index(search_term)
 
+#%%
+# Revisited calculation of PMI defining context as a sentence
 pmis = {}
 for ix, name in enumerate(names):
-    association = disc.pmi(count_dict[search_term],
-                  count_dict[names[ix]],
+    association = disc.pmi(np.sum(X[:, search_index]),
+                  np.sum(X[:, ix]),
                   Xc[search_index, ix],
-                  sum(count_dict.values()),
-                  ngrams)
+                  len(flat_article_sentences),
+                  len(flat_article_sentences))
     pmis[name] = association
     
 pruned_pmis = {k:v for k,v in pmis.items() if v >0}
