@@ -34,13 +34,21 @@ from innovation_sweet_spots.analysis import analysis_utils as iss
 from innovation_sweet_spots.analysis import discourse_utils as disc
 from innovation_sweet_spots.utils import text_cleaning_utils as tcu
 from innovation_sweet_spots.utils import text_pre_processing as tpu
+from innovation_sweet_spots import PROJECT_DIR, config, logging
+from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
 
 # %%
 import spacy
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
+import collections
+import pickle
+import os
 # %%
 TAGS = ['p', 'h2']
+# OUTPUTS_CACHE = OUTPUT_DATA_PATH / ".cache"
+DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "discourse_analysis_outputs"
+DISC_OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 # %% [markdown]
 # ## 2. Fetching relevant Guardian articles
 
@@ -75,15 +83,17 @@ clean_article_text = [tcu.clean_text_minimal(article) for article in article_tex
 
 #%%
 # 3.3 Extracting sentences
-#nlp = spacy.load("en_core_web_sm")
+# nlp = spacy.load("en_core_web_sm")
 
 processed_articles = [nlp(article) for article in clean_article_text]
 
 #%%
 # To do: persist article sentences, as they form the corpus for further analysis
 article_sentences = [[sent.text for sent in article.sents] for article in processed_articles]
+with open(os.path.join(DISC_OUTPUTS_DIR, 'article_sentences.pkl'), "wb") as outfile:
+        pickle.dump(article_sentences, outfile)
 flat_article_sentences = [item for sublist in article_sentences for item in sublist]
-
+flat_article_sentences = list(set(flat_article_sentences))
 #%%
 # Relevant articles
 sentence_mentions = [[sent for sent in art if search_term in sent] for art in article_sentences]
@@ -94,7 +104,7 @@ noun_chunks = []
 for article in processed_articles:
     for chunk in article.noun_chunks:
         noun_chunks.append(chunk)
-        print(chunk)
+        # print(chunk)
 
 noun_chunks_str = [str(elem) for elem in noun_chunks]
 dedup_noun_chunks = list(set(noun_chunks_str))
@@ -123,7 +133,7 @@ count_dict = dict(zip(names,count_list))
 
 # %%
 # Calculate PPMI
-ngrams = np.sum(Xc.todense())/2
+# ngrams = np.sum(Xc.todense())/2
 search_index = names.index(search_term)
 
 #%%
@@ -149,11 +159,47 @@ chunk_pmi = {chunk: pruned_pmis.get(chunk, 0) for chunk in pruned_noun_chunks}
 chunk_pmis = {k:v for k,v in chunk_pmi.items() if v >0}
 
 # Below need to remove noun chunks with any terms from the search term 
-contains_search_term = []
-for noun_chunk in pruned_noun_chunks:
-    for substring in search_term.split():
-        if substring in noun_chunk:
-            contains_search_term.append(noun_chunk)
+# contains_search_term = []
+# for noun_chunk in pruned_noun_chunks:
+#     for substring in search_term.split():
+#         if substring in noun_chunk:
+#             contains_search_term.append(noun_chunk)
 
 # %%
 # Study sentiment around noun chunks in sentences
+sentence_sentiment = iss.get_sentence_sentiment(flat_article_sentences)
+
+# %%
+# Link noun chunks with high association to sentence sentiment
+
+noun_chunk_sentiments = collections.defaultdict(list)
+for ix, row in sentence_sentiment.iterrows():
+    for noun_chunk in chunk_pmis:
+        # print(noun_chunk)
+        if noun_chunk in row['sentences']:
+            noun_chunk_sentiments[noun_chunk].append(row['compound'])
+            
+# %%
+# Calculate average sentiment for noun chunks
+noun_chunk_agg_sent = {k: np.mean(v) for k,v in noun_chunk_sentiments.items()}
+
+sorted_sent = sorted(noun_chunk_agg_sent.items(), 
+                     key = lambda x: x[1], 
+                     reverse = True)
+
+# %% Analyse presence of noun chunks in positive and negative sentences
+
+def prop_pos(sentiment_score_list):
+    pos_sent = len([elem for elem in sentiment_score_list if elem >0])
+    neutral_sent = len([elem for elem in sentiment_score_list if elem ==0])
+    total_sent = len(sentiment_score_list)
+    neg_sent = total_sent - (pos_sent + neutral_sent)
+    prop_pos = round(pos_sent/total_sent, 3)
+    prop_neg = round(neg_sent/total_sent, 3)
+    prop_neut = round(neutral_sent/total_sent, 3)
+    return (prop_pos, prop_neut, prop_neg)
+
+# %%
+prop_sent = {k: prop_pos(v) for k,v in \
+             noun_chunk_sentiments.items()}
+    
