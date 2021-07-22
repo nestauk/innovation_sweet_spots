@@ -90,8 +90,10 @@ processed_articles = [nlp(article) for article in clean_article_text]
 #%%
 # To do: persist article sentences, as they form the corpus for further analysis
 article_sentences = [[sent.text for sent in article.sents] for article in processed_articles]
+
 with open(os.path.join(DISC_OUTPUTS_DIR, 'article_sentences.pkl'), "wb") as outfile:
         pickle.dump(article_sentences, outfile)
+
 flat_article_sentences = [item for sublist in article_sentences for item in sublist]
 flat_article_sentences = list(set(flat_article_sentences))
 #%%
@@ -188,18 +190,6 @@ sorted_sent = sorted(noun_chunk_agg_sent.items(),
                      reverse = True)
 
 # %% Analyse presence of noun chunks in positive and negative sentences
-
-def prop_pos(sentiment_score_list):
-    pos_sent = len([elem for elem in sentiment_score_list if elem >0])
-    neutral_sent = len([elem for elem in sentiment_score_list if elem ==0])
-    total_sent = len(sentiment_score_list)
-    neg_sent = total_sent - (pos_sent + neutral_sent)
-    prop_pos = round(pos_sent/total_sent, 3)
-    prop_neg = round(neg_sent/total_sent, 3)
-    prop_neut = round(neutral_sent/total_sent, 3)
-    return (prop_pos, prop_neut, prop_neg)
-
-# %%
-prop_sent = {k: prop_pos(v) for k,v in \
+prop_sent = {k: disc.prop_pos(v) for k,v in \
              noun_chunk_sentiments.items()}
     
