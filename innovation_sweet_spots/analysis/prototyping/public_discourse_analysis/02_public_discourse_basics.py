@@ -61,7 +61,7 @@ articles = guardian.search_content(search_term)
 # ## 2.1 Review most common article categories
 
 article_categories = [article['sectionName'] for article in articles]
-category_count = sorted(Counter(article_categories).items(), 
+category_count = sorted(collections.Counter(article_categories).items(), 
                         key = lambda x: x[1], 
                         reverse=True)
 
