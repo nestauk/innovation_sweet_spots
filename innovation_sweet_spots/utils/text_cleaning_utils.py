@@ -19,13 +19,14 @@ nltk.download("wordnet")
 # Hardcoded rules for dealing with punctuation marks and other custom symbols
 punctuation_replacement_rules = {
     # old patterns: replacement pattern
-    "[\u2022,\u2023,\u25E6,\u2043,\u2219\:]": ",",  # Convert bullet points to commas
+    "[\u2022,\u2023,\u25E6,\u2043,\u2219\:]": ".",  # Convert bullet points to full stops
     r"[-/\\]": " ",  # Convert colon, hyphens and forward and backward slashes to spaces
     r"’": "'",  # Standardise single quote
     r"[^a-zA-Z0-9,.;' #(++)]": "",  # Preserve spaces, commas, full stops, semicollons, and single quotes for discerning noun chunks
     r"\s\(": ", ",  # Replace open parentheses with comma
     r"\)\s": r", ",  # Replace closing parentheses followed by sapce, with commas
     r"(\))(?!\s)": r"",  # Remove closing parentheses not followed by space
+    r"\s\;": ".",  # Replace semicolons with full stops
     r"\.{2,}": ".",  # Replace multiple periods with one
     # r"[\x60, \xe2\x80\x98,\xe2\x80\x99, \xe2\x80\x9b]": "'",  # Catch funny single quotes
     # r"[„“]|(\'\')|(,,)": '"',  # Standardise double quotes
