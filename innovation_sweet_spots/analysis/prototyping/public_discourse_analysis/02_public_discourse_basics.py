@@ -49,10 +49,11 @@ import pickle
 import os
 from itertools import groupby
 # %%
-TAGS = ['p', 'h2']
 # OUTPUTS_CACHE = OUTPUT_DATA_PATH / ".cache"
 DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "discourse_analysis_outputs"
 DISC_OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+TAGS = ['p', 'h2']
+
 # %% [markdown]
 # ## 2. Fetching relevant Guardian articles
 
@@ -69,6 +70,13 @@ sorted_articles = sorted(articles, key = lambda x: x['webPublicationDate'][:4])
 articles_by_year = collections.defaultdict(list)
 for k,v in groupby(sorted_articles,key=lambda x:x['webPublicationDate'][:4]):
     articles_by_year[k] = list(v)
+# %%
+# generate mapping of articles to IDs and original urls
+id_map = collections.defaultdict(dict)
+for year, articles in articles_by_year.items():
+    for ix, article in enumerate(articles):
+        record_id = (ix, article['id'], article['webUrl'])
+        id_map[year][ix] = record_id
 
 # %% [markdown]
 # ### 2.1 Mentions in the news
@@ -85,33 +93,44 @@ print(f"The top 10 categories of articles in 2019 were:\n{top10_across_years['20
 
 
 # %% [markdown]
-# ## 3. Cleaning and pre-processing article text
+# ## 3. Preparing articles for further analysis
 
 # %%
-# 3.1 Extracting content from specified html tags to avoid irrelevant in-text links 
-# to other articles
+# Extract text from html
 
-article_segments = disc.get_text_segments(articles, TAGS)
-article_text = [' '.join(segment) for segment in article_segments]
+article_text_by_year = {y: disc.get_article_text(v, TAGS) for y,v in articles_by_year.items()}
 
-# %%
-# 3.2 Cleaning content
+combined = collections.defaultdict(dict)
+for year, articles in article_text_by_year.items():
+    combined_record = list(zip(article_text_by_year[year], id_map[year].values()))
+    combined[year] = combined_record
 
-# This involves minimal cleaning (keeping punctuation and stopwords, no lemmatisation)
-clean_article_text = [tcu.clean_text_minimal(article) for article in article_text]
 
 # %%
-# 3.3 Extracting sentences
+# Generate clean corpus of sentences.
 # nlp = spacy.load("en_core_web_sm")
 
-processed_articles = [nlp(article) for article in clean_article_text]
+
+# Cleaning is minimal (keeping punctuation and stopwords, no lemmatisation)
+sentences_by_year = collections.defaultdict(dict)
+for year, articles in combined.items():
+    sentences = generate_sentence_corpus([art[0] for art in combined[year]], nlp)
+    sentences_with_record = list(zip(sentences, [art[1] for art in articles]))
+    sentences_by_year[year] = sentences_with_record
+
+# Persist sentence corpus to disk
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year.pkl'), "wb") as outfile:
+        pickle.dump(sentences_by_year, outfile)
+
+# %% [markdown]
+# ## 4. Evaluating sentiment around search terms
 
 # %%
-# To do: persist article sentences, as they form the corpus for further analysis
-article_sentences = [[sent.text for sent in article.sents] for article in processed_articles]
+# Calculate sentiment in a context around search term for each year
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'article_sentences.pkl'), "wb") as outfile:
-        pickle.dump(article_sentences, outfile)
+sentiments_by_year = 
+
+aggregated_sentiment_by_year
 
 flat_article_sentences = [item for sublist in article_sentences for item in sublist]
 flat_article_sentences = list(set(flat_article_sentences))
