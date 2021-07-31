@@ -42,8 +42,6 @@ from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
 
 # %%
 import spacy
-from sklearn.feature_extraction.text import CountVectorizer
-import numpy as np
 import collections
 import pickle
 import os
@@ -113,126 +111,132 @@ for year, articles in article_text_by_year.items():
 
 # Cleaning is minimal (keeping punctuation and stopwords, no lemmatisation)
 sentences_by_year = collections.defaultdict(dict)
+processed_articles_by_year = collections.defaultdict(dict) # spacy corpus of articles
 for year, articles in combined.items():
-    sentences = generate_sentence_corpus([art[0] for art in combined[year]], nlp)
+    sentences, processed_articles = disc.generate_sentence_corpus\
+        ([art[0] for art in combined[year]], nlp)
     sentences_with_record = list(zip(sentences, [art[1] for art in articles]))
     sentences_by_year[year] = sentences_with_record
+    processed_articles_by_year[year] = processed_articles
 
 # Persist sentence corpus to disk
 with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year.pkl'), "wb") as outfile:
         pickle.dump(sentences_by_year, outfile)
 
 # %% [markdown]
-# ## 4. Evaluating sentiment around search terms
-
+# ## 4. Evaluating sentiment around search terms for a given year
 # %%
-# Calculate sentiment in a context around search term for each year
-
-sentiments_by_year = 
-
-aggregated_sentiment_by_year
-
-flat_article_sentences = [item for sublist in article_sentences for item in sublist]
-flat_article_sentences = list(set(flat_article_sentences))
-# %%
-# Relevant articles
-sentence_mentions = [[sent for sent in art if search_term in sent] for art in article_sentences]
-flat_sentence_mentions = [item for sublist in sentence_mentions for item in sublist]
-# %%
-# 3.4 Extract noun chunks related to search term
-noun_chunks = []
-for article in processed_articles:
-    for chunk in article.noun_chunks:
-        noun_chunks.append(chunk)
-        # print(chunk)
-
-noun_chunks_str = [str(elem) for elem in noun_chunks]
-dedup_noun_chunks = list(set(noun_chunks_str))
-
-# %%
-# 3.5 Tokenize and extract ngrams
-# Filter out stopwords, punctuation, etc. and certain entities
-# Use sentence as a unit of analysis
-tokenised = [tpu.process_text_disc(doc) for doc in nlp.pipe(flat_article_sentences)]
-
-# %%
-# Extract ngrams
-count_model = CountVectorizer(tokenizer = disc.identity_tokenizer,
-                              lowercase = False, 
-                              ngram_range=(1,3),
-                              min_df = 5) # default unigram model
-X = count_model.fit_transform(tokenised)
-Xc = (X.T * X) # this is co-occurrence matrix in sparse csr format
-Xc.setdiag(0)
-
-# %%
-vocab = count_model.vocabulary_
-names = count_model.get_feature_names()
-count_list = X.toarray().sum(axis=0)
-count_dict = dict(zip(names,count_list))
-
-# %%
-# Calculate PPMI
-# ngrams = np.sum(Xc.todense())/2
-search_index = names.index(search_term)
-
-# %%
-# Revisited calculation of PMI defining context as a sentence
-pmis = {}
-for ix, name in enumerate(names):
-    association = disc.pmi(np.sum(X[:, search_index]),
-                  np.sum(X[:, ix]),
-                  Xc[search_index, ix],
-                  len(flat_article_sentences),
-                  len(flat_article_sentences))
-    pmis[name] = association
+year_flat_sentences = collections.defaultdict(list)
+year_sentence_records = collections.defaultdict(list)
+for year in articles_by_year:
+    year_articles = [elem[0] for elem in sentences_by_year[given_year]]
+    year_article_records = {elem[1][0]: (elem[1][1], elem[1][2]) for elem in sentences_by_year[given_year]}
     
-pruned_pmis = {k:v for k,v in pmis.items() if v >0}
+    sentences_with_term = [[sent for sent in art if search_term in sent] for art in year_articles]
+    
+    flat_sentences_with_ix = []
+    for ix, sentences in enumerate(sentences_with_term):
+        for sentence in sentences:
+            flat_sentences_with_ix.append((ix, sentence))
+        
+    
+    flat_sentences = [item[1] for item in flat_sentences_with_ix]
+    sentence_records = [year_article_records[elem[0]] for elem in flat_sentences_with_ix]
+    
+    year_flat_sentences[year] = flat_sentences
+    year_sentence_records[year] = sentence_records
+# %%
+# Sentiment for different types of context
+
+# Whole sentence
+sentence_sentiments = disc.calculate_sentiment(year_articles,
+                                               search_term, 
+                                               context = 'sentence')
+
+sentence_sentiments['url'] = [elem[1] for elem in sentence_records] # can add guardian ID too
 
 # %%
-# 3.6 Identiy noun chunk associations
-# Remove determiners in noun chunks to increase number of matches
-dedup_noun_chunks = [elem.replace(' a ', ' ').replace(' the ',' ') for elem in dedup_noun_chunks]
-dedup_noun_chunks = [elem.strip() for elem in dedup_noun_chunks]
+# Window of n words to the left and right of the search term
+word_window_sentiments = disc.calculate_sentiment(year_articles,
+                                               search_term, 
+                                               context = 'n_words', 
+                                               n_words = 5)
+
+word_window_sentiments['url'] = [elem[1] for elem in sentence_records] # can add guardian ID too
+# %%
+# Phrase containing search term (using dependency subtrees)
+phrase_sentiments = disc.calculate_sentiment(year_articles,
+                                               search_term, 
+                                               context = 'phrase', 
+                                               nlp)
+
+phrase_sentiments['url'] = [elem[1] for elem in sentence_records] # can add guardian ID too
+
+# %% [markdown]
+# ## 5. Identifying most relevant terms
+# %%
+# Identifying terms that often co-occur with search term using PMI
+
+# First identify noun chunks
+year_sentences = [sent for art in year_articles for sent in art]
+given_year_nouns_chunks = disc.get_noun_chunks(processed_articles_by_year[given_year], nlp)
+
+# %%
+# Then get terms with positive PMI
+tokenised_sentences = disc.get_spacy_tokens(year_sentences, nlp)
+
+cooccurrence_matrix, doc_term_matrix, token_names, token_counts = disc.get_ngrams(\
+                                                    tokenised_sentences,
+                                                    token_range = (1,3), 
+                                                    min_mentions = 3)
+
+# %%
+# Calculate PMI defining sentence as a context
+pmis = disc.calculate_positive_pmi(cooccurrence_matrix, 
+                                          doc_term_matrix, 
+                                          token_names, 
+                                          token_counts,
+                                          search_term)
 
 
-pruned_noun_chunks = [elem for elem in dedup_noun_chunks if elem in names]
-pruned_noun_chunks = [elem for elem in pruned_noun_chunks if count_dict.get(elem, 0) > 3]
+# %%
+# Identify most relevant noun phrases
+key_related_terms = disc.get_related_terms(given_year_nouns_chunks, 
+                                    pmis, 
+                                    token_names, 
+                                    token_counts, 
+                                    min_mentions = 3)
 
+# Add normalised cooccurrence rank
+normalised_ranks = disc.get_normalised_rank(cooccurrence_matrix, token_names, 
+                                             token_counts, search_term, 
+                                             threshold =3)
 
-chunk_pmi = {chunk: pruned_pmis.get(chunk, 0) for chunk in pruned_noun_chunks}
-chunk_pmis = {k:v for k,v in chunk_pmi.items() if v >0}
-
-# Below need to remove noun chunks with any terms from the search term 
-# contains_search_term = []
-# for noun_chunk in pruned_noun_chunks:
-#     for substring in search_term.split():
-#         if substring in noun_chunk:
-#             contains_search_term.append(noun_chunk)
-
+# sorted(normalised_ranks.items(), key = lambda x: x[1])[:20]
+# Add comparison of standard deviation of normalised ranks over time
 # %%
 # Study sentiment around noun chunks in sentences
-sentence_sentiment = iss.get_sentence_sentiment(flat_article_sentences)
+# sentence_sentiment = iss.get_sentence_sentiment(flat_article_sentences)
 
 # %%
 # Link noun chunks with high association to sentence sentiment
 
-noun_chunk_sentiments = collections.defaultdict(list)
-for ix, row in sentence_sentiment.iterrows():
-    for noun_chunk in chunk_pmis:
-        # print(noun_chunk)
-        if noun_chunk in row['sentences']:
-            noun_chunk_sentiments[noun_chunk].append(row['compound'])
+# noun_chunk_sentiments = collections.defaultdict(list)
+# for ix, row in sentence_sentiment.iterrows():
+#     for noun_chunk in chunk_pmis:
+#         # print(noun_chunk)
+#         if noun_chunk in row['sentences']:
+#             noun_chunk_sentiments[noun_chunk].append(row['compound'])
 
 # %%
 # Calculate average sentiment for noun chunks
-noun_chunk_agg_sent = {k: np.mean(v) for k,v in noun_chunk_sentiments.items()}
+# noun_chunk_agg_sent = {k: np.mean(v) for k,v in noun_chunk_sentiments.items()}
 
-sorted_sent = sorted(noun_chunk_agg_sent.items(), 
-                     key = lambda x: x[1], 
-                     reverse = True)
+# sorted_sent = sorted(noun_chunk_agg_sent.items(), 
+#                      key = lambda x: x[1], 
+#                      reverse = True)
 
 # %%
-prop_sent = {k: disc.prop_pos(v) for k,v in \
-             noun_chunk_sentiments.items()}
+# prop_sent = {k: disc.prop_pos(v) for k,v in \
+#              noun_chunk_sentiments.items()}
 
