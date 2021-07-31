@@ -164,10 +164,18 @@ def get_phrase(sentence, search_term, nlp_model):
     lens = {ix: len(elem) for ix, elem in enumerate(subtrees)}
     if len(lens) >1:
         target_ix = sorted(lens.items(), key = lambda x: x[1], reverse = True)[1]
-        phrase = ' '.join(subtrees[target_ix[0]])
-        phrase = tcu.remove_punctuation(phrase)
-        phrase = tcu.clean_up(phrase)
-        return phrase
+        # phrase = ' '.join(subtrees[target_ix[0]])
+        phrase_start = subtrees[target_ix[0]][0]
+        phrase_end = subtrees[target_ix[0]][-1]
+        sentence = tcu.clean_up(tcu.remove_punctuation(sentence))
+        start_ix = sentence.split().index(phrase_start)
+        end_ix = sentence.split().index(phrase_end)
+        corresponding_sent = ' '.join(sentence.split()[start_ix:end_ix+1])
+
+        # phrase = tcu.remove_punctuation(phrase)
+        # phrase = tcu.clean_up(phrase)
+        # phrase_start = phrase[0]
+        return corresponding_sent
     else:
         return sentence # this means that there isn't a proper subtree for search term
 
