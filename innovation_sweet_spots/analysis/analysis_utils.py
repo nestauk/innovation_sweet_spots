@@ -328,13 +328,27 @@ def estimate_funding_level(
 
 
 def estimate_growth_level(
-    yearly_stats: pd.DataFrame, year_cycle: int = 5, column: str = "amount_total"
+    yearly_stats: pd.DataFrame,
+    year_cycle: int = 5,
+    column: str = "amount_total",
+    growth_rate: bool = False,
 ):
     """Compare two time periods (year cycles) and estimate growth percentage"""
     first_cycle = yearly_stats.iloc[-year_cycle * 2 : -year_cycle][column].sum()
     second_cycle = yearly_stats.iloc[-year_cycle:][column].sum()
-    growth = (second_cycle - first_cycle) / first_cycle * 100
+    with np.errstate(divide="ignore", invalid="ignore"):
+        if growth_rate:
+            growth = second_cycle / first_cycle
+        else:
+            growth = (second_cycle - first_cycle) / first_cycle * 100
     return growth
+
+
+# def estimte_growth_level_linear(
+#     yearly_stats: pd.DataFrame,
+#     year_cycle: int = 5,
+#     column: str = "amount_total",
+# ):
 
 
 def link_gtr_projects_and_orgs(
@@ -457,12 +471,12 @@ def get_cb_org_funding_rounds(
     return fund_rounds
 
 
-def check_currencies(fund_rounds):
+def check_currencies(fund_rounds, verbose=False):
     """# Check if there are different currencies present"""
     currencies = fund_rounds[
         -fund_rounds.raised_amount_currency_code.isnull()
     ].raised_amount_currency_code.unique()
-    if len(currencies) > 1:
+    if verbose and (len(currencies) > 1):
         logging.warning(f"More than one unique currency: {list(currencies)}")
 
 

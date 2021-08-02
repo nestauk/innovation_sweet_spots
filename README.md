@@ -46,6 +46,13 @@ In case of the news dataset, we're not downloading any large data beforehand. In
 - Specify the path to this file in `.env` file, by adding a new line with `export GUARDIAN_API_KEY=path/to/file`
 - Use the functionalities in `innovation_sweet_spots.getters.guardian`
 
+## Usage
+
+- `pipeline/green_documents.py` Find green documents and tokenise
+- `pipeline/top2vec_green_projects.py` Find coherent categories of green GTR projects
+- `pipeline/give_topics_names.py` Generate wikipedia labels
+- `pipeline/`
+
 ## Contributor guidelines
 
 [Technical and working style guidelines](https://github.com/nestauk/ds-cookiecutter/blob/master/GUIDELINES.md)

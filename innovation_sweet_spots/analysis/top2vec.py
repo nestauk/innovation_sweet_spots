@@ -406,6 +406,7 @@ class Top2Vec:
             self.doc2vec_args["hs"] = 0
             self.doc2vec_args["negative"] = 5
             self.doc2vec_args["epochs"] = 1
+
         self.doc2vec_args["seed"] = self.doc2vec_seed
 
     def prepare_corpus_file(self, tokenizer, documents):
@@ -1382,11 +1383,13 @@ class Top2Vec:
             tokenizer for document embedding.
         """
         # if tokenizer is not passed use default
-        if tokenizer is None:
+        if tokenizer == "preprocessed":
+            tokenizer = lambda x: x
+        elif tokenizer is None:
             tokenizer = default_tokenizer
 
         # add documents
-        self._validate_documents(documents)
+        # self._validate_documents(documents)
         if self.documents is not None:
             self.documents = np.append(self.documents, documents)
 
