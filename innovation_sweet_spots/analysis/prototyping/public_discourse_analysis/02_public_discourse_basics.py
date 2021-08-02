@@ -46,6 +46,7 @@ import collections
 import pickle
 import os
 from itertools import groupby
+import pandas as pd
 # %%
 # OUTPUTS_CACHE = OUTPUT_DATA_PATH / ".cache"
 DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "discourse_analysis_outputs"
@@ -77,13 +78,13 @@ for year, articles in articles_by_year.items():
         id_map[year][ix] = record_id
 
 # %% [markdown]
-# ### 2.1 Mentions in the news
+# #### 2.1 Mentions in the news
 
 # %%
 disc.show_num_articles(disc.get_num_articles(articles_by_year))
 
 # %% [markdown]
-# ### 2.2 Review most common article categories for each year
+# #### 2.2 Review most common article categories for each year
 
 # %%
 top10_across_years = disc.get_top_n_categories(articles_by_year)
@@ -129,8 +130,8 @@ with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year.pkl'), "wb") as outf
 year_flat_sentences = collections.defaultdict(list)
 year_sentence_records = collections.defaultdict(list)
 for year in articles_by_year:
-    year_articles = [elem[0] for elem in sentences_by_year[given_year]]
-    year_article_records = {elem[1][0]: (elem[1][1], elem[1][2]) for elem in sentences_by_year[given_year]}
+    year_articles = [elem[0] for elem in sentences_by_year[year]]
+    year_article_records = {elem[1][0]: (elem[1][1], elem[1][2]) for elem in sentences_by_year[year]}
     
     sentences_with_term = [[sent for sent in art if search_term in sent] for art in year_articles]
     
@@ -149,28 +150,43 @@ for year in articles_by_year:
 # Sentiment for different types of context
 
 # Whole sentence
-sentence_sentiments = disc.calculate_sentiment(year_articles,
-                                               search_term, 
-                                               context = 'sentence')
+sentiments_all_years = []
+for year in year_flat_sentences:
+    # Sentence
+    sentiments = disc.calculate_sentiment(year_flat_sentences[year],
+                                                   search_term, 
+                                                   context = 'sentence')
+    
+    # # Window of n words to the left and right of the search term
+    # sentiments = disc.calculate_sentiment(year_flat_sentences[year],
+    #                                            search_term, 
+    #                                            context = 'n_words', 
+    #                                            n_words = 5)
+    
+    # # Phrase containing search term (using dependency subtrees)
+    # sentiments = disc.calculate_sentiment(year_flat_sentences[year],
+    #                                            search_term, 
+    #                                            context = 'phrase', 
+    #                                            nlp)
+    
+    sentiments['url'] = [elem[1] for elem in year_sentence_records[year]] # can add guardian ID too
+    sentiments['year'] = year
+    sentiments_all_years.append(sentiments)
 
-sentence_sentiments['url'] = [elem[1] for elem in sentence_records] # can add guardian ID too
+sentiments_across_years_df = pd.concat(sentiments_all_years)
 
 # %%
-# Window of n words to the left and right of the search term
-word_window_sentiments = disc.calculate_sentiment(year_articles,
-                                               search_term, 
-                                               context = 'n_words', 
-                                               n_words = 5)
+sentiments_across_years_df.head()
 
-word_window_sentiments['url'] = [elem[1] for elem in sentence_records] # can add guardian ID too
 # %%
-# Phrase containing search term (using dependency subtrees)
-phrase_sentiments = disc.calculate_sentiment(year_articles,
-                                               search_term, 
-                                               context = 'phrase', 
-                                               nlp)
+# Produce aggregate sentiment stats over years
+agg_sentiments = sentiments_across_years_df.groupby('year').agg({'neg': 'mean', 
+                                                                 'neu': 'mean', 
+                                                                 'pos': 'mean', 
+                                                                 'compound': 'mean'})
 
-phrase_sentiments['url'] = [elem[1] for elem in sentence_records] # can add guardian ID too
+# %%
+agg_sentiments
 
 # %% [markdown]
 # ## 5. Identifying most relevant terms
@@ -178,65 +194,95 @@ phrase_sentiments['url'] = [elem[1] for elem in sentence_records] # can add guar
 # Identifying terms that often co-occur with search term using PMI
 
 # First identify noun chunks
-year_sentences = [sent for art in year_articles for sent in art]
-given_year_nouns_chunks = disc.get_noun_chunks(processed_articles_by_year[given_year], nlp)
+year_noun_chunks = collections.defaultdict(list)
+for year in articles_by_year:
+    year_articles = [elem[0] for elem in sentences_by_year[year]]
+    year_sentences = [sent for art in year_articles for sent in art]
+    noun_chunks = disc.get_noun_chunks(processed_articles_by_year[year], nlp)
+    year_noun_chunks[year] = noun_chunks
 
 # %%
-# Then get terms with positive PMI
-tokenised_sentences = disc.get_spacy_tokens(year_sentences, nlp)
+# Persist noun chunks to disk
+with open(os.path.join(DISC_OUTPUTS_DIR, 'year_noun_chunks.pkl'), "wb") as outfile:
+        pickle.dump(year_noun_chunks, outfile)
 
-cooccurrence_matrix, doc_term_matrix, token_names, token_counts = disc.get_ngrams(\
+# %%
+related_terms = collections.defaultdict(list)
+normalised_ranks = collections.defaultdict(list)
+
+
+for year in articles_by_year:
+    year_articles = [elem[0] for elem in sentences_by_year[year]]
+    year_sentences = [sent for art in year_articles for sent in art]
+    noun_chunks = year_noun_chunks[year]
+    
+    # Then get terms with positive PMI
+    tokenised_sentences = disc.get_spacy_tokens(year_sentences, nlp)
+
+    cooccurrence_matrix, doc_term_matrix, token_names, token_counts = disc.get_ngrams(\
                                                     tokenised_sentences,
                                                     token_range = (1,3), 
                                                     min_mentions = 3)
 
-# %%
-# Calculate PMI defining sentence as a context
-pmis = disc.calculate_positive_pmi(cooccurrence_matrix, 
-                                          doc_term_matrix, 
-                                          token_names, 
-                                          token_counts,
-                                          search_term)
+    # Calculate PMI defining sentence as a context
+    pmis = disc.calculate_positive_pmi(cooccurrence_matrix, 
+                                              doc_term_matrix, 
+                                              token_names, 
+                                              token_counts,
+                                              search_term)
 
+    # Identify most relevant noun phrases
+    key_related_terms = disc.get_related_terms(noun_chunks, 
+                                        pmis, 
+                                        token_names, 
+                                        token_counts, 
+                                        min_mentions = 3)
 
-# %%
-# Identify most relevant noun phrases
-key_related_terms = disc.get_related_terms(given_year_nouns_chunks, 
-                                    pmis, 
-                                    token_names, 
-                                    token_counts, 
-                                    min_mentions = 3)
+    # Add normalised cooccurrence rank
+    normalised_rank = disc.get_normalised_rank(cooccurrence_matrix, token_names, 
+                                                 token_counts, search_term, 
+                                                 threshold =3)
 
-# Add normalised cooccurrence rank
-normalised_ranks = disc.get_normalised_rank(cooccurrence_matrix, token_names, 
-                                             token_counts, search_term, 
-                                             threshold =3)
-
-# sorted(normalised_ranks.items(), key = lambda x: x[1])[:20]
-# Add comparison of standard deviation of normalised ranks over time
-# %%
-# Study sentiment around noun chunks in sentences
-# sentence_sentiment = iss.get_sentence_sentiment(flat_article_sentences)
+    # sorted(normalised_ranks.items(), key = lambda x: x[1])[:20]
+    # Add comparison of standard deviation of normalised ranks over time
+    
+    related_terms[year] = list(key_related_terms.items())
+    normalised_ranks[year] = list(normalised_rank.items())
 
 # %%
-# Link noun chunks with high association to sentence sentiment
-
-# noun_chunk_sentiments = collections.defaultdict(list)
-# for ix, row in sentence_sentiment.iterrows():
-#     for noun_chunk in chunk_pmis:
-#         # print(noun_chunk)
-#         if noun_chunk in row['sentences']:
-#             noun_chunk_sentiments[noun_chunk].append(row['compound'])
+# Write to disk
+with open(os.path.join(DISC_OUTPUTS_DIR, 'related_terms.pkl'), "wb") as outfile:
+        pickle.dump(related_terms, outfile)
+        
+with open(os.path.join(DISC_OUTPUTS_DIR, 'normalised_ranks.pkl'), "wb") as outfile:
+        pickle.dump(normalised_ranks, outfile)     
 
 # %%
-# Calculate average sentiment for noun chunks
-# noun_chunk_agg_sent = {k: np.mean(v) for k,v in noun_chunk_sentiments.items()}
-
-# sorted_sent = sorted(noun_chunk_agg_sent.items(), 
-#                      key = lambda x: x[1], 
-#                      reverse = True)
+sorted(key_related_terms.items(), key = lambda x: x[1], reverse = True)[:50]
 
 # %%
-# prop_sent = {k: disc.prop_pos(v) for k,v in \
-#              noun_chunk_sentiments.items()}
+list(normalised_rank.items())[:50]
 
+# %% [markdown]
+# ## Appendix
+
+# %%
+# Illustration of subtree phrase extraction
+sample_sentence = "switching heating from gas to electricity would mean relying on heat pumps."
+print(disc.get_phrase(sample_sentence, 'heat pumps', nlp_model = None))
+
+# %%
+sample_sentence = "heating remains a major source of carbon and the government plans to open a grant scheme from april 2022 to help households and small businesses invest in heat pumps and biomass boilers, backed by 100m of exchequer funding."
+print(disc.get_phrase(sample_sentence, 'heat pumps', nlp_model = None))
+
+# %%
+from spacy import displacy
+
+# %%
+nlp = spacy.load("en_core_web_sm")
+
+# %%
+displacy.serve(nlp(sample_sentence), style="dep")
+
+
+# %%
