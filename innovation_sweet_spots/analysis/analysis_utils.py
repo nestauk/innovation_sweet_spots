@@ -648,6 +648,19 @@ def articles_table(articles: Iterator[dict]):
     return df
 
 
+def get_sentence_sentiment_modified(sentence: Iterator[str], vader_exceptions) -> pd.DataFrame:
+    """Calculates sentiment for each sentence in the list, and sorts them"""
+    analyzer = SentimentIntensityAnalyzer()
+    # replacements = {' a ': ' ', 
+    #                     ' an ': ' ',
+    #                     ' the ': ' '}
+    # Remove words that should be neutral for the purposes of our analysis (e.g. energy)
+    for word, replacement in vader_exceptions.items():
+        sentence = sentence.replace(word, replacement)
+    sentiment = analyzer.polarity_scores(sentence)
+    return sentiment
+
+
 """
 TODO:
 
