@@ -18,10 +18,19 @@ from innovation_sweet_spots.analysis import analysis_utils as iss
 
 from sklearn.feature_extraction.text import CountVectorizer
 import numpy as np
+import pickle
+from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
+import os
 
 
 
 DEF_LANGUAGE_MODEL = {"model": "en_core_web_sm", "disable": ["tok2vec"]}
+DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "discourse_analysis_outputs"
+
+with open(os.path.join(DISC_OUTPUTS_DIR, 'vader_exceptions.pkl'), "rb") as infile:
+        vader_exceptions = pickle.load(infile)
+
+vader_replacements = {elem: ' ' for elem in vader_exceptions}
 
 
 def extract_text_from_html(text, tags):
@@ -147,6 +156,7 @@ def get_window(sentence, n_words, search_term):
 
 
 def get_phrase(sentence, search_term, nlp_model):
+    sentence = tcu.clean_up(tcu.remove_punctuation(sentence))
     if nlp_model is None:
         nlp_model = tpu.setup_spacy_model(DEF_LANGUAGE_MODEL)
     matches = []
@@ -167,7 +177,6 @@ def get_phrase(sentence, search_term, nlp_model):
         # phrase = ' '.join(subtrees[target_ix[0]])
         phrase_start = subtrees[target_ix[0]][0]
         phrase_end = subtrees[target_ix[0]][-1]
-        sentence = tcu.clean_up(tcu.remove_punctuation(sentence))
         start_ix = sentence.split().index(phrase_start)
         end_ix = sentence.split().index(phrase_end)
         corresponding_sent = ' '.join(sentence.split()[start_ix:end_ix+1])
@@ -244,12 +253,16 @@ def calculate_sentiment(sentence_collection, search_term, context, n_words = Non
                         nlp_model = None):
     target_context = [define_context(sentence, context, n_words, search_term, nlp_model) for\
                        sentence in sentence_collection]
-    context_sentiment = iss.get_sentence_sentiment(target_context)
-    return context_sentiment
+    # context_sentiment = iss.get_sentence_sentiment(target_context)
+    context_sentiment = [iss.get_sentence_sentiment_modified(elem, vader_replacements) for\
+                         elem in target_context]
+    sentiment_df = pd.DataFrame(context_sentiment)
+    sentiment_df["context"] = target_context
+    return sentiment_df
 
 
 # Addressing determiner articles, but not stopwords
-def get_noun_chunks(spacy_corpus, nlp_model, remove_det_articles = True):
+def get_noun_chunks(spacy_corpus):
     noun_chunks = []
     for article in spacy_corpus:
         for chunk in article.noun_chunks:
