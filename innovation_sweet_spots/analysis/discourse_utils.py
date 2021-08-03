@@ -262,11 +262,11 @@ def calculate_sentiment(sentence_collection, search_term, context, n_words = Non
 
 
 # Addressing determiner articles, but not stopwords
-def get_noun_chunks(spacy_corpus):
+def get_noun_chunks(spacy_corpus, remove_det_articles = False):
     noun_chunks = []
     for article in spacy_corpus:
         for chunk in article.noun_chunks:
-            noun_chunks.append(chunk)
+            noun_chunks.append(chunk.lemma_)
             # print(chunk)
     
     noun_chunks_str = [str(elem) for elem in noun_chunks]
