@@ -114,7 +114,7 @@ def process_text_disc(doc: spacy.tokens.doc.Doc) -> list:
     drop_ents = [x.text for x in doc.ents if x.label_ in set(DROP_NERS_MIN)]
 
     no_ents = [
-        x for x in no_stops if all(x.text not in ent for ent in drop_ents)
+        x.lemma_ for x in no_stops if all(x.text not in ent for ent in drop_ents)
     ]
 
     return no_ents
