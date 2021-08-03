@@ -198,7 +198,7 @@ year_noun_chunks = collections.defaultdict(list)
 for year in articles_by_year:
     year_articles = [elem[0] for elem in sentences_by_year[year]]
     year_sentences = [sent for art in year_articles for sent in art]
-    noun_chunks = disc.get_noun_chunks(processed_articles_by_year[year], nlp)
+    noun_chunks = disc.get_noun_chunks(processed_articles_by_year[year])
     year_noun_chunks[year] = noun_chunks
 
 # %%
