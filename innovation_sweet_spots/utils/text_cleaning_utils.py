@@ -10,6 +10,7 @@ from toolz import pipe
 import re
 import nltk
 from functools import lru_cache
+import numpy as np
 
 nltk.download("stopwords")
 nltk.download("wordnet")
@@ -189,25 +190,28 @@ def clean_text_minimal(text, keep_punct=True):
     Args:
         text (str): Text to be processed via the pipeline
     """
-    if keep_punct is False:
-        return pipe(
-            text,
-            detect_sentences,
-            lowercase,
-            remove_punctuation,
-            # lemmatize_paragraph,
-            # remove_stopwords,
-            clean_up,
-        )
-    elif keep_punct is True:
-        return pipe(
-            text,
-            detect_sentences,
-            lowercase,
-            clean_punctuation,
-            # pad_punctuation,
-            # lemmatize_paragraph,
-            # remove_stopwords,
-            # unpad_punctuation,
-            clean_up,
-        )
+    if text is not np.nan:
+        if keep_punct is False:
+            return pipe(
+                text,
+                detect_sentences,
+                lowercase,
+                remove_punctuation,
+                # lemmatize_paragraph,
+                # remove_stopwords,
+                clean_up,
+            )
+        elif keep_punct is True:
+            return pipe(
+                text,
+                detect_sentences,
+                lowercase,
+                clean_punctuation,
+                # pad_punctuation,
+                # lemmatize_paragraph,
+                # remove_stopwords,
+                # unpad_punctuation,
+                clean_up,
+            )
+    else:
+        return('sentence is blank')
