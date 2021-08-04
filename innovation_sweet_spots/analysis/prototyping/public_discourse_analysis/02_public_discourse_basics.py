@@ -258,9 +258,11 @@ with open(os.path.join(DISC_OUTPUTS_DIR, 'normalised_ranks.pkl'), "wb") as outfi
         pickle.dump(normalised_ranks, outfile)     
 
 # %%
+# View top 50 terms with the highest pointwise mutual information in the most recent year
 sorted(key_related_terms.items(), key = lambda x: x[1], reverse = True)[:50]
 
 # %%
+# View top 50 terms with the highest normalised rank in the most recent year
 list(normalised_rank.items())[:50]
 
 # %% [markdown]
@@ -284,5 +286,3 @@ nlp = spacy.load("en_core_web_sm")
 # %%
 displacy.serve(nlp(sample_sentence), style="dep")
 
-
-# %%
