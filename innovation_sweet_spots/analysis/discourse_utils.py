@@ -463,7 +463,7 @@ def get_noun_chunks(spacy_corpus, remove_det_articles = False):
     noun_chunks = []
     for article in spacy_corpus:
         for chunk in article.noun_chunks:
-            noun_chunks.append(chunk.lemma_)
+            noun_chunks.append(chunk) #could change to chunk.lemma_ if needed 
 
     #convert spacy tokens to string
     noun_chunks_str = [str(elem) for elem in noun_chunks]
@@ -476,7 +476,7 @@ def get_noun_chunks(spacy_corpus, remove_det_articles = False):
 def get_spacy_tokens(sentence_collection, nlp_model):
     """
     Tokenise the corpus of sentences using spacy. Preprocessing includes:
-    lemmatisation, filtering of stopwords, punctuation and certain entities.
+    filtering of stopwords, punctuation and certain entities.
 
     Parameters
     ----------
@@ -722,10 +722,9 @@ def get_sentence_corpus(article_text_df, nlp_model):
     return(sentences_by_year, processed_articles_by_year, sentence_records)
 
 
-# NEEDS FIXING: str.contains returns matches of substring (e.g. theatre for 'heat')
 def get_flat_sentence_mentions(search_term, sentence_collection):
     """
-    Identify sentences that contain search_term.
+    Identify sentences that contain search_term using regex.
     Convert list of lists (i.e. lists of sentences in a given article) into
     a flat list of sentences.
 
@@ -739,11 +738,15 @@ def get_flat_sentence_mentions(search_term, sentence_collection):
     year_flat_sentences (dict): sentences with term in each year.
 
     """
+    base = r'{}'
+    expr = '(?:\s|^){}(?:,?\s|$)'
+    combined_expr = base.format(''.join(expr.format(search_term)))
     year_flat_sentences = dict()
     sentence_collection_df = pd.DataFrame(sentence_collection)
     sentence_collection_df.columns = ['sentence', 'id', 'year']
     for year, sentences in sentence_collection_df.groupby('year'):
-        sentences_with_term = sentences[sentences['sentence'].str.contains(search_term)]
+        sentences_with_term = sentences[sentences['sentence'].\
+                                        str.contains(combined_expr, regex = True)]
         year_flat_sentences[year] = sentences_with_term
     return year_flat_sentences
     
