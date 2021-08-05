@@ -16,6 +16,7 @@ import pickle
 from typing import Iterator
 from collections import Counter, defaultdict
 from sklearn.feature_extraction.text import CountVectorizer
+from textacy import extract
 
 from innovation_sweet_spots.utils import text_cleaning_utils as tcu
 from innovation_sweet_spots.utils import text_pre_processing as tpu
@@ -1034,3 +1035,92 @@ def agg_rank_dfs(term, norm_ranks, freq_threshold = 50):
     all_ranks = all_ranks[all_ranks['frequency']>freq_threshold]
     all_ranks= all_ranks.sort_values(by = ['term', 'year'])
     return all_ranks
+
+
+def get_svo_triples(sentence_collection, search_term, nlp_model):
+    """
+    Extract subject verb object triples from sentences using textacy.
+
+    Parameters
+    ----------
+    sentence_collection (list): list of sentences.
+    search_term (str): term of interest.
+    nlp_model (spacy.lang.en.English): spacy model used.
+
+    Returns
+    -------
+    svo_subject (list): phrases where search term acts as subject.
+    svo_object (list): phrases where search term acts as object.
+
+    """
+    
+    svo_subject = []
+    svo_object = []
+    
+    for sent in sentence_collection:
+        sent_svos = list(extract.triples.subject_verb_object_triples(nlp_model(sent)))
+        for svo in sent_svos:                
+            if set(search_term.split()).issubset(set([str(elem) for elem in svo.subject])):
+                svo_subject.append(svo)
+            if set(search_term.split()).issubset(set([str(elem) for elem in svo.object])):
+                svo_object.append(svo)
+                
+    return svo_subject, svo_object
+
+
+def get_svo_phrases(svo_subject, svo_object):
+    """
+    Convert textacy SVO triplets into phrases.
+
+    Parameters
+    ----------
+    svo_subject (list): list of SVO triplets
+    svo_object (list): list of SVO triplets
+
+    Returns
+    -------
+    subject_phrases (list): list of whole phrases
+    object_phrases (list): list of whole phrases
+
+    """
+    subject_phrases = []
+    for triple in svo_subject:
+        subj = ' '.join([str(elem) for elem in triple.subject])
+        verb = ' '.join([str(elem) for elem in triple.verb])
+        obj = ' '.join([str(elem) for elem in triple.object])
+        subject_phrase = ' '.join([subj, verb, obj])
+        subject_phrases.append(subject_phrase)
+        
+    subject_phrases = list(set(subject_phrases))
+    
+    object_phrases = []
+    for triple in svo_object:
+        subj = ' '.join([str(elem) for elem in triple.subject])
+        verb = ' '.join([str(elem) for elem in triple.verb])
+        obj = ' '.join([str(elem) for elem in triple.object])
+        object_phrase = ' '.join([subj, verb, obj])
+        object_phrases.append(object_phrase)
+    
+    object_phrases = list(set(object_phrases))
+    return subject_phrases, object_phrases
+
+
+def get_verbs(svo_list):
+    """
+    Obtain verbs from subject-verb-object triplets.
+
+    Parameters
+    ----------
+    svo_list (list): list of SVO triplets.
+
+    Returns
+    -------
+    flat_verbs (list): list of verbs
+
+    """
+    verbs = [svo.verb for svo in svo_list]
+    flat_verbs = list(set([elem for sublist in verbs for elem in sublist]))
+    flat_verbs = list(set([str(elem) for elem in flat_verbs]))
+    return flat_verbs
+    
+
