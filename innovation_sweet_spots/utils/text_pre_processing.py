@@ -10,6 +10,8 @@ from innovation_sweet_spots.analysis.text_analysis import setup_spacy_model
 
 DEF_LANGUAGE_MODEL = {"model": "en_core_web_sm", "disable": ["tok2vec"]}
 DROP_NERS = ["ORG", "DATE", "QUANTITY", "PERSON", "CARDINAL", "ORDINAL", "GPE", "LOC"]
+DROP_NERS_MIN = []
+
 
 
 def remove_newline(text):
@@ -94,3 +96,25 @@ def pre_process_corpus(text_corpus: list, nlp=None, **kwargs) -> list:
     tok_ngram, ngram_phraser = make_ngram(tokenised, **kwargs)
 
     return tok_ngram, ngram_phraser
+
+def process_text_disc(doc: spacy.tokens.doc.Doc) -> list:
+    """Adapted from process_text for discourse analysis
+    """
+
+    no_stops = [
+        x
+        for x in doc
+        if (x.is_stop is False)
+        & (x.is_punct is False)
+        & (x.is_digit is False)
+        & (x.like_url is False)
+        & (x.is_space is False)
+    ]
+
+    drop_ents = [x.text for x in doc.ents if x.label_ in set(DROP_NERS_MIN)]
+
+    no_ents = [
+        x for x in no_stops if all(x.text not in ent for ent in drop_ents)
+    ]
+
+    return no_ents

@@ -170,7 +170,7 @@ def get_sentence_sentiment(sentences: Iterator[str]) -> pd.DataFrame:
     # Optional: output as a dataframe
     sentiment_df = pd.DataFrame(sentiments)
     sentiment_df["sentences"] = sentences
-    sentiment_df = sentiment_df.sort_values("compound")
+    # sentiment_df = sentiment_df.sort_values("compound")
     return sentiment_df
 
 
@@ -253,7 +253,7 @@ def nicer_axis(fig):
     )
 
 
-### GTR specific utils
+### GTR specific utils
 
 
 def link_gtr_projects_and_funds(
