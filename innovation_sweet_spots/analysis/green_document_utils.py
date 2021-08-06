@@ -105,6 +105,7 @@ def find_green_gtr_projects_by_keywords(
     green_ids = []
     # For each keyword, find all documents where the keyword is present
     logging.info(f"Searching {len(keywords)} key terms across {len(docs)} documents")
+    # Should perhaps add a case where the term is present in the title (and that's enough)
     for keyword in keywords:
         df = iss.is_term_present_in_sentences(
             keyword, docs.project_text.to_list(), min_mentions

@@ -64,7 +64,7 @@ def get_doc_details(clustering: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
 
     """
-
+    # GTR projects
     gtr_projects = gtr.get_gtr_projects()[
         ["project_id", "title", "abstractText"]
     ].rename(
@@ -74,9 +74,17 @@ def get_doc_details(clustering: pd.DataFrame) -> pd.DataFrame:
             "abstractText": "description",
         }
     )
-    ##### To do: Add long description in there as well
+
+    # CB projects
+    cb_df = crunchbase.get_crunchbase_orgs_full()[
+        ["id", "name", "short_description", "long_description"]
+    ]
+    cb_df_texts = iss.create_documents_from_dataframe(
+        cb_df, ["short_description", "long_description"], lambda x: x
+    )
+    cb_df["description"] = cb_df_texts
     cb_orgs = (
-        crunchbase.get_crunchbase_orgs_full()[["id", "name", "short_description"]]
+        cb_df[["id", "name", "description"]]
         .drop_duplicates("id")
         .rename(
             columns={
@@ -86,10 +94,11 @@ def get_doc_details(clustering: pd.DataFrame) -> pd.DataFrame:
             }
         )
     )
+    cb_orgs["source"] = "cb"
 
-    # if "source" not in clustering.columns:
-    #     green_country_orgs["source"] = "cb"
-    #     gtr_projects["source"] = "gtr"
+    if "source" not in clustering.columns:
+        gtr_projects["source"] = "gtr"
+        cb_orgs["source"] = "cb"
     combined_df = pd.concat([gtr_projects, cb_orgs], axis=0, ignore_index=True)
     clustering_details = clustering.merge(combined_df, on="doc_id", how="left")
     del combined_df
@@ -110,7 +119,7 @@ def get_wiki_topic_labels(run):
 
 
 def get_clustering(run):
-    return pd.read_csv(PROJECT_DIR / f"outputs/data/gtr/top2vec_clusters_{run}.csv")
+    return pd.read_csv(PROJECT_DIR / f"outputs/data/top2vec_clusters_{run}.csv")
 
 
 # def get_cluster_counts(clusterings, cluster_col="cluster_id"):
@@ -519,7 +528,7 @@ def get_cluster_stats(clustering_reduced):
     return cluster_stats
 
 
-def get_higher_level_topics(clustering_reduced_stats, level):
+def get_higher_level_topics(clustering_reduced_stats, clustering_reduced, level):
     """Adds higher level cluster topics"""
     all_clust_columns = [cluster_col_name(level) for level in range(1, level + 1)] + [
         keywords_col_name(level) for level in range(1, level + 1)
@@ -648,7 +657,9 @@ def get_full_keywords_table(clustering_reduced, level=3):
 def prep_cluster_table(clustering_reduced_stats, clustering_reduced, level):
     cluster_source_counts = get_cluster_source_counts(clustering_reduced, level)
     df = (
-        get_higher_level_topics(clustering_reduced_stats, level=level)
+        get_higher_level_topics(
+            clustering_reduced_stats, clustering_reduced, level=level
+        )
         .drop([keywords_col_name(i) for i in range(1, level)], axis=1)
         .merge(
             cluster_source_counts,
