@@ -29,6 +29,7 @@ punctuation_replacement_rules = {
     r"\)\s": r", ",  # Replace closing parentheses followed by sapce, with commas
     r"(\))(?!\s)": r"",  # Remove closing parentheses not followed by space
     r"\.{2,}": ".",  # Replace multiple periods with one
+    r";": ".",  # Replace semicolon with full stop
     # r"[\x60, \xe2\x80\x98,\xe2\x80\x99, \xe2\x80\x9b]": "'",  # Catch funny single quotes
     # r"[„“]|(\'\')|(,,)": '"',  # Standardise double quotes
 }
