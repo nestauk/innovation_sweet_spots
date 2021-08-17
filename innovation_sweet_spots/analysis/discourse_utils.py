@@ -1135,3 +1135,81 @@ def get_verbs(svo_list):
     return flat_verbs
     
 
+def check_collocations(sentence_collection_df, collocated_term, groupby_field = 'year'):
+    """
+    Retrieve sentences where the collocated_term was mentioned together with one
+    of the search terms.
+
+    Parameters
+    ----------
+    sentence_collection_df (pandas.core.frame.DataFrame): dataframe with sentences
+    collocated_term (str): term of interest.
+    groupby_field (str): this is the field on which sentence dataframe will be grouped.
+
+    Returns
+    -------
+    grouped_by_year : pandas groupby object.
+
+    """
+    target_collocation = []
+    base = r'{}'
+    expr = '(?:\s|^){}(?:,?\s|$)'
+    combined_expr = base.format(''.join(expr.format(collocated_term)))    
+    collocation_df = sentence_collection_df[sentence_collection_df['sentence'].\
+                                            str.contains(combined_expr, regex = True)]
+    grouped_by_year = collocation_df.groupby(groupby_field)
+    return grouped_by_year
+
+
+def collocation_summary(grouped_sentences):
+    """
+    Print quick summary of collocations.
+
+    Parameters
+    ----------
+    grouped_sentences : pandas groupby object.
+
+    Returns
+    -------
+    None.
+
+    """
+    num_years = len(grouped_sentences)
+    num_sentences = sum([len(group) for name, group in grouped_sentences])
+    print(f"The terms were mentioned together in {num_sentences} sentences across {num_years} years.")
+
+
+def view_collocations(grouped_sentences):
+    """
+    Print sentences with collocations.
+
+    Parameters
+    ----------
+    grouped_sentences : pandas groupby object.
+
+    Returns
+    -------
+    None.
+
+    """
+    for year, group in grouped_sentences:
+        print(year)
+        for ix, row in group.iterrows():
+            print(row['sentence'], end = "\n\n")
+        print('----------')
+        
+
+def combine_term_sentences(term_sentence_dict, search_terms):
+    combined_sentences = collections.defaultdict(dict)
+    all_keys = [term_sentence_dict[term].keys() for term in search_terms]
+    all_years = sorted(list(set([year for sublist in all_keys for year in sublist])))
+    for year in all_years:
+        year_sents = []
+        for term in search_terms:
+            year_term_sentences = term_sentence_dict[term].\
+            get(year, pd.DataFrame({'sentence': [], 'id':[], 'year':[]}))
+            year_sents.append(year_term_sentences)
+        year_corpus = pd.concat(year_sents)
+        combined_sentences[year] = year_corpus
+    return combined_sentences
+    
