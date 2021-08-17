@@ -10,7 +10,7 @@ from innovation_sweet_spots.analysis.text_analysis import setup_spacy_model
 
 DEF_LANGUAGE_MODEL = {"model": "en_core_web_sm", "disable": ["tok2vec"]}
 DROP_NERS = ["ORG", "DATE", "QUANTITY", "PERSON", "CARDINAL", "ORDINAL", "GPE", "LOC"]
-DROP_NERS_MIN = []
+DROP_NERS_MIN = ["PERSON", "MONEY", "QUANTITY", "ORDINAL"]
 
 
 
