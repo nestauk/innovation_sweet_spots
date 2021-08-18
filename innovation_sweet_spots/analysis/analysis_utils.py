@@ -4,6 +4,7 @@ Utils for doing data analysis
 """
 from innovation_sweet_spots import logging
 from innovation_sweet_spots.utils.text_cleaning_utils import clean_text
+from innovation_sweet_spots.getters import gtr, crunchbase
 
 from typing import Iterator
 import pandas as pd
@@ -401,6 +402,17 @@ def link_gtr_projects_and_topics(gtr_projects, gtr_topics, link_gtr_topics):
     return gtr_project_topics
 
 
+def get_gtr_project_topics(project_df):
+    gtr_topics = gtr.get_gtr_topics()
+    link_gtr_topics = gtr.get_link_table("gtr_topic")
+    project_topic_df = link_gtr_projects_and_topics(
+        project_df, gtr_topics, link_gtr_topics
+    )
+    del link_gtr_topics
+    del gtr_topics
+    return project_topic_df
+
+
 ### Crunchbase specific utils
 
 
@@ -430,7 +442,7 @@ def cb_orgs_with_most_funding(orgs):
     return orgs[columns]
 
 
-def cb_orgs_funded_by_year(
+def cb_orgs_founded_by_year(
     orgs: pd.DataFrame, min_year: int = 2007, max_year: int = 2020
 ):
     orgs = orgs[
@@ -468,6 +480,8 @@ def get_cb_org_funding_rounds(
         .rename(columns={"id": "funding_round_id"})
         .sort_values("announced_on")
     )
+    fund_rounds.raised_amount = fund_rounds.raised_amount / 1000
+    fund_rounds.raised_amount_usd = fund_rounds.raised_amount_usd / 1000
     return fund_rounds
 
 
@@ -545,6 +559,10 @@ def investor_raised_amounts(
         .sort_values("total_round_value_usd", ascending=False)
     )
     return investors
+
+
+def get_crunchbase_org_tags():
+    cb_org_categories = crunchbase.get_crunchbase_organizations_categories()
 
 
 ### Hansard specific utils
@@ -662,10 +680,12 @@ def articles_table(articles: Iterator[dict]):
     return df
 
 
-def get_sentence_sentiment_modified(sentence: Iterator[str], vader_exceptions) -> pd.DataFrame:
+def get_sentence_sentiment_modified(
+    sentence: Iterator[str], vader_exceptions
+) -> pd.DataFrame:
     """Calculates sentiment for each sentence in the list, and sorts them"""
     analyzer = SentimentIntensityAnalyzer()
-    # replacements = {' a ': ' ', 
+    # replacements = {' a ': ' ',
     #                     ' an ': ' ',
     #                     ' the ': ' '}
     # Remove words that should be neutral for the purposes of our analysis (e.g. energy)

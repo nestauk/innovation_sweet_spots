@@ -59,19 +59,16 @@ nlp = spacy.load("en_core_web_sm")
 # ## 2. Fetching relevant Guardian articles
 
 # %%
-# search_terms = ["heat", "thermal", "temperature", "waste heat", "storage", "heating", "electricity", "cooling"]
-search_terms = ["heat pump", "heat pumps"]
-# search_terms = ['district heating', 'district heat', 'heat network', 'heat networks']
-# search_terms = ['solar thermal']
-# search_terms = ['home insulation', 'building insulation', 'house insulation']
-
-# %%
-ff = guardian.search_content(
-    search_term="insulated home", only_first_page=True, save_to_cache=False
-)
-
-# %%
-# ff[99]
+search_terms = [
+    "heat",
+    "thermal",
+    "temperature",
+    "waste heat",
+    "storage",
+    "heating",
+    "electricity",
+    "cooling",
+]
 
 # %%
 articles = [guardian.search_content(search_term) for search_term in search_terms]
@@ -103,16 +100,11 @@ print(f"The top 10 categories of articles in 2020 were:\n {top10_across_years['2
 
 # %%
 # Extract article metadata
-metadata = disc.get_article_metadata(
-    articles_by_year, fields_to_extract=["id", "webUrl"]
-)
+# metadata = disc.get_article_metadata(articles_by_year, fields_to_extract=['id', 'webUrl'])
 
 # %%
 # Extract article text
-article_text = disc.get_article_text_df(articles_by_year, TAGS, metadata)
-
-# %%
-article_text.head(2)
+# article_text = disc.get_article_text_df(articles_by_year, TAGS, metadata)
 
 # %%
 # Read in outputs generated earlier
@@ -120,11 +112,10 @@ article_text.head(2)
 #        articles_by_year = pickle.load(infile)
 
 # %%
-# article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text.csv'))
+article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, "article_text.csv"))
 
 # %%
-# sample_articles = article_text.sample(n = 10000, random_state = 808)
-sample_articles = article_text
+sample_articles = article_text.sample(n=10000, random_state=808)
 
 # %%
 # Extract sentences, spacy corpus of articles and sentence records (include original article id)
@@ -215,8 +206,7 @@ with open(
 
 # %%
 # Example sentences and sentiment for a given term (e.g. heat)
-pd.set_option("max_colwidth", 200)
-sentence_sentiment_all_terms["heat pumps"].sort_values("compound")
+sentence_sentiment_all_terms["heating"].tail()
 
 # %%
 average_sentiment_all_terms = disc.average_sentiment_across_terms(
@@ -240,9 +230,11 @@ noun_chunks_all_years = {
 #        pickle.dump(noun_chunks_all_years, outfile)
 
 # %%
-# # Read in previously identified noun chunks
-# with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_all_years_sample.pkl'), "rb") as infile:
-#         noun_chunks_all_years = pickle.load(infile)
+# Read in previously identified noun chunks
+with open(
+    os.path.join(DISC_OUTPUTS_DIR, "noun_chunks_all_years_sample.pkl"), "rb"
+) as infile:
+    noun_chunks_all_years = pickle.load(infile)
 
 # %%
 related_terms = collections.defaultdict(dict)
@@ -273,76 +265,28 @@ for year in sentences_by_year:
             continue
 
 # %%
-# # Write to disk
-# with open(os.path.join(DISC_OUTPUTS_DIR, 'related_terms.pkl'), "wb") as outfile:
-#         pickle.dump(related_terms, outfile)
-
-# with open(os.path.join(DISC_OUTPUTS_DIR, 'normalised_ranks.pkl'), "wb") as outfile:
-#         pickle.dump(normalised_ranks, outfile)
-
-# %%
 # Write to disk
-with open(os.path.join(DISC_OUTPUTS_DIR, "related_terms.pkl"), "rb") as outfile:
-    related_terms = pickle.load(outfile)
+with open(os.path.join(DISC_OUTPUTS_DIR, "related_terms.pkl"), "wb") as outfile:
+    pickle.dump(related_terms, outfile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, "normalised_ranks.pkl"), "rb") as outfile:
-    normalised_ranks = pickle.load(outfile)
+with open(os.path.join(DISC_OUTPUTS_DIR, "normalised_ranks.pkl"), "wb") as outfile:
+    pickle.dump(normalised_ranks, outfile)
 
 # %%
 # View top 50 terms with the highest pointwise mutual information in the most recent year
-term = "heat pump"
-year = str(2015)
+term = "heating"
+year = 2020
 print(term, year)
 sorted(related_terms[year][term], key=lambda x: x[1], reverse=True)[:25]
 
 # %%
 # View top 50 terms with the highest normalised rank in the most recent year
 print(term, year)
-list(normalised_ranks[year][term])[:50]
-
-# %%
-# # def agg_rank_dfs(term, norm_ranks, freq_threshold = 50):
-freq_threshold = 5
-rank_dfs = []
-for y in normalised_ranks:
-    rank_df = pd.DataFrame(normalised_ranks[y][term])
-    if len(rank_df) == 0:
-        continue
-    rank_df["year"] = y
-    rank_df.columns = ["term_count", "normalised_rank", "year"]
-    rank_df["term"] = rank_df["term_count"].apply(lambda x: x[0])
-    rank_df["frequency"] = rank_df["term_count"].apply(lambda x: x[1])
-    rank_dfs.append(rank_df)
-all_ranks = pd.concat(rank_dfs)
-all_ranks = all_ranks[all_ranks["frequency"] > freq_threshold]
-all_ranks = all_ranks.sort_values(by=["term", "year"])
-# return all_ranks
-
-# %%
-all_ranks.head(1)
-
-# %%
-all_ranks[all_ranks.term.isin(["air source", "ground source"])]
-
-# %%
-all_ranks.groupby("term").agg(rank_std=("normalised_rank", "mean")).sort_values(
-    "rank_std", ascending=False
-).head(10)
-
-# %%
-# all_ranks[all_ranks.term=='e.on']
-
-# %%
-import importlib
-
-importlib.reload(disc)
+list(normalised_ranks[year][term])[:25]
 
 # %%
 # Aggregate normalised ranks to analyse language shift over time
-all_ranks = disc.agg_rank_dfs("heat", normalised_ranks)
-
-# %%
-# all_ranks
+all_ranks = disc.agg_rank_dfs("heating", normalised_ranks)
 
 # %%
 all_ranks.to_csv(os.path.join(DISC_OUTPUTS_DIR, "normalised_ranks_across_years.csv"))

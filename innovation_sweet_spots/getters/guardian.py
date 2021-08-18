@@ -104,9 +104,12 @@ def search_content(
                 if r.status_code == 200:
                     results_list.append(r.json()["response"]["results"])
         results_list = [r for page_results in results_list for r in page_results]
-        percentage_collected = round(len(results_list) / n_total_results * 100)
-        # Save the results
+        if n_total_results != 0:
+            percentage_collected = round(len(results_list) / n_total_results * 100)
+            # Save the results
+            if save_to_cache:
+                save_content_to_cache(search_term, results_list, fpath)
+        else:
+            percentage_collected = "n/a"
         logging.info(f"Collected {len(results_list)} ({percentage_collected}%) results")
-        if save_to_cache:
-            save_content_to_cache(search_term, results_list, fpath)
         return results_list

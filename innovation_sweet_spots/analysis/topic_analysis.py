@@ -556,7 +556,11 @@ def get_higher_level_topics(clustering_reduced_stats, clustering_reduced, level)
     return clustering_level_stats
 
 
-def get_moving_average(clust_funding, window=5):
+def get_moving_average(clust_funding, window=5, rename_cols=True):
+    if rename_cols:
+        new_col_name = "{}_sma{}"
+    else:
+        new_col_name = "{}"
     df = (
         clust_funding.rolling(window, min_periods=1)
         .mean()
@@ -566,14 +570,17 @@ def get_moving_average(clust_funding, window=5):
                 zip(
                     clust_funding.drop("year", axis=1).columns,
                     [
-                        f"{s}_sma{window}"
+                        new_col_name.format(s, window)
                         for s in clust_funding.drop("year", axis=1).columns
                     ],
                 )
             )
         )
     )
-    return pd.concat([clust_funding, df], axis=1)
+    if rename_cols:
+        return pd.concat([clust_funding, df], axis=1)
+    else:
+        return pd.concat([clust_funding[["year"]], df], axis=1)
 
 
 def get_moving_sum(clust_funding, window=5):

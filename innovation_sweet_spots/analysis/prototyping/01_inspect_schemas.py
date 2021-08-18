@@ -81,6 +81,9 @@ print_column_names(schemas["gtr"]["gtr_funds"])
 # %%
 print_column_names(schemas["gtr"]["gtr_organisations"])
 
+# %%
+print_column_names(schemas["gtr"]["gtr_organisations_locations"])
+
 # %% [markdown]
 # # Crunchbase schemas
 
