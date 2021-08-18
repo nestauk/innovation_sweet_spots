@@ -58,7 +58,8 @@ nlp = spacy.load("en_core_web_sm")
 # ## 2. Fetching relevant Guardian articles
 
 # %%
-search_terms = ["heat", "thermal", "temperature", "waste heat", "storage", "heating", "electricity", "cooling"]
+search_terms = ['heat pump', 'heat pumps']
+#["heat", "thermal", "temperature", "waste heat", "storage", "heating", "electricity", "cooling"]
 
 # %%
 articles = [guardian.search_content(search_term) for search_term in search_terms]
@@ -74,7 +75,7 @@ articles_by_year = collections.defaultdict(list)
 for k,v in groupby(sorted_articles,key=lambda x:x['webPublicationDate'][:4]):
     articles_by_year[k] = list(v)
 # %%
-with open(os.path.join(DISC_OUTPUTS_DIR, 'articles_by_year.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'articles_by_year_heat_pumps.pkl'), "wb") as outfile:
         pickle.dump(articles_by_year, outfile)
 
 # %% [markdown]
@@ -90,71 +91,71 @@ print(f"The top 10 categories of articles in 2020 were:\n {top10_across_years['2
 
 # %%
 # Extract article metadata
-#metadata = disc.get_article_metadata(articles_by_year, fields_to_extract=['id', 'webUrl'])
+metadata = disc.get_article_metadata(articles_by_year, fields_to_extract=['id', 'webUrl'])
 
 # %%
 # Extract article text
-#article_text = disc.get_article_text_df(articles_by_year, TAGS, metadata)
+article_text = disc.get_article_text_df(articles_by_year, TAGS, metadata)
 
 # %%
 # Read in outputs generated earlier
-#with open(os.path.join(DISC_OUTPUTS_DIR, 'articles_by_year.pkl'), "rb") as infile:
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'articles_by_year_heat_pumps.pkl'), "rb") as infile:
 #        articles_by_year = pickle.load(infile)
 
 # %%
-article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text.csv'))
+#article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text.csv'))
 
 # %%
-sample_articles = article_text.sample(n = 10000, random_state = 808)
+#sample_articles = article_text.sample(n = 10000, random_state = 808) #if working with a large dataset
 
 # %%
 #Extract sentences, spacy corpus of articles and sentence records (include original article id)
 # Cleaning is minimal (keeping punctuation and stopwords, basic lemmatisation)
-# Current performance is about 2.5 min per 1K articles, so using a sample for illustrative purposes. 
-# There are 95K articles in total.
+# Current performance is about 2.5 min per 1K articles, so using a sample for illustrative purposes (for broad topics). 
+# There are 95K articles in total for broad heating topic.
 
-sentences_by_year, processed_articles_by_year, sentence_records = disc.get_sentence_corpus(sample_articles, nlp)
+sentences_by_year, processed_articles_by_year, sentence_records = disc.get_sentence_corpus(article_text, nlp)
 
 # %%
 # Persist processed outputs to disk
 
 # Metadata for all articles
-#metadata.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_metadata.csv'), index = False)
+#metadata.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_metadata_heat_pumps.csv'), index = False)
 
-#article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text.csv'), index = False, quoting = csv.QUOTE_NONNUMERIC)
+#article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_heat_pumps.csv'), index = False, quoting = csv.QUOTE_NONNUMERIC)
 
 
-#with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_sample.pkl'), "wb") as outfile:
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_heat_pumps.pkl'), "wb") as outfile:
 #        pickle.dump(sentences_by_year, outfile)
 
-#with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_sample.pkl'), "wb") as outfile:
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_heat_pumps.pkl'), "wb") as outfile:
 #        pickle.dump(processed_articles_by_year, outfile)
 
-#with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_sample.pkl'), "wb") as outfile:
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_heat_pumps.pkl'), "wb") as outfile:
 #        pickle.dump(sentence_records, outfile)        
 
 # %%
 # Read in outputs
-with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_sample.pkl'), "rb") as infile:
-        sentences_by_year = pickle.load(infile)
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_heat_pumps.pkl'), "rb") as infile:
+#        sentences_by_year = pickle.load(infile)
 
-#with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_sample.pkl'), "rb") as infile:
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_heat_pumps.pkl'), "rb") as infile:
 #        processed_articles_by_year = pickle.load(infile)
 
-#with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_sample.pkl'), "rb") as infile:
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_heat_pumps.pkl'), "rb") as infile:
 #        sentence_records = pickle.load(infile) 
 
 # %% [markdown]
 # ## 4. Analyse mentions of term in the news
 
 # %%
-# Flat list of sentences that contain search terms
+# Dataframe with sentences that contain search terms
 term_sentences = disc.combine_flat_sentence_mentions(search_terms, sentence_records)
 
 # %%
 # Number of mentions (calculated as number of sentences with mentions)
 term_mentions = disc.collate_mentions(search_terms, term_sentences)
-term_mentions.append(disc.total_docs(article_text))
+term_mentions.append(disc.total_docs(article_text)) #replace with sample_articles is using a sample
 
 # %%
 # Combined data frame with number of mentions across all terms and total number of articles
@@ -165,8 +166,11 @@ mentions_all.columns = search_terms + ['total_articles']
 # %%
 mentions_all
 
+# %%
+combined_term_sentences = disc.combine_term_sentences(term_sentences, search_terms)
+
 # %% [markdown]
-# ## 4. Evaluating sentiment around search terms for a given year
+# ### Evaluating sentiment around search terms for a given year
 # %%
 aggregated_sentiment_all_terms = dict()
 sentence_sentiment_all_terms = dict()
@@ -176,15 +180,15 @@ for term in search_terms:
     sentence_sentiment_all_terms[term] = sentence_sentiment
 
 # %%
-with open(os.path.join(DISC_OUTPUTS_DIR, 'aggregated_sentiment_all_terms_sample.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'aggregated_sentiment_all_terms_hp.pkl'), "wb") as outfile:
         pickle.dump(aggregated_sentiment_all_terms, outfile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_sentiment_all_terms_sample.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_sentiment_all_terms_hp.pkl'), "wb") as outfile:
         pickle.dump(sentence_sentiment_all_terms, outfile)   
 
 # %%
 # Example sentences and sentiment for a given term (e.g. heat)
-sentence_sentiment_all_terms['heating'].tail()
+sentence_sentiment_all_terms['heat pumps'].tail()
 
 # %%
 average_sentiment_all_terms = disc.average_sentiment_across_terms(aggregated_sentiment_all_terms)
@@ -200,13 +204,13 @@ noun_chunks_all_years = {str(year): disc.get_noun_chunks(processed_articles, rem
 
 # %%
 # Persist noun chunks to disk
-#with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_all_years_sample.pkl'), "wb") as outfile:
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_all_years_hp.pkl'), "wb") as outfile:
 #        pickle.dump(noun_chunks_all_years, outfile)
 
 # %%
 # Read in previously identified noun chunks
-with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_all_years_sample.pkl'), "rb") as infile:
-        noun_chunks_all_years = pickle.load(infile)
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_all_years_hp.pkl'), "rb") as infile:
+#        noun_chunks_all_years = pickle.load(infile)
 
 # %%
 related_terms = collections.defaultdict(dict)
@@ -218,42 +222,145 @@ for year in sentences_by_year:
     year_sentences = [sent for art in year_articles for sent in art]
     noun_chunks = noun_chunks_all_years[str(year)]
     for term in search_terms:
-        if term != 'waste heat': # no or only a few mentions in some years
-            print(term)
-            key_terms, normalised_rank = disc.get_key_terms(term, year_sentences, nlp, noun_chunks,
+        print(term)
+        key_terms, normalised_rank = disc.get_key_terms(term, year_sentences, nlp, noun_chunks,
                                                             mentions_threshold = 3, token_range = (1,3))
 
-            related_terms[year][term] = list(key_terms.items())
-            normalised_ranks[year][term] = list(normalised_rank.items())
-        else:
-            continue
+        related_terms[year][term] = list(key_terms.items())
+        normalised_ranks[year][term] = list(normalised_rank.items())
 
 # %%
 # Write to disk
-with open(os.path.join(DISC_OUTPUTS_DIR, 'related_terms.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'related_terms_hp.pkl'), "wb") as outfile:
         pickle.dump(related_terms, outfile)
         
-with open(os.path.join(DISC_OUTPUTS_DIR, 'normalised_ranks.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'normalised_ranks_hp.pkl'), "wb") as outfile:
         pickle.dump(normalised_ranks, outfile)     
 
-# %%
-# View top 50 terms with the highest pointwise mutual information in the most recent year
-term = 'heating'
-year = 2020
-print(term, year)
-sorted(related_terms[year][term], key = lambda x: x[1], reverse = True)[:25]
+# %% [markdown]
+# ### Combine related terms and normalised ranks
 
 # %%
-# View top 50 terms with the highest normalised rank in the most recent year
-print(term, year)
-list(normalised_ranks[year][term])[:25]
+combined_pmi = disc.combine_pmi(related_terms, search_terms)
+
+# %%
+agg_pmi = agg_combined_pmi(combined_pmi)
+
+# %%
+agg_pmi.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_pmi_hp.csv'))
+
+# %%
+combined_ranks = disc.combine_ranks(normalised_ranks, search_terms)
 
 # %%
 # Aggregate normalised ranks to analyse language shift over time
-all_ranks = disc.agg_rank_dfs('heating', normalised_ranks)
+all_ranks = disc.agg_combined_rank_dfs(combined_ranks)
 
 # %%
-all_ranks.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'normalised_ranks_across_years.csv'))
+all_ranks.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_ranks_hp.csv'))
+
+# %%
+#Quick check of terms with the highest pointwise mutual information in a given year
+combined_pmi['2020']
+
+# %%
+#Quick check of terms with the highest normalised rank in a given year
+combined_ranks['2020']
+
+# %% [markdown]
+# ### Quick exploration of collocations
+
+# %%
+flat_sentences = pd.concat([combined_term_sentences[y] for y in combined_term_sentences])
+
+# %%
+grouped_sentences = disc.check_collocations(flat_sentences, 'retrofitting')
+disc.collocation_summary(grouped_sentences)
+
+# %%
+disc.view_collocations(grouped_sentences)
+
+# %% [markdown]
+# ## 6. Analysis of language used to describe search terms
+
+# %%
+term_phrases = noun_chunks_w_term(noun_chunks_all_years, search_terms)
+
+# %%
+term_phrases
+
+# %%
+adjectives = disc.find_pattern(combined_term_sentences['2020']['sentence'], nlp, adj_phrase)
+
+# %%
+collections.Counter(adjectives)
+
+# %%
+noun_phrases = disc.find_pattern(combined_term_sentences['2020']['sentence'], nlp, noun_phrase)
+
+# %%
+collections.Counter(noun_phrases)
+
+# %%
+disc.find_pattern(combined_term_sentences['2020']['sentence'], nlp, term_is)
+
+# %%
+disc.find_pattern(combined_term_sentences['2020']['sentence'], nlp, verb_obj)
+
+# %%
+disc.find_pattern(combined_term_sentences['2020']['sentence'], nlp, verb_subj)
 
 # %% [markdown]
 # ## Appendix
+
+# %%
+noun_phrase = [{"POS": "ADJ", "OP": "*"}, 
+               {'POS': 'NOUN'},
+               {'POS': 'NOUN', 'OP': '?'},
+               {'TEXT': 'heat'},
+               {"TEXT": {'IN': ['pump', 'pumps']}}, 
+              ]
+
+adj_phrase = [{"POS": "ADV", "OP": "*"}, 
+            {'POS': 'ADJ'},
+            {"POS": "ADJ", "OP": "*"}, 
+            {'POS': 'NOUN', 'OP': '?'},
+            {'TEXT': 'heat'},
+            {"TEXT": {'IN': ['pump', 'pumps']}}, 
+            ]
+
+
+term_is = [{'TEXT': 'heat'},
+           {"TEXT": {'IN': ['pump', 'pumps']}}, 
+           {"LEMMA": "be"}, 
+           {"DEP": "neg", "OP": "?"}, 
+           {"POS": "ADV", "OP": "*"},
+           {"POS": "ADJ"}]
+
+
+verb_obj = [{'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+            {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+            {'POS': 'VERB'},
+            {'OP': '?'},            
+            {'TEXT': 'heat'},
+            {"TEXT": {'IN': ['pump', 'pumps']}}, 
+            ]
+
+verb_subj = [{'TEXT': 'heat'},
+             {"TEXT": {'IN': ['pump', 'pumps']}}, 
+             {'POS': 'VERB'},
+             {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+             {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+             ]   
+
+
+# %%
+def noun_chunks_w_term(noun_chunks_dict, search_terms):
+    chunks_with_term = collections.defaultdict(list)
+    for year, chunks in noun_chunks_dict.items():
+        contain_term = []
+        for term in search_terms:
+            contain_term.append([elem for elem in chunks if term in elem])
+        contain_term = [item for sublist in contain_term for item in sublist]
+        chunks_with_term[year] = list(set(contain_term))
+    return chunks_with_term
