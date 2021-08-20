@@ -120,19 +120,19 @@ sentences_by_year, processed_articles_by_year, sentence_records = disc.get_sente
 # Persist processed outputs to disk
 
 # Metadata for all articles
-#metadata.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_metadata_heat_pumps.csv'), index = False)
+metadata.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_metadata_heat_pumps.csv'), index = False)
 
-#article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_heat_pumps.csv'), index = False, quoting = csv.QUOTE_NONNUMERIC)
+article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_heat_pumps.csv'), index = False, quoting = csv.QUOTE_NONNUMERIC)
 
 
-#with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_heat_pumps.pkl'), "wb") as outfile:
-#        pickle.dump(sentences_by_year, outfile)
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_heat_pumps.pkl'), "wb") as outfile:
+        pickle.dump(sentences_by_year, outfile)
 
-#with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_heat_pumps.pkl'), "wb") as outfile:
-#        pickle.dump(processed_articles_by_year, outfile)
+with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_heat_pumps.pkl'), "wb") as outfile:
+        pickle.dump(processed_articles_by_year, outfile)
 
-#with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_heat_pumps.pkl'), "wb") as outfile:
-#        pickle.dump(sentence_records, outfile)        
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_heat_pumps.pkl'), "wb") as outfile:
+        pickle.dump(sentence_records, outfile)        
 
 # %%
 # Read in outputs
@@ -170,33 +170,6 @@ mentions_all
 combined_term_sentences = disc.combine_term_sentences(term_sentences, search_terms)
 
 # %% [markdown]
-# ### Evaluating sentiment around search terms for a given year
-# %%
-aggregated_sentiment_all_terms = dict()
-sentence_sentiment_all_terms = dict()
-for term in search_terms:
-    aggregated_sentiment, sentence_sentiment = disc.agg_term_sentiments(term, term_sentences)
-    aggregated_sentiment_all_terms[term] = aggregated_sentiment
-    sentence_sentiment_all_terms[term] = sentence_sentiment
-
-# %%
-with open(os.path.join(DISC_OUTPUTS_DIR, 'aggregated_sentiment_all_terms_hp.pkl'), "wb") as outfile:
-        pickle.dump(aggregated_sentiment_all_terms, outfile)
-
-with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_sentiment_all_terms_hp.pkl'), "wb") as outfile:
-        pickle.dump(sentence_sentiment_all_terms, outfile)   
-
-# %%
-# Example sentences and sentiment for a given term (e.g. heat)
-sentence_sentiment_all_terms['heat pumps'].tail()
-
-# %%
-average_sentiment_all_terms = disc.average_sentiment_across_terms(aggregated_sentiment_all_terms)
-
-# %%
-average_sentiment_all_terms
-
-# %% [markdown]
 # ## 5. Identifying most relevant terms
 # %%
 noun_chunks_all_years = {str(year): disc.get_noun_chunks(processed_articles, remove_det_articles = True) for\
@@ -222,7 +195,7 @@ for year in sentences_by_year:
     year_sentences = [sent for art in year_articles for sent in art]
     noun_chunks = noun_chunks_all_years[str(year)]
     for term in search_terms:
-        print(term)
+        #print(term)
         key_terms, normalised_rank = disc.get_key_terms(term, year_sentences, nlp, noun_chunks,
                                                             mentions_threshold = 3, token_range = (1,3))
 
@@ -244,28 +217,28 @@ with open(os.path.join(DISC_OUTPUTS_DIR, 'normalised_ranks_hp.pkl'), "wb") as ou
 combined_pmi = disc.combine_pmi(related_terms, search_terms)
 
 # %%
-agg_pmi = agg_combined_pmi(combined_pmi)
-
-# %%
-agg_pmi.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_pmi_hp.csv'))
-
-# %%
 combined_ranks = disc.combine_ranks(normalised_ranks, search_terms)
 
 # %%
-# Aggregate normalised ranks to analyse language shift over time
-all_ranks = disc.agg_combined_rank_dfs(combined_ranks)
+combined_pmi_dict = collections.defaultdict(dict)
+for year in combined_pmi:
+    for term in combined_pmi[year]:
+        combined_pmi_dict[year][term[0]] = term[1]
 
 # %%
-all_ranks.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_ranks_hp.csv'))
+# Dictionary: for each year return frequency of mentions, normalised rank and pmi for a given term.
+pmi_inters_ranks = collections.defaultdict(dict)
+for year in combined_ranks:
+    for term in combined_ranks[year]:
+        if term[0] in combined_pmi_dict[year]:
+            pmi_inters_ranks[year][term[0]] = (term[1], combined_ranks[year][term], combined_pmi_dict[year][term[0]])
 
 # %%
-#Quick check of terms with the highest pointwise mutual information in a given year
-combined_pmi['2020']
+agg_pmi = disc.agg_combined_pmi_rank(pmi_inters_ranks)
 
 # %%
-#Quick check of terms with the highest normalised rank in a given year
-combined_ranks['2020']
+# Aggregate pmi
+agg_pmi.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_pmi_rank_hp.csv'), index = False)
 
 # %% [markdown]
 # ### Quick exploration of collocations
@@ -274,7 +247,7 @@ combined_ranks['2020']
 flat_sentences = pd.concat([combined_term_sentences[y] for y in combined_term_sentences])
 
 # %%
-grouped_sentences = disc.check_collocations(flat_sentences, 'retrofitting')
+grouped_sentences = disc.check_collocations(flat_sentences, 'hydrogen')
 disc.collocation_summary(grouped_sentences)
 
 # %%
@@ -284,31 +257,72 @@ disc.view_collocations(grouped_sentences)
 # ## 6. Analysis of language used to describe search terms
 
 # %%
-term_phrases = noun_chunks_w_term(noun_chunks_all_years, search_terms)
+term_phrases = disc.noun_chunks_w_term(noun_chunks_all_years, search_terms)
 
 # %%
-term_phrases
+#term_phrases
 
 # %%
-adjectives = disc.find_pattern(combined_term_sentences['2020']['sentence'], nlp, adj_phrase)
+period = ['2007', '2008', '2009', '2010']
+adjectives = []
+for year in period:
+    adjectives.append(disc.find_pattern(combined_term_sentences[year]['sentence'], nlp, adj_phrase))
 
 # %%
-collections.Counter(adjectives)
+collections.Counter([elem for sublist in adjectives for elem in sublist])
 
 # %%
-noun_phrases = disc.find_pattern(combined_term_sentences['2020']['sentence'], nlp, noun_phrase)
+period = ['2018', '2019', '2020', '2021']
+nouns = []
+for year in period:
+    nouns.append(disc.find_pattern(combined_term_sentences[year]['sentence'], nlp, noun_phrase))
 
 # %%
-collections.Counter(noun_phrases)
+collections.Counter([elem for sublist in nouns for elem in sublist])
 
 # %%
-disc.find_pattern(combined_term_sentences['2020']['sentence'], nlp, term_is)
+period = ['2011', '2012', '2013']
+hp_are = []
+for year in period:
+    hp_are.append(disc.find_pattern(combined_term_sentences[year]['sentence'], nlp, term_is))
 
 # %%
-disc.find_pattern(combined_term_sentences['2020']['sentence'], nlp, verb_obj)
+collections.Counter([elem for sublist in hp_are for elem in sublist])
 
 # %%
-disc.find_pattern(combined_term_sentences['2020']['sentence'], nlp, verb_subj)
+period = ['2018', '2019', '2020', '2021']
+verb_s = []
+for year in period:
+    verb_s.append(disc.find_pattern(combined_term_sentences[year]['sentence'], nlp, verb_subj))
+
+# %%
+collections.Counter([elem for sublist in verb_s for elem in sublist])
+
+# %%
+period = ['2011', '2012', '2013']
+verb_o = []
+for year in period:
+    verb_o.append(disc.find_pattern(combined_term_sentences[year]['sentence'], nlp, verb_obj))
+
+# %%
+collections.Counter([elem for sublist in verb_o for elem in sublist])
+
+# %%
+subject_phrase_dict = collections.defaultdict(list)
+object_phrase_dict = collections.defaultdict(list)
+given_term = 'heat pump'
+for year in term_sentences[given_term]:
+    given_term_sentences = term_sentences[given_term][year]['sentence']
+    subj_triples, obj_tripels = disc.get_svo_triples(given_term_sentences, given_term, nlp)
+    subject_phrases, object_phrases = disc.get_svo_phrases(subj_triples, obj_tripels)
+    subject_phrase_dict[year] = subject_phrases
+    object_phrase_dict[year] = object_phrases
+
+# %%
+period = ['2018', '2019', '2020', '2021']
+verb_o = []
+for year in period:
+    print(object_phrase_dict[year])
 
 # %% [markdown]
 # ## Appendix
@@ -354,13 +368,19 @@ verb_subj = [{'TEXT': 'heat'},
              ]   
 
 
+# %% [markdown]
+# ### Evaluating sentiment around search terms for a given year
 # %%
-def noun_chunks_w_term(noun_chunks_dict, search_terms):
-    chunks_with_term = collections.defaultdict(list)
-    for year, chunks in noun_chunks_dict.items():
-        contain_term = []
-        for term in search_terms:
-            contain_term.append([elem for elem in chunks if term in elem])
-        contain_term = [item for sublist in contain_term for item in sublist]
-        chunks_with_term[year] = list(set(contain_term))
-    return chunks_with_term
+aggregated_sentiment_all_terms = dict()
+sentence_sentiment_all_terms = dict()
+for term in search_terms:
+    aggregated_sentiment, sentence_sentiment = disc.agg_term_sentiments(term, term_sentences)
+    aggregated_sentiment_all_terms[term] = aggregated_sentiment
+    sentence_sentiment_all_terms[term] = sentence_sentiment
+
+# %%
+with open(os.path.join(DISC_OUTPUTS_DIR, 'aggregated_sentiment_all_terms_hp.pkl'), "wb") as outfile:
+        pickle.dump(aggregated_sentiment_all_terms, outfile)
+
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_sentiment_all_terms_hp.pkl'), "wb") as outfile:
+        pickle.dump(sentence_sentiment_all_terms, outfile)   
