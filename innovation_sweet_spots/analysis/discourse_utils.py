@@ -17,6 +17,8 @@ from typing import Iterator
 from collections import Counter, defaultdict
 from sklearn.feature_extraction.text import CountVectorizer
 from textacy import extract
+from spacy.matcher import Matcher
+from spacy.util import filter_spans 
 
 from innovation_sweet_spots.utils import text_cleaning_utils as tcu
 from innovation_sweet_spots.utils import text_pre_processing as tpu
@@ -589,7 +591,7 @@ def get_related_terms(noun_chunks, pmi, token_names, token_counts, min_mentions)
     """
     pruned_noun_chunks = [elem for elem in noun_chunks if elem in token_names]
     pruned_noun_chunks = [elem for elem in pruned_noun_chunks if \
-                          token_counts.get(elem, 0) > min_mentions]
+                          token_counts.get(elem, 0) >= min_mentions]
 
 
     chunk_pmi = {chunk: pmi.get(chunk, 0) for chunk in pruned_noun_chunks}
@@ -1017,16 +1019,16 @@ def get_key_terms(search_term, sentence_collection, nlp_model, noun_chunks,
     return key_terms, norm_rank
     
 
-def agg_rank_dfs(term, norm_ranks, freq_threshold = 50):
+def agg_combined_rank_dfs(combined_norm_ranks, freq_threshold = 3):
     """
-    Collect all normalised ranks across years into a dataframe.
+    Collect normalised ranks for across years into a dataframe.
+    (Ranks for individual search terms need to be combined prior to this step.)
     This will be used to assess language shift over time.
 
     Parameters
     ----------
-    term (str): term of interest.
-    norm_ranks (dict): normalised ranks in each year
-    freq_threshold (int): min frequency. the default is 50.
+    combined_norm_ranks (dict): combined normalised ranks in each year
+    freq_threshold (int): min frequency. the default is 3.
 
     Returns
     -------
@@ -1035,17 +1037,47 @@ def agg_rank_dfs(term, norm_ranks, freq_threshold = 50):
 
     """
     rank_dfs = []
-    for y in norm_ranks:
-        rank_df = pd.DataFrame(norm_ranks[y][term])
+    for y in combined_norm_ranks:
+        rank_df = pd.Series(combined_norm_ranks[y]).to_frame().reset_index()
         rank_df['year'] = y
-        rank_df.columns = ['term_count', 'normalised_rank', 'year']
-        rank_df['term'] = rank_df['term_count'].apply(lambda x: x[0])
-        rank_df['frequency'] = rank_df['term_count'].apply(lambda x: x[1])
+        rank_df.columns = ['term', 'count','normalised_rank', 'year']
         rank_dfs.append(rank_df)
     all_ranks = pd.concat(rank_dfs)
-    all_ranks = all_ranks[all_ranks['frequency']>freq_threshold]
+    all_ranks = all_ranks[all_ranks['count']>=freq_threshold]
     all_ranks= all_ranks.sort_values(by = ['term', 'year'])
     return all_ranks
+
+
+def agg_combined_pmi(combined_pmi, freq_threshold = 5):
+    pmi_dfs = []
+    for y in combined_pmi:
+        pmi_df = pd.Series(combined_pmi[y]).to_frame()
+        pmi_df['year'] = y
+        pmi_df.columns = ['term_pmi', 'year']
+        pmi_df['term'] = pmi_df['term_pmi'].apply(lambda x: x[0])
+        pmi_df['pmi'] = pmi_df['term_pmi'].apply(lambda x: x[1])
+        pmi_df = pmi_df[['term', 'pmi', 'year']]
+        pmi_dfs.append(pmi_df)
+    all_pmis = pd.concat(pmi_dfs)
+#    all_pmis = all_pmis[all_pmis['count']>freq_threshold]
+    all_pmis= all_pmis.sort_values(by = ['term', 'year'])
+    return all_pmis
+
+def agg_combined_pmi_rank(combined_dict, freq_threshold = 2):
+    pmi_dfs = []
+    for y in combined_dict:
+        pmi_df = pd.Series(combined_dict[y]).to_frame().reset_index()
+        pmi_df['year'] = y
+        pmi_df.columns = ['term', 'indicators','year']
+        pmi_df['freq'] = pmi_df['indicators'].apply(lambda x: x[0])
+        pmi_df['rank'] = pmi_df['indicators'].apply(lambda x: x[1])
+        pmi_df['pmi'] = pmi_df['indicators'].apply(lambda x: x[2])
+        pmi_df = pmi_df[['term', 'year', 'freq', 'rank', 'pmi']]
+        pmi_dfs.append(pmi_df)
+    all_pmis = pd.concat(pmi_dfs)
+#    all_pmis = all_pmis[all_pmis['count']>freq_threshold]
+    all_pmis= all_pmis.sort_values(by = ['term', 'year', 'freq'])
+    return all_pmis
 
 
 def get_svo_triples(sentence_collection, search_term, nlp_model):
@@ -1200,7 +1232,7 @@ def view_collocations(grouped_sentences):
         
 
 def combine_term_sentences(term_sentence_dict, search_terms):
-    combined_sentences = collections.defaultdict(dict)
+    combined_sentences = defaultdict(dict)
     all_keys = [term_sentence_dict[term].keys() for term in search_terms]
     all_years = sorted(list(set([year for sublist in all_keys for year in sublist])))
     for year in all_years:
@@ -1212,4 +1244,120 @@ def combine_term_sentences(term_sentence_dict, search_terms):
         year_corpus = pd.concat(year_sents)
         combined_sentences[year] = year_corpus
     return combined_sentences
-    
+
+
+def combine_pmi_given_year(related_term_dict, year, search_terms):
+    term_lists = []
+    for term in search_terms:
+        term_list = related_term_dict[year][term]
+        term_lists.append(term_list)
+    flat_term_list = sorted([term for sublist in term_lists for term in sublist])
+    flat_term_dict = dict()
+    for term in flat_term_list:
+        this_pmi = term[1]
+        existing_pmi = flat_term_dict.get(term[0], 0)
+        if existing_pmi > this_pmi:
+            continue
+        else:
+            flat_term_dict[term[0]] = this_pmi
+    return sorted(flat_term_dict.items(), key = lambda x: x[1], reverse = True)
+
+def combine_pmi(related_term_dict, search_terms):
+    combined_related_terms = defaultdict(list)
+    for year in related_term_dict:
+        given_year_pmi = combine_pmi_given_year(related_term_dict, 
+                                                year, 
+                                                search_terms)
+        combined_related_terms[year] = given_year_pmi
+    return combined_related_terms
+        
+
+def combine_ranks_given_year(normalised_rank_dict, year, search_terms):
+    rank_lists = []
+    for term in search_terms:
+        rank_list = normalised_rank_dict[year][term]
+        if rank_list:
+            rank_lists.append(rank_list)
+    total_freqs = sum([1/rank_list[1][1] for rank_list in rank_lists])
+    flat_rank_list = sorted([rank for sublist in rank_lists for rank in sublist])
+    flat_freq_dict = dict()
+    for term in flat_rank_list:
+        this_freq = term[0][1]
+        existing_freq = flat_freq_dict.get(term[0][0], 0)
+        new_freq = existing_freq + this_freq
+        flat_freq_dict[term[0][0]] = new_freq
+    count_rank_items = sorted(flat_freq_dict.items(), key = lambda x: x[1], reverse = True)
+    new_normalised_rank = {name: ix/total_freqs for ix, name in enumerate(count_rank_items)}
+    return new_normalised_rank
+
+
+def combine_ranks(normalised_rank_dict, search_terms):
+    combined_ranks = defaultdict(list)
+    for year in normalised_rank_dict:
+        given_year_rank = combine_ranks_given_year(normalised_rank_dict, 
+                                                year, 
+                                                search_terms)
+        combined_ranks[year] = given_year_rank
+    return combined_ranks
+
+
+def noun_chunks_w_term(noun_chunks_dict, search_terms):
+    chunks_with_term = defaultdict(list)
+    for year, chunks in noun_chunks_dict.items():
+        contain_term = []
+        for term in search_terms:
+            contain_term.append([elem for elem in chunks if term in elem])
+        contain_term = [item for sublist in contain_term for item in sublist]
+        chunks_with_term[year] = list(set(contain_term))
+    return chunks_with_term
+
+
+noun_phrase = [{'POS': 'NOUN'},
+              {'POS': 'NOUN', 'OP': '?'},
+              {'TEXT': 'heat'},
+              {"TEXT": {'IN': ['pump', 'pumps']}}, 
+              ]
+
+adj_phrase = [{"POS": "ADV", "OP": "*"}, 
+            {'POS': 'ADJ'},
+            {'POS': 'NOUN', 'OP': '?'},
+            {'TEXT': 'heat'},
+            {"TEXT": {'IN': ['pump', 'pumps']}}, 
+            ]
+
+
+term_is = [{'TEXT': 'heat'},
+           {"TEXT": {'IN': ['pump', 'pumps']}}, 
+           {"LEMMA": "be"}, 
+           {"POS": "ADV", "OP": "*"},
+           {"POS": "ADJ"}]
+
+
+verb_obj = [{'POS': 'NOUN', 'OP': '?'},
+            {'POS': 'VERB'},
+            {'OP': '?'},
+            {'TEXT': 'heat'},
+            {"TEXT": {'IN': ['pump', 'pumps']}}, 
+            ]
+
+verb_subj = [{'TEXT': 'heat'},
+             {"TEXT": {'IN': ['pump', 'pumps']}}, 
+             {'POS': 'VERB'},
+             {'OP': '?'},
+             ]     
+
+
+def find_pattern(sentences, nlp_model, pattern):
+    matcher = Matcher(nlp_model.vocab) 
+    matcher.add("pattern", [pattern])
+    all_matches = []
+    for sentence in sentences:
+        doc = nlp_model(sentence)
+        matches = matcher(doc)
+        spans = [doc[start:end] for _, start, end in matches]
+        longest_span = filter_spans(spans)
+        if longest_span:
+            all_matches.append(longest_span)
+    all_matches = [item.text for sublist in all_matches for item in sublist]
+    return all_matches
+
