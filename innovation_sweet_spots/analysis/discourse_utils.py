@@ -1361,3 +1361,33 @@ def find_pattern(sentences, nlp_model, pattern):
     all_matches = [item.text for sublist in all_matches for item in sublist]
     return all_matches
 
+
+def match_patterns_across_years(sentence_dict, nlp_model,
+                                pattern, n_years = 3, field = 'sentence'):
+    period = list(sentence_dict.keys())
+    year_chunks = []
+    for i in range(0, len(period), n_years):
+        year_chunks.append(period[i:i + n_years])
+    phrases = defaultdict(list)
+    for chunk in year_chunks:
+        chunk_name = ', '.join(chunk)
+        for year in chunk:
+            year_sentences = sentence_dict.get(year,{})
+            if len(year_sentences):
+                year_phrases = find_pattern(year_sentences[field], nlp_model, pattern)
+                phrases[chunk_name].append(year_phrases)
+    return phrases
+
+
+def aggregate_patterns(phrase_dict, sort_phrases = True):
+    agg_results = collections.defaultdict(list)
+    for year_period, phrases in phrase_dict.items():
+       flat_results = [elem for sublist in phrases for elem in sublist]
+       sorted_results = sorted(Counter(flat_results).items())
+       agg_results[year_period] = sorted_results
+    return agg_results
+    return agg_results
+    
+       
+
+            
