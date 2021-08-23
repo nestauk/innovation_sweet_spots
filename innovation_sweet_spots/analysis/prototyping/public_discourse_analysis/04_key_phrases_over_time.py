@@ -60,7 +60,7 @@ search_terms = ['heat pump', 'heat pumps']
 # ## 2. Reading in dataset
 
 # %%
-# If Guardian articles, read in as is
+# If Guardian articles, read article_text as is (this file contains articles extracted from html sorted by year)
 #article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_heat_pumps.csv'))
 
 # If GTR
@@ -127,7 +127,7 @@ term_mentions.append(disc.total_docs(article_text, 'year')) #replace with sample
 # Combined data frame with number of mentions across all terms and total number of articles
 mentions_all = pd.DataFrame.from_records(term_mentions)
 mentions_all = mentions_all.T
-mentions_all.columns = search_terms + ['total_articles']
+mentions_all.columns = search_terms + ['total_documents']
 
 # %%
 mentions_all
@@ -166,7 +166,7 @@ for year in sentences_by_year:
     for term in search_terms:
         #print(term)
         key_terms, normalised_rank = disc.get_key_terms(term, year_sentences, nlp, noun_chunks,
-                                                            mentions_threshold = 3, token_range = (1,3))
+                                                            mentions_threshold = 2, token_range = (1,3))
 
         related_terms[year][term] = list(key_terms.items())
         normalised_ranks[year][term] = list(normalised_rank.items())
@@ -216,7 +216,7 @@ agg_pmi.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_pmi_rank_hp_gtr.csv'), i
 flat_sentences = pd.concat([combined_term_sentences[y] for y in combined_term_sentences])
 
 # %%
-grouped_sentences = disc.check_collocations(flat_sentences, 'sorption')
+grouped_sentences = disc.check_collocations(flat_sentences, 'breakthrough')
 disc.collocation_summary(grouped_sentences)
 
 # %%
@@ -226,65 +226,61 @@ disc.view_collocations(grouped_sentences)
 # ## 6. Analysis of language used to describe search terms
 
 # %%
+# All spacy identified noun chunks that contain search terms
 term_phrases = disc.noun_chunks_w_term(noun_chunks_all_years, search_terms)
 
 # %%
-term_phrases
+#term_phrases
 
 # %%
-period = ['2008', '2009', '2010']
-adjectives = []
-for year in period:
-    year_sentences = combined_term_sentences.get(year,None)
-    if len(year_sentences):
-        adjectives.append(disc.find_pattern(year_sentences['sentence'], nlp, adj_phrase))
+# Adjectives used to describe heat pumps
+adjectives = match_patterns_across_years(combined_term_sentences, nlp, adj_phrase)
 
 # %%
-collections.Counter([elem for sublist in adjectives for elem in sublist])
+adj_aggregated = aggregate_patterns(adjectives)
 
 # %%
-period = ['2018', '2019', '2020', '2021']
-nouns = []
-for year in period:
-    year_sentences = combined_term_sentences.get(year,None)
-    if len(year_sentences):    
-        nouns.append(disc.find_pattern(year_sentences['sentence'], nlp, noun_phrase))
+adj_aggregated['2020, 2021']
 
 # %%
-collections.Counter([elem for sublist in nouns for elem in sublist])
+# Noun phrases that describe heat pumps
+nouns = match_patterns_across_years(combined_term_sentences, nlp, noun_phrase)
 
 # %%
-period = ['2011', '2012', '2013']
-hp_are = []
-for year in period:
-    year_sentences = combined_term_sentences.get(year,None)
-    if len(year_sentences): 
-        hp_are.append(disc.find_pattern(year_sentences['sentence'], nlp, term_is))
+nouns_aggregated = aggregate_patterns(nouns)
 
 # %%
-collections.Counter([elem for sublist in hp_are for elem in sublist])
+nouns_aggregated['2020, 2021']
 
 # %%
-period = ['2018', '2019', '2020', '2021']
-verb_s = []
-for year in period:
-    year_sentences = combined_term_sentences.get(year,None)
-    if len(year_sentences): 
-        verb_s.append(disc.find_pattern(year_sentences['sentence'], nlp, verb_subj))
+# Phrases that match the pattern 'heat pumps are at the ...'
+hp_are_at = match_patterns_across_years(combined_term_sentences, nlp, term_is_at)
 
 # %%
-collections.Counter([elem for sublist in verb_s for elem in sublist])
+hp_aggregated = aggregate_patterns(hp_are_at)
 
 # %%
-period = ['2011', '2012', '2013']
-verb_o = []
-for year in period:
-    year_sentences = combined_term_sentences.get(year,None)
-    if len(year_sentences): 
-        verb_o.append(disc.find_pattern(year_sentences['sentence'], nlp, verb_obj))
+hp_aggregated['2014, 2015, 2016']
 
 # %%
-collections.Counter([elem for sublist in verb_o for elem in sublist])
+# Verbs that follow heat pumps
+verbs_follow = match_patterns_across_years(combined_term_sentences, nlp, verb_subj)
+
+# %%
+verbs_aggregated = aggregate_patterns(verbs_follow)
+
+# %%
+verbs_aggregated['2020, 2021']
+
+# %%
+# Phrases where verbs preceed heat pumps
+verbs_preceede = match_patterns_across_years(combined_term_sentences, nlp, verb_obj)
+
+# %%
+verbs_p_aggregated = aggregate_patterns(verbs_preceede)
+
+# %%
+verbs_p_aggregated['2020, 2021']
 
 # %%
 subject_phrase_dict = collections.defaultdict(list)
@@ -299,10 +295,9 @@ for given_term in terms:
         object_phrase_dict[year] = object_phrases
 
 # %%
-period = ['2018', '2019', '2020', '2021']
-verb_o = []
-for year in period:
-    print(object_phrase_dict[year])
+for chunk in nouns:
+    for year in chunk.split(', '):
+        print(year, subject_phrase_dict[year])
 
 # %% [markdown]
 # ## Appendix
@@ -327,9 +322,17 @@ adj_phrase = [{"POS": "ADV", "OP": "*"},
 term_is = [{'TEXT': 'heat'},
            {"TEXT": {'IN': ['pump', 'pumps']}}, 
            {"LEMMA": "be"}, 
-           {"DEP": "neg", "OP": "?"}, 
+           {"DEP": "neg", "OP": '?'},           
            {"POS": "ADV", "OP": "*"},
-           {"POS": "ADJ"}]
+           {"POS": {'IN': ['NOUN', 'ADJ']}}],
+
+
+term_is_at = [{'TEXT': 'heat'},
+           {"TEXT": {'IN': ['pump', 'pumps']}}, 
+           {"LEMMA": "be"}, 
+           {"DEP": "prep"}, 
+           {"POS": "DET"},
+           {"POS": "NOUN"}]
 
 
 verb_obj = [{'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
