@@ -589,9 +589,11 @@ def get_related_terms(noun_chunks, pmi, token_names, token_counts, min_mentions)
     chunk_pmi (dict): PMIs for noun chunks.
 
     """
-    pruned_noun_chunks = [elem for elem in noun_chunks if elem in token_names]
-    pruned_noun_chunks = [elem for elem in pruned_noun_chunks if \
-                          token_counts.get(elem, 0) >= min_mentions]
+    # pruned_noun_chunks = [elem for elem in noun_chunks if elem in token_names]
+    # pruned_noun_chunks = [elem for elem in pruned_noun_chunks if \
+    #                       token_counts.get(elem, 0) >= min_mentions]
+    pruned_noun_chunks = [elem for elem in token_names if \
+                           token_counts.get(elem, 0) >= min_mentions]
 
 
     chunk_pmi = {chunk: pmi.get(chunk, 0) for chunk in pruned_noun_chunks}
