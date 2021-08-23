@@ -531,7 +531,7 @@ def get_ngrams(spacy_tokens, token_range, min_mentions):
 
 
 def calculate_positive_pmi(cooccurrence_matrix, doc_term_m, token_names, 
-                           token_counts, search_term, coocc_threshold = 2):
+                           token_counts, search_term, coocc_threshold = 1):
     """
     Calculate positive PMI for a given search term. For this analysis context
     is defined as cooccurrence in the same sentence.
@@ -543,7 +543,7 @@ def calculate_positive_pmi(cooccurrence_matrix, doc_term_m, token_names,
     token_names (list): ngram labels.
     token_counts (dict): token frequency counts in the corpus.
     search_term (str): term of interest.
-    coocc_threshold (int): minimum numer of cooccurrences, the default is 2.
+    coocc_threshold (int): minimum numer of cooccurrences, the default is 1.
 
     Returns
     -------
@@ -601,7 +601,7 @@ def get_related_terms(noun_chunks, pmi, token_names, token_counts, min_mentions)
 
 
 def get_normalised_rank(cooccurrence_m, token_names, token_counts, search_term, 
-                        freq = 3, threshold = 2):
+                        freq = 2, threshold = 1):
     """
     Calculate normalised rank for related terms by dividing term rank in frequency
     of cooccurrences with the search_term by the total number of terms that have
@@ -614,8 +614,8 @@ def get_normalised_rank(cooccurrence_m, token_names, token_counts, search_term,
     token_names (list): ngram labels.
     token_counts (dict): token frequency counts in the corpus.
     search_term (str): term of interest.
-    freq (int): minimum frequency of token, the default is 3.
-    threshold (int): minimum frequency of cooccurrences, the default is 2.
+    freq (int): minimum frequency of token, the default is 2.
+    threshold (int): minimum frequency of cooccurrences, the default is 1.
 
     Returns
     -------
@@ -936,8 +936,8 @@ def identify_related_terms(search_term,
                            token_names, 
                            token_counts,
                            noun_chunks,
-                           mentions_threshold = 3,
-                           coocc_threshold = 2):
+                           mentions_threshold = 2,
+                           coocc_threshold = 1):
     """
     Identify terms that have positive PMI and calculate their normalised frequency
     rank.
@@ -989,7 +989,7 @@ def identify_related_terms(search_term,
 
 
 def get_key_terms(search_term, sentence_collection, nlp_model, noun_chunks, 
-                      mentions_threshold = 3, coocc_threshold = 2, 
+                      mentions_threshold = 2, coocc_threshold = 1, 
                       token_range = (1,3)):
     """
     Identify most relevant terms.
@@ -1001,8 +1001,8 @@ def get_key_terms(search_term, sentence_collection, nlp_model, noun_chunks,
     sentence_collection (list): sentences.
     nlp_model (spacy.lang.en.English): spacy model used.
     noun_chunks (list): spacy noun chunks converted to string.
-    mentions_threshold (int): min frequency, the default is 3.
-    coocc_threshold (int): cooccurrence threshold, the default is 2.
+    mentions_threshold (int): min frequency, the default is 2.
+    coocc_threshold (int): cooccurrence threshold, the default is 1.
     token_range (tuple): ngram range, the default is (1,3).
 
 
