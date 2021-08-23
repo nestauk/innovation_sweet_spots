@@ -213,7 +213,7 @@ agg_pmi = disc.agg_combined_pmi_rank(pmi_inters_ranks)
 agg_pmi.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_pmi_rank_hp_gtr.csv'), index = False)
 
 # %%
-combined_pmi['2020']
+combined_pmi['2019']
 
 # %% [markdown]
 # ### Quick exploration of collocations
@@ -257,15 +257,6 @@ nouns_aggregated = disc.aggregate_patterns(nouns)
 
 # %%
 nouns_aggregated['2014, 2015, 2016']
-
-# %%
-10/35
-
-# %%
-7/57
-
-# %%
-2/57
 
 # %%
 # Phrases that match the pattern 'heat pumps are at the ...'
@@ -371,5 +362,3 @@ num_sentences
 
 # %%
 nouns.keys()
-
-# %%
