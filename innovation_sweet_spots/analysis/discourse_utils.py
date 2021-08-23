@@ -1382,7 +1382,7 @@ def match_patterns_across_years(sentence_dict, nlp_model,
 
 
 def aggregate_patterns(phrase_dict, sort_phrases = True):
-    agg_results = collections.defaultdict(list)
+    agg_results = defaultdict(list)
     for year_period, phrases in phrase_dict.items():
        flat_results = [elem for sublist in phrases for elem in sublist]
        sorted_results = sorted(Counter(flat_results).items())
