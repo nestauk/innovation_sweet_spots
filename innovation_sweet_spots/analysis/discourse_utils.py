@@ -637,7 +637,7 @@ def get_normalised_rank(cooccurrence_m, token_names, token_counts, search_term,
     return normalised_rank
 
 
-def get_article_metadata(grouped_articles, fields_to_extract = ['id']):
+def get_article_metadata(grouped_articles, year_field,fields_to_extract = ['id']):
     """
     Extract useful article fields from raw data returned by the Guardian API.
 
@@ -658,7 +658,7 @@ def get_article_metadata(grouped_articles, fields_to_extract = ['id']):
         for field in fields_to_extract:
             article_field = [article[field] for article in articles]
             year_data[field] = article_field
-            year_data['year'] = year
+            year_data[year_field] = year
         year_article_df = pd.DataFrame(year_data)
         year_article_dfs.append(year_article_df)
     year_article_df_combined = pd.concat(year_article_dfs)
@@ -698,7 +698,7 @@ def get_article_text_df(grouped_articles, tags, article_metadata):
     return year_articles
         
         
-def get_sentence_corpus(article_text_df, nlp_model):
+def get_sentence_corpus(article_text_df, nlp_model, year_field, text_field, id_field):
     """
     Generate corpus of sentences, spacy processed docs and sentence records
     for each year in the dataset.
@@ -718,16 +718,16 @@ def get_sentence_corpus(article_text_df, nlp_model):
     sentence_records = []
     sentences_by_year = defaultdict(dict)
     processed_articles_by_year = defaultdict(dict)
-    for year, group in article_text_df.groupby('year'):
+    for year, group in article_text_df.groupby(year_field):
         sentences, processed_articles = generate_sentence_corpus\
-            (group['text'], nlp_model)
-        ids = group['id']
+            (group[text_field], nlp_model)
+        ids = group[id_field]
         for sentence_bunch in zip(sentences, ids):
             article_id = sentence_bunch[1]
             for sentence in sentence_bunch[0]:
                 sentence_records.append((sentence, article_id, year))
-        sentences_by_year[year] = sentences
-        processed_articles_by_year[year] = processed_articles
+        sentences_by_year[str(year)] = sentences
+        processed_articles_by_year[str(year)] = processed_articles
     return(sentences_by_year, processed_articles_by_year, sentence_records)
 
 
@@ -756,7 +756,7 @@ def get_flat_sentence_mentions(search_term, sentence_collection):
     for year, sentences in sentence_collection_df.groupby('year'):
         sentences_with_term = sentences[sentences['sentence'].\
                                         str.contains(combined_expr, regex = True)]
-        year_flat_sentences[year] = sentences_with_term
+        year_flat_sentences[str(year)] = sentences_with_term
     return year_flat_sentences
     
 
@@ -822,7 +822,7 @@ def collate_mentions(search_terms, flat_sentences_dict):
     return mentions_all_terms
         
         
-def total_docs(article_text_df):
+def total_docs(article_text_df, year_field):
     """
     Get total count of articles in each year.
 
@@ -836,8 +836,8 @@ def total_docs(article_text_df):
     total_docs (dict): number of articles in each year.
 
     """
-    total_docs = {year: len(articles) for year, articles in \
-                  article_text_df.groupby('year')}
+    total_docs = {str(year): len(articles) for year, articles in \
+                  article_text_df.groupby(year_field)}
     return total_docs
 
 
@@ -1242,7 +1242,7 @@ def combine_term_sentences(term_sentence_dict, search_terms):
             get(year, pd.DataFrame({'sentence': [], 'id':[], 'year':[]}))
             year_sents.append(year_term_sentences)
         year_corpus = pd.concat(year_sents)
-        combined_sentences[year] = year_corpus
+        combined_sentences[str(year)] = year_corpus
     return combined_sentences
 
 
