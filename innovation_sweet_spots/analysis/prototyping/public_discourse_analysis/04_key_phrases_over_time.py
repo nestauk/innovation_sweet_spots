@@ -135,6 +135,9 @@ mentions_all
 # %%
 combined_term_sentences = disc.combine_term_sentences(term_sentences, search_terms)
 
+# %%
+num_sentences = {year: len(value) for year, value in combined_term_sentences.items()}
+
 # %% [markdown]
 # ## 5. Identifying most relevant terms
 # %%
@@ -142,7 +145,7 @@ noun_chunks_all_years = {str(year): disc.get_noun_chunks(processed_articles, rem
                         year, processed_articles in processed_articles_by_year.items()}
 
 # %%
-noun_chunks_all_years
+noun_chunks_all_years['2014']
 
 # %%
 # Persist noun chunks to disk
@@ -209,6 +212,9 @@ agg_pmi = disc.agg_combined_pmi_rank(pmi_inters_ranks)
 # Aggregate pmi
 agg_pmi.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_pmi_rank_hp_gtr.csv'), index = False)
 
+# %%
+combined_pmi['2020']
+
 # %% [markdown]
 # ### Quick exploration of collocations
 
@@ -216,7 +222,7 @@ agg_pmi.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_pmi_rank_hp_gtr.csv'), i
 flat_sentences = pd.concat([combined_term_sentences[y] for y in combined_term_sentences])
 
 # %%
-grouped_sentences = disc.check_collocations(flat_sentences, 'breakthrough')
+grouped_sentences = disc.check_collocations(flat_sentences, 'thermal')
 disc.collocation_summary(grouped_sentences)
 
 # %%
@@ -230,54 +236,63 @@ disc.view_collocations(grouped_sentences)
 term_phrases = disc.noun_chunks_w_term(noun_chunks_all_years, search_terms)
 
 # %%
-#term_phrases
+term_phrases
 
 # %%
 # Adjectives used to describe heat pumps
-adjectives = match_patterns_across_years(combined_term_sentences, nlp, adj_phrase)
+adjectives = disc.match_patterns_across_years(combined_term_sentences, nlp, adj_phrase)
 
 # %%
-adj_aggregated = aggregate_patterns(adjectives)
+adj_aggregated = disc.aggregate_patterns(adjectives)
 
 # %%
 adj_aggregated['2020, 2021']
 
 # %%
 # Noun phrases that describe heat pumps
-nouns = match_patterns_across_years(combined_term_sentences, nlp, noun_phrase)
+nouns = disc.match_patterns_across_years(combined_term_sentences, nlp, noun_phrase)
 
 # %%
-nouns_aggregated = aggregate_patterns(nouns)
+nouns_aggregated = disc.aggregate_patterns(nouns)
 
 # %%
-nouns_aggregated['2020, 2021']
+nouns_aggregated['2014, 2015, 2016']
+
+# %%
+10/35
+
+# %%
+7/57
+
+# %%
+2/57
 
 # %%
 # Phrases that match the pattern 'heat pumps are at the ...'
-hp_are_at = match_patterns_across_years(combined_term_sentences, nlp, term_is_at)
+hp_are_at = disc.match_patterns_across_years(combined_term_sentences, nlp, term_is_at)
 
 # %%
-hp_aggregated = aggregate_patterns(hp_are_at)
+hp_aggregated = disc.aggregate_patterns(hp_are_at)
 
 # %%
 hp_aggregated['2014, 2015, 2016']
 
 # %%
 # Verbs that follow heat pumps
-verbs_follow = match_patterns_across_years(combined_term_sentences, nlp, verb_subj)
+verbs_follow = disc.match_patterns_across_years(combined_term_sentences, nlp, verb_subj)
 
 # %%
-verbs_aggregated = aggregate_patterns(verbs_follow)
+verbs_aggregated = disc.aggregate_patterns(verbs_follow)
 
 # %%
 verbs_aggregated['2020, 2021']
 
 # %%
 # Phrases where verbs preceed heat pumps
-verbs_preceede = match_patterns_across_years(combined_term_sentences, nlp, verb_obj)
+verbs_preceede = disc.match_patterns_across_years(combined_term_sentences, nlp, verb_obj)
 
 # %%
-verbs_p_aggregated = aggregate_patterns(verbs_preceede)
+verbs_p_aggregated = disc.aggregate_patterns(verbs_preceede)
 
 # %%
 verbs_p_aggregated['2020, 2021']
@@ -350,3 +365,11 @@ verb_subj = [{'TEXT': 'heat'},
              {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
              ]   
 
+
+# %%
+num_sentences
+
+# %%
+nouns.keys()
+
+# %%
