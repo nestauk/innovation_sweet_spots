@@ -628,7 +628,7 @@ def get_normalised_rank(cooccurrence_m, token_names, token_counts, search_term,
     search_index = token_names.index(search_term)
     total_word_set = np.count_nonzero(cooccurrence_m[search_index,:].toarray())
     for ix, name in enumerate(token_names):
-        if token_counts[name] > freq:
+        if token_counts[name] >= freq:
             cooccurence_frequency = cooccurrence_m[search_index, ix]
             if cooccurence_frequency < threshold:
                 continue
