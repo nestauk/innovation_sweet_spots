@@ -62,7 +62,7 @@ search_terms = ['heat pump', 'heat pumps']
 # ## 2. Read in data
 
 # %%
-# If Guardian articles, read article_text as is (this file contains articles extracted from html sorted by year)
+# If Guardian articles, read article_text as is (this file contains articles extracted from html sorted by year).
 article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_heat_pumps.csv'))
 
 # If GTR
@@ -75,8 +75,8 @@ article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_heat_pum
 # ## 3. Preprocess articles
 
 # %%
-#Extract sentences, spacy corpus of articles and sentence records (include original article id)
-# Cleaning is minimal (keeping punctuation and stopwords, no lemmatisation)
+# Extract sentences, spacy corpus of articles and sentence records (include original article id).
+# Cleaning is minimal (keeping punctuation and stopwords, no lemmatisation).
 # Current performance is about 2.5 min per 1K articles, so for broad topics with large number of articles use sample
 # for exploration. 
 # For example, for the broad topic ["heat", "thermal", "temperature", "waste heat", "storage", "heating", 
@@ -89,21 +89,20 @@ sentences_by_year, processed_articles_by_year, sentence_records = disc.get_sente
                                                                                           'id') #doc_id for GTR
 
 # %%
-# Persist processed outputs to disk
-article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hp_gtr.csv'), index = False, quoting = csv.QUOTE_NONNUMERIC)
+# Persist processed outputs to disk.
+#article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hp_gtr.csv'), index = False, quoting = csv.QUOTE_NONNUMERIC)
 
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_hp_gtr.pkl'), "wb") as outfile:
+#        pickle.dump(sentences_by_year, outfile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_hp_gtr.pkl'), "wb") as outfile:
-        pickle.dump(sentences_by_year, outfile)
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_hp_gtr.pkl'), "wb") as outfile:
+#        pickle.dump(processed_articles_by_year, outfile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_hp_gtr.pkl'), "wb") as outfile:
-        pickle.dump(processed_articles_by_year, outfile)
-
-with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_hp_gtr.pkl'), "wb") as outfile:
-        pickle.dump(sentence_records, outfile)        
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_hp_gtr.pkl'), "wb") as outfile:
+#        pickle.dump(sentence_records, outfile)        
 
 # %%
-# Read in outputs
+# Read in outputs.
 #with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_heat_pumps.pkl'), "rb") as infile:
 #        sentences_by_year = pickle.load(infile)
 
@@ -117,16 +116,16 @@ with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_hp_gtr.pkl'), "wb") a
 # ## 4. Analyse mentions of term in the corpus
 
 # %%
-# Dataframe with sentences that contain search terms
+# Dataframe with sentences that contain search terms.
 term_sentences = disc.combine_flat_sentence_mentions(search_terms, sentence_records)
 
 # %%
-# Number of mentions (calculated as number of sentences with mentions)
+# Number of mentions (calculated as number of sentences with mentions).
 term_mentions = disc.collate_mentions(search_terms, term_sentences)
 term_mentions.append(disc.total_docs(article_text, 'year')) #replace with sample_articles is using a sample
 
 # %%
-# Combined data frame with number of mentions across all terms and total number of documents
+# Combined data frame with number of mentions across all terms and total number of documents.
 mentions_all = pd.DataFrame.from_records(term_mentions)
 mentions_all = mentions_all.T
 mentions_all.columns = search_terms + ['total_documents']
@@ -150,12 +149,12 @@ noun_chunks_all_years = {str(year): disc.get_noun_chunks(processed_articles, rem
 noun_chunks_all_years['2014']
 
 # %%
-# Persist noun chunks to disk
+# Persist noun chunks to disk.
 #with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_all_years_hp.pkl'), "wb") as outfile:
 #        pickle.dump(noun_chunks_all_years, outfile)
 
 # %%
-# Read in previously identified noun chunks
+# Read in previously identified noun chunks.
 #with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_all_years_hp.pkl'), "rb") as infile:
 #        noun_chunks_all_years = pickle.load(infile)
 
@@ -176,7 +175,7 @@ for year in sentences_by_year:
         normalised_ranks[year][term] = list(normalised_rank.items())
 
 # %%
-# Write to disk
+# Write to disk.
 with open(os.path.join(DISC_OUTPUTS_DIR, 'related_terms_hp_gtr.pkl'), "wb") as outfile:
         pickle.dump(related_terms, outfile)
         
@@ -236,16 +235,13 @@ disc.view_collocations(grouped_sentences)
 # ## 6. Analyse language used to describe search terms
 
 # %%
-# All spacy identified noun chunks that contain search terms
+# All spacy identified noun chunks that contain search terms.
 term_phrases = disc.noun_chunks_w_term(noun_chunks_all_years, search_terms)
 
 # %%
-# Adjectives used to describe heat pumps
-# NB: before running define patterns from the Appendix
+# Adjectives used to describe heat pumps.
+# NB: before running define patterns from the Appendix.
 adjectives = disc.match_patterns_across_years(combined_term_sentences, nlp, adj_phrase)
-
-# %%
-adjectives
 
 # %%
 adj_aggregated = disc.aggregate_patterns(adjectives)
@@ -254,7 +250,7 @@ adj_aggregated = disc.aggregate_patterns(adjectives)
 #adj_aggregated['2007, 2008, 2009']
 
 # %%
-# Noun phrases that describe heat pumps
+# Noun phrases that describe heat pumps.
 nouns = disc.match_patterns_across_years(combined_term_sentences, nlp, noun_phrase)
 
 # %%
@@ -264,7 +260,7 @@ nouns_aggregated = disc.aggregate_patterns(nouns)
 #nouns_aggregated['2007, 2008, 2009']
 
 # %%
-# Phrases that match the pattern 'heat pumps are at the ...'
+# Phrases that match the pattern 'heat pumps are ...'
 hp_are_at = disc.match_patterns_across_years(combined_term_sentences, nlp, term_is)
 
 # %%
@@ -274,7 +270,7 @@ hp_aggregated = disc.aggregate_patterns(hp_are_at)
 #hp_aggregated['2019, 2020, 2021']
 
 # %%
-# Verbs that follow heat pumps
+# Verbs that follow heat pumps.
 verbs_follow = disc.match_patterns_across_years(combined_term_sentences, nlp, verb_subj)
 
 # %%
@@ -284,7 +280,7 @@ verbs_aggregated = disc.aggregate_patterns(verbs_follow)
 #verbs_aggregated['2007, 2008, 2009']
 
 # %%
-# Phrases where verbs precede heat pumps
+# Phrases where verbs precede heat pumps.
 verbs_precede = disc.match_patterns_across_years(combined_term_sentences, nlp, verb_obj)
 
 # %%
@@ -315,7 +311,8 @@ for chunk in nouns:
 # ## Appendix
 
 # %%
-# Patterns for phrase matching
+# Patterns for phrase matching:
+
 noun_phrase = [{"POS": "ADJ", "OP": "*"}, 
                {'POS': 'NOUN'},
                {'POS': 'NOUN', 'OP': '?'},
