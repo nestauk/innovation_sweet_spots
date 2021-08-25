@@ -17,10 +17,12 @@
 # ---
 
 # %% [markdown]
-# # Extending functionality to perform analysis on a set of terms
+# # Analyse mentions and language used to describe a set of terms
 #
-# - Perform analysis on individual terms
-# - Aggregate results
+# - Preprocess document text
+# - Analyse mentions of given search terms
+# - Identify most relevant words and phrases used together with search terms
+# - Analyse language used to describe search terms
 
 # %% [markdown]
 # ## 1. Import dependencies
@@ -57,34 +59,34 @@ nlp = spacy.load("en_core_web_sm")
 search_terms = ['heat pump', 'heat pumps']
 
 # %% [markdown]
-# ## 2. Reading in dataset
+# ## 2. Read in data
 
 # %%
 # If Guardian articles, read article_text as is (this file contains articles extracted from html sorted by year)
-#article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_heat_pumps.csv'))
+article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_heat_pumps.csv'))
 
 # If GTR
-gtr_data = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'ISS_example_gtr_data_August17.csv'))
-gtr_data = gtr_data[gtr_data['tech_category'] == 'Heat pumps']
-gtr_data['text'] = gtr_data['title'] + '. ' + gtr_data['description']
-
-# %%
-article_text = gtr_data[['doc_id', 'text', 'year']]
+#gtr_data = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'ISS_example_gtr_data_August17.csv'))
+#gtr_data = gtr_data[gtr_data['tech_category'] == 'Heat pumps']
+#gtr_data['text'] = gtr_data['title'] + '. ' + gtr_data['description']
+#article_text = gtr_data[['doc_id', 'text', 'year']]
 
 # %% [markdown]
 # ## 3. Preprocess articles
 
 # %%
 #Extract sentences, spacy corpus of articles and sentence records (include original article id)
-# Cleaning is minimal (keeping punctuation and stopwords, basic lemmatisation)
-# Current performance is about 2.5 min per 1K articles, so using a sample for illustrative purposes (for broad topics). 
-# There are 95K articles in total for broad heating topic.
+# Cleaning is minimal (keeping punctuation and stopwords, no lemmatisation)
+# Current performance is about 2.5 min per 1K articles, so for broad topics with large number of articles use sample
+# for exploration. 
+# For example, for the broad topic ["heat", "thermal", "temperature", "waste heat", "storage", "heating", 
+# "electricity", "cooling"] there were 95K articles in total.
 
 sentences_by_year, processed_articles_by_year, sentence_records = disc.get_sentence_corpus(article_text, 
                                                                                            nlp,
                                                                                            'year',
                                                                                            'text',
-                                                                                          'doc_id')
+                                                                                          'id') #doc_id for GTR
 
 # %%
 # Persist processed outputs to disk
@@ -112,7 +114,7 @@ with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_hp_gtr.pkl'), "wb") a
 #        sentence_records = pickle.load(infile) 
 
 # %% [markdown]
-# ## 4. Analyse mentions of term in the news
+# ## 4. Analyse mentions of term in the corpus
 
 # %%
 # Dataframe with sentences that contain search terms
@@ -124,7 +126,7 @@ term_mentions = disc.collate_mentions(search_terms, term_sentences)
 term_mentions.append(disc.total_docs(article_text, 'year')) #replace with sample_articles is using a sample
 
 # %%
-# Combined data frame with number of mentions across all terms and total number of articles
+# Combined data frame with number of mentions across all terms and total number of documents
 mentions_all = pd.DataFrame.from_records(term_mentions)
 mentions_all = mentions_all.T
 mentions_all.columns = search_terms + ['total_documents']
@@ -136,10 +138,10 @@ mentions_all
 combined_term_sentences = disc.combine_term_sentences(term_sentences, search_terms)
 
 # %%
-num_sentences = {year: len(value) for year, value in combined_term_sentences.items()}
+#num_sentences = {year: len(value) for year, value in combined_term_sentences.items()}
 
 # %% [markdown]
-# ## 5. Identifying most relevant terms
+# ## 5. Identify most relevant terms
 # %%
 noun_chunks_all_years = {str(year): disc.get_noun_chunks(processed_articles, remove_det_articles = True) for\
                         year, processed_articles in processed_articles_by_year.items()}
@@ -162,12 +164,11 @@ related_terms = collections.defaultdict(dict)
 normalised_ranks = collections.defaultdict(dict)
 
 for year in sentences_by_year:
-    print(year)
+    #print(year)
     year_articles = [elem for elem in sentences_by_year[year]] # nested list of sentences within each article
     year_sentences = [sent for art in year_articles for sent in art]
     noun_chunks = noun_chunks_all_years[str(year)]
     for term in search_terms:
-        #print(term)
         key_terms, normalised_rank = disc.get_key_terms(term, year_sentences, nlp, noun_chunks,
                                                             mentions_threshold = 2, token_range = (1,3))
 
@@ -206,14 +207,17 @@ for year in combined_ranks:
             pmi_inters_ranks[year][term[0]] = (term[1], combined_ranks[year][term], combined_pmi_dict[year][term[0]])
 
 # %%
+# Aggregate into one long dataframe.
 agg_pmi = disc.agg_combined_pmi_rank(pmi_inters_ranks)
 
 # %%
-# Aggregate pmi
-agg_pmi.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_pmi_rank_hp_gtr.csv'), index = False)
+# Preprocess for further analysis of changes over time.
+agg_terms = disc.analyse_rank_pmi_over_time(agg_pmi)
 
 # %%
-combined_pmi['2019']
+# Save to disc to explore separately.
+agg_pmi.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_pmi_rank_hp.csv'), index = False)
+agg_terms.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'agg_pmi_rank_hp.csv'), index = False)
 
 # %% [markdown]
 # ### Quick exploration of collocations
@@ -222,31 +226,32 @@ combined_pmi['2019']
 flat_sentences = pd.concat([combined_term_sentences[y] for y in combined_term_sentences])
 
 # %%
-grouped_sentences = disc.check_collocations(flat_sentences, 'thermal')
+grouped_sentences = disc.check_collocations(flat_sentences, 'expensive')
 disc.collocation_summary(grouped_sentences)
 
 # %%
 disc.view_collocations(grouped_sentences)
 
 # %% [markdown]
-# ## 6. Analysis of language used to describe search terms
+# ## 6. Analyse language used to describe search terms
 
 # %%
 # All spacy identified noun chunks that contain search terms
 term_phrases = disc.noun_chunks_w_term(noun_chunks_all_years, search_terms)
 
 # %%
-term_phrases
+# Adjectives used to describe heat pumps
+# NB: before running define patterns from the Appendix
+adjectives = disc.match_patterns_across_years(combined_term_sentences, nlp, adj_phrase)
 
 # %%
-# Adjectives used to describe heat pumps
-adjectives = disc.match_patterns_across_years(combined_term_sentences, nlp, adj_phrase)
+adjectives
 
 # %%
 adj_aggregated = disc.aggregate_patterns(adjectives)
 
 # %%
-adj_aggregated['2020, 2021']
+#adj_aggregated['2007, 2008, 2009']
 
 # %%
 # Noun phrases that describe heat pumps
@@ -256,17 +261,17 @@ nouns = disc.match_patterns_across_years(combined_term_sentences, nlp, noun_phra
 nouns_aggregated = disc.aggregate_patterns(nouns)
 
 # %%
-nouns_aggregated['2014, 2015, 2016']
+#nouns_aggregated['2007, 2008, 2009']
 
 # %%
 # Phrases that match the pattern 'heat pumps are at the ...'
-hp_are_at = disc.match_patterns_across_years(combined_term_sentences, nlp, term_is_at)
+hp_are_at = disc.match_patterns_across_years(combined_term_sentences, nlp, term_is)
 
 # %%
 hp_aggregated = disc.aggregate_patterns(hp_are_at)
 
 # %%
-hp_aggregated['2014, 2015, 2016']
+#hp_aggregated['2019, 2020, 2021']
 
 # %%
 # Verbs that follow heat pumps
@@ -276,19 +281,20 @@ verbs_follow = disc.match_patterns_across_years(combined_term_sentences, nlp, ve
 verbs_aggregated = disc.aggregate_patterns(verbs_follow)
 
 # %%
-verbs_aggregated['2020, 2021']
+#verbs_aggregated['2007, 2008, 2009']
 
 # %%
-# Phrases where verbs preceed heat pumps
-verbs_preceede = disc.match_patterns_across_years(combined_term_sentences, nlp, verb_obj)
+# Phrases where verbs precede heat pumps
+verbs_precede = disc.match_patterns_across_years(combined_term_sentences, nlp, verb_obj)
 
 # %%
-verbs_p_aggregated = disc.aggregate_patterns(verbs_preceede)
+verbs_p_aggregated = disc.aggregate_patterns(verbs_precede)
 
 # %%
-verbs_p_aggregated['2020, 2021']
+#verbs_p_aggregated['2007, 2008, 2009']
 
 # %%
+# Subject verb object triplets with search term acting both as subject and object.
 subject_phrase_dict = collections.defaultdict(list)
 object_phrase_dict = collections.defaultdict(list)
 terms = ['heat pump', 'heat pumps']
@@ -309,6 +315,7 @@ for chunk in nouns:
 # ## Appendix
 
 # %%
+# Patterns for phrase matching
 noun_phrase = [{"POS": "ADJ", "OP": "*"}, 
                {'POS': 'NOUN'},
                {'POS': 'NOUN', 'OP': '?'},
@@ -330,7 +337,7 @@ term_is = [{'TEXT': 'heat'},
            {"LEMMA": "be"}, 
            {"DEP": "neg", "OP": '?'},           
            {"POS": "ADV", "OP": "*"},
-           {"POS": {'IN': ['NOUN', 'ADJ']}}],
+           {"POS": {'IN': ['NOUN', 'ADJ']}}]
 
 
 term_is_at = [{'TEXT': 'heat'},
@@ -357,8 +364,17 @@ verb_subj = [{'TEXT': 'heat'},
              ]   
 
 
-# %%
-num_sentences
+# %% [markdown]
+# Comparing and plotting rank and pmi for given terms
 
 # %%
-nouns.keys()
+comparative_df = disc.compare_term_rank(pmi_inters_ranks, ['boilers', 'homes', 'government'], measure = 1)
+
+# %%
+disc.plot_ranks(comparative_df, 'Comparison of term ranks over time')
+
+# %%
+comparative_df_pmi = disc.compare_term_pmi(pmi_inters_ranks, ['homes', 'boilers'], measure = 2)
+
+# %%
+disc.plot_ranks(comparative_df_pmi, 'Comparison of term PMI over time')
