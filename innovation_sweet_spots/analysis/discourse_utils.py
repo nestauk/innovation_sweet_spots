@@ -1547,7 +1547,7 @@ def compare_term_rank(rank_dict, set_of_terms, measure = 1):
     rank_values_df : pandas dataframe with columns for year and each term.
 
     """
-    year_rank_values = collections.defaultdict(list)
+    year_rank_values = defaultdict(list)
     years = []
     for year in rank_dict:
         years.append(year)
@@ -1581,7 +1581,7 @@ def compare_term_pmi(rank_dict, set_of_terms, measure = 2):
     -------
     rank_values_df : pandas dataframe with columns for year and each term.    
     """
-    year_rank_values = collections.defaultdict(list)
+    year_rank_values = defaultdict(list)
     years = []
     for year in rank_dict:
         years.append(year)
