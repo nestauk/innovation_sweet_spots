@@ -32,7 +32,7 @@ punctuation_replacement_rules = {
     r";": ".",  # Replace semicolon with full stop
     # r"[\x60, \xe2\x80\x98,\xe2\x80\x99, \xe2\x80\x9b]": "'",  # Catch funny single quotes
     # r"[„“]|(\'\')|(,,)": '"',  # Standardise double quotes
-    r"\.(?=[a-zA-Z])": ". " # Catch instances when 2 sentences are joined together
+    r"\.(?=[a-zA-Z][^.g.][^.e.])": ". " # Catch instances when 2 sentences are joined together, but ignore e.g. and i.e.
 }
 
 # Patterns for cleaning punctuation, for clean_punctuation()
