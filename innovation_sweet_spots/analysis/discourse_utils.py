@@ -18,7 +18,9 @@ from collections import Counter, defaultdict
 from sklearn.feature_extraction.text import CountVectorizer
 from textacy import extract
 from spacy.matcher import Matcher
-from spacy.util import filter_spans 
+from spacy.util import filter_spans
+import seaborn as sns
+import matplotlib.pyplot as plt 
 
 from innovation_sweet_spots.utils import text_cleaning_utils as tcu
 from innovation_sweet_spots.utils import text_pre_processing as tpu
@@ -635,7 +637,7 @@ def get_normalised_rank(cooccurrence_m, token_names, token_counts, search_term,
             else:
                 count_rank[name] = cooccurence_frequency
     count_rank_items = sorted(count_rank.items(), key = lambda x: x[1], reverse = True)
-    normalised_rank = {name: ix/total_word_set for ix, name in enumerate(count_rank_items)}
+    normalised_rank = {name: ix+1/total_word_set for ix, name in enumerate(count_rank_items)}
     return normalised_rank
 
 
@@ -1215,7 +1217,7 @@ def collocation_summary(grouped_sentences):
 
 def view_collocations(grouped_sentences):
     """
-    Print sentences with collocations.
+    Print sentences grouped by year.
 
     Parameters
     ----------
@@ -1234,6 +1236,19 @@ def view_collocations(grouped_sentences):
         
 
 def combine_term_sentences(term_sentence_dict, search_terms):
+    """
+    Bring together all sentences that mention any term from the search term list.
+
+    Parameters
+    ----------
+    term_sentence_dict (dict): dictionary with sentences for each year and each term.
+    search_terms (list): list of terms.
+
+    Returns
+    -------
+    combined_sentences (dict): dictionary with years as keys and sentence dataframe as values.
+
+    """
     combined_sentences = defaultdict(dict)
     all_keys = [term_sentence_dict[term].keys() for term in search_terms]
     all_years = sorted(list(set([year for sublist in all_keys for year in sublist])))
@@ -1249,6 +1264,22 @@ def combine_term_sentences(term_sentence_dict, search_terms):
 
 
 def combine_pmi_given_year(related_term_dict, year, search_terms):
+    """
+    Aggregate pmi values across the set of terms for a given year. If a word/phrase 
+    has been mentioned with more than one search term, we take the max pmi.
+
+    Parameters
+    ----------
+    related_term_dict (dict): dictionary with year and search term as keys and
+    list of (word, pmi) as values.
+    year (str): year.
+    search_terms (list): list of search terms.
+
+    Returns
+    -------
+    list of tuples: sorted list of (word, pmi) items.
+
+    """
     term_lists = []
     for term in search_terms:
         term_list = related_term_dict[year][term]
@@ -1264,7 +1295,23 @@ def combine_pmi_given_year(related_term_dict, year, search_terms):
             flat_term_dict[term[0]] = this_pmi
     return sorted(flat_term_dict.items(), key = lambda x: x[1], reverse = True)
 
+
 def combine_pmi(related_term_dict, search_terms):
+    """
+    Aggregate pmi values over several years.
+
+    Parameters
+    ----------
+    related_term_dict (dict): dictionary with year and search term as keys and
+    list of (word, pmi) as values.
+    search_terms (list): list of search terms.
+
+    Returns
+    -------
+    combined_related_terms (dict): dictionary with year as key and list of
+    (word, pmi) as values.
+
+    """
     combined_related_terms = defaultdict(list)
     for year in related_term_dict:
         given_year_pmi = combine_pmi_given_year(related_term_dict, 
@@ -1275,12 +1322,29 @@ def combine_pmi(related_term_dict, search_terms):
         
 
 def combine_ranks_given_year(normalised_rank_dict, year, search_terms):
+    """
+    Aggregate normalised rank values across the set of terms for a given year. 
+    Recalculate rank using updated value of total frequency of collocated terms.
+
+    Parameters
+    ----------
+    normalised_rank_dict (dict): dictionary with year and term as keys and list
+    of ((word, freq), rank)) as values.
+    year (str): year.
+    search_terms (list): list of search terms.
+
+    Returns
+    -------
+    new_normalised_rank (dict): dictionary with term as key and list of 
+    ((word, freq), new_rank)) as values.    
+
+    """
     rank_lists = []
     for term in search_terms:
         rank_list = normalised_rank_dict[year][term]
         if rank_list:
             rank_lists.append(rank_list)
-    total_freqs = sum([1/rank_list[1][1] for rank_list in rank_lists])
+    total_freqs = sum([1/rank_list[0][1] for rank_list in rank_lists])
     flat_rank_list = sorted([rank for sublist in rank_lists for rank in sublist])
     flat_freq_dict = dict()
     for term in flat_rank_list:
@@ -1289,11 +1353,26 @@ def combine_ranks_given_year(normalised_rank_dict, year, search_terms):
         new_freq = existing_freq + this_freq
         flat_freq_dict[term[0][0]] = new_freq
     count_rank_items = sorted(flat_freq_dict.items(), key = lambda x: x[1], reverse = True)
-    new_normalised_rank = {name: ix/total_freqs for ix, name in enumerate(count_rank_items)}
+    new_normalised_rank = {name: ix+1/total_freqs for ix, name in enumerate(count_rank_items)}
     return new_normalised_rank
 
 
 def combine_ranks(normalised_rank_dict, search_terms):
+    """
+    Aggregate normalised rank values over several years.
+
+    Parameters
+    ----------
+    normalised_rank_dict (dict): dictionary with year and term as keys and list
+    of ((word, freq), rank)) as values.
+    search_terms (list): list of search terms.
+
+    Returns
+    -------
+    combined_ranks (dict): dictionary with year and (word, freq) as keys and
+    normalised rank as values.
+
+    """
     combined_ranks = defaultdict(list)
     for year in normalised_rank_dict:
         given_year_rank = combine_ranks_given_year(normalised_rank_dict, 
@@ -1304,6 +1383,19 @@ def combine_ranks(normalised_rank_dict, search_terms):
 
 
 def noun_chunks_w_term(noun_chunks_dict, search_terms):
+    """
+    Identify noun chunks that contain any of the search terms.
+
+    Parameters
+    ----------
+    noun_chunks_dict (dict): dictionary with year as key and list of noun chunks as values.
+    search_terms (list): list of search terms.
+
+    Returns
+    -------
+    chunks_with_term (dict): dictionary with year as key and list of noun chunks as values.
+
+    """
     chunks_with_term = defaultdict(list)
     for year, chunks in noun_chunks_dict.items():
         contain_term = []
@@ -1314,6 +1406,7 @@ def noun_chunks_w_term(noun_chunks_dict, search_terms):
     return chunks_with_term
 
 
+#Below are the patterns used to identify various types of phrases using spacy
 noun_phrase = [{'POS': 'NOUN'},
               {'POS': 'NOUN', 'OP': '?'},
               {'TEXT': 'heat'},
@@ -1350,6 +1443,20 @@ verb_subj = [{'TEXT': 'heat'},
 
 
 def find_pattern(sentences, nlp_model, pattern):
+    """
+    Identify matches to specified pattern in a collection of sentences.
+
+    Parameters
+    ----------
+    sentences (list): list of sentences.
+    nlp_model : spacy model used.
+    pattern : pattern in the form of list of dicts (see adj_phrase for example).
+
+    Returns
+    -------
+    all_matches (list): list with matches.
+
+    """
     matcher = Matcher(nlp_model.vocab) 
     matcher.add("pattern", [pattern])
     all_matches = []
@@ -1366,6 +1473,24 @@ def find_pattern(sentences, nlp_model, pattern):
 
 def match_patterns_across_years(sentence_dict, nlp_model,
                                 pattern, n_years = 3, field = 'sentence'):
+    """
+    Identify matches to specified pattern in a collection of sentences over
+    several years.
+
+    Parameters
+    ----------
+    sentences (list): list of sentences.
+    nlp_model : spacy model used.
+    pattern : pattern in the form of list of dicts (see adj_phrase for example).
+    n_years (int): size of period (e.g. number of years), the default is 3.
+    field (str): name of the dataframe field that contains sentences. the default 
+    is 'sentence'.
+
+    Returns
+    -------
+    phrases (dictionary): dictionary with period name as key and list of phrases as values.
+
+    """
     period = list(sentence_dict.keys())
     year_chunks = []
     for i in range(0, len(period), n_years):
@@ -1382,6 +1507,20 @@ def match_patterns_across_years(sentence_dict, nlp_model,
 
 
 def aggregate_patterns(phrase_dict, sort_phrases = True):
+    """
+    Combine found matches and count frequency.
+
+    Parameters
+    ----------
+    phrase_dict (dictionary): dictionary with period name as key and list of phrases as values.
+    sort_phrases (Boolean): option to sort phrases alphabetically, the default is True.
+
+    Returns
+    -------
+    agg_results (dict): dictionary with period name as key and list of (phrase, count)
+    as values.
+
+    """
     agg_results = defaultdict(list)
     for year_period, phrases in phrase_dict.items():
        flat_results = [elem for sublist in phrases for elem in sublist]
@@ -1391,5 +1530,129 @@ def aggregate_patterns(phrase_dict, sort_phrases = True):
     return agg_results
     
        
+def compare_term_rank(rank_dict, set_of_terms, measure = 1):
+    """
+    Collect rank values for a set of terms in a single dataframe for further
+    analysis and plotting.
 
+    Parameters
+    ----------
+    rank_dict (dict): nested dictionary with year and term as keys and (freq, rank, pmi)
+    as values.
+    set_of_terms (list): list of terms.
+    measure : specifies particular measure we want to retrieve (1 for rank).
+
+    Returns
+    -------
+    rank_values_df : pandas dataframe with columns for year and each term.
+
+    """
+    year_rank_values = collections.defaultdict(list)
+    years = []
+    for year in rank_dict:
+        years.append(year)
+        for term in set_of_terms:
+            term_rank = rank_dict[year].get(term, (0,0,0))
+            if term_rank[measure] == 0:
+                year_rank_values[term].append(0)
+            else:
+                year_rank_values[term].append((1/term_rank[measure]))
+    
+    rank_values_df = pd.DataFrame.from_dict(year_rank_values)
+    rank_values_df['year'] = years    
+    return rank_values_df
+
+
+def compare_term_pmi(rank_dict, set_of_terms, measure = 2):
+    """
+    Collect rank values for a set of terms in a single dataframe for further
+    analysis and plotting.
+
+    Parameters
+    ----------
+    rank_dict (dict): nested dictionary with year and term as keys and (freq, rank, pmi)
+    as values.
+    set_of_terms (list): list of terms.
+    measure : specify measure to retrieve: 0 for total frequency, 1 for normalised 
+    rank and 2 for pmi. Don't select 1, as normalised rank needs to be inverted for
+    further analysis and plotting.
+
+    Returns
+    -------
+    rank_values_df : pandas dataframe with columns for year and each term.    
+    """
+    year_rank_values = collections.defaultdict(list)
+    years = []
+    for year in rank_dict:
+        years.append(year)
+        for term in set_of_terms:
+            term_rank = rank_dict[year].get(term, (0,0,0))
+            if term_rank[measure] == 0:
+                year_rank_values[term].append(0)
+            else:
+                year_rank_values[term].append((term_rank[measure]))
+    
+    rank_values_df = pd.DataFrame.from_dict(year_rank_values)
+    rank_values_df['year'] = years  
+    return rank_values_df
+
+
+
+def plot_ranks(comparative_df, title, fields = ['year', 'terms', 'rank']):
+    """
+    Plot values for set of terms over time.
+
+    Parameters
+    ----------
+    comparative_df : pandas dataframe with comparative measures.
+    title (str): figure title.
+    fields (list): list of fields to plot, the default is ['year', 'terms', 'rank'].
+
+    Returns
+    -------
+    None.
+
+    """
+    sns.set(style="ticks", rc={"lines.linewidth": 0.7})
+#    kws = dict(linewidth=2, s = 3, alpha = 0.75)
+    long_df =  comparative_df.melt(fields[0], 
+                                   var_name=fields[1],  
+                                   value_name=fields[2])
+    g = sns.catplot(x="year", y="rank", hue='terms', data=long_df, 
+                    kind='point', palette = 'colorblind', height = 4, aspect =1.8,
+                   kws={"s": 10, "linewidth":2, "alpha": 0.2});
+    g.fig.subplots_adjust(top=0.9)
+    g.fig.suptitle(title, fontsize = 12)
+    return g;
+
+
+def analyse_rank_pmi_over_time(agg_pmi_df, group_field = 'term'):
+    """
+    Preprocess dataframe with freq, rank and pmi values for terms over years.
+    This will then be used to analyse changes over time.
+
+    Parameters
+    ----------
+    agg_pmi_df : pandas dataframe with freq, rank, pmi values for terms over years.
+    group_field (str): dataframe field name to group on, the default is 'term'.
+
+    Returns
+    -------
+    agg_terms : pandas dataframe which shows for each term: year of first mention,
+    total number of years with mentions, standard deviation of the rank and mean pmi.
+
+    """
+    grouped_terms = agg_pmi_df.groupby(group_field)
+    agg_terms = grouped_terms.agg({'year': lambda x: np.min([int(elem) for elem in x]),
+                                   'freq': 'count',
+                                   # below we invert rank to make it more intuitive
+                                   # so higher values would mean higher importance
+                                   'rank': lambda x: np.std([1/elem for elem in x]),
+                                   'pmi': lambda x: np.mean(x)})
+    agg_terms.columns = ['year_first_mention', 'num_years', 'st_dev_rank', 'mean_pmi']
+    agg_terms = agg_terms.round({'year_first_mention': 0, 
+                                 'num_years': 0,
+                                 'st_dev_rank': 3,
+                                 'mean_pmi': 3})
+    return agg_terms
             
