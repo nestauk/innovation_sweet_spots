@@ -34,10 +34,10 @@ DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "discourse_analysis_outputs"
 
 # THis contains a list of terms that should have neutral sentimen
 # for the purposes of green tech analysis (e.g. 'energy demand', 'lower emissions')
-with open(os.path.join(DISC_OUTPUTS_DIR, 'vader_exceptions.pkl'), "rb") as infile:
-        vader_exceptions = pickle.load(infile)
+# with open(os.path.join(DISC_OUTPUTS_DIR, 'vader_exceptions.pkl'), "rb") as infile:
+#         vader_exceptions = pickle.load(infile)
 
-vader_replacements = {elem: ' ' for elem in vader_exceptions}
+# vader_replacements = {elem: ' ' for elem in vader_exceptions}
 
 
 def extract_text_from_html(html, tags: Iterator[str]) -> Iterator[str]:
@@ -641,7 +641,7 @@ def get_normalised_rank(cooccurrence_m, token_names, token_counts, search_term,
     return normalised_rank
 
 
-def get_article_metadata(grouped_articles, year_field,fields_to_extract = ['id']):
+def get_article_metadata(grouped_articles, year_field, fields_to_extract = ['id']):
     """
     Extract useful article fields from raw data returned by the Guardian API.
 
@@ -1643,13 +1643,14 @@ def analyse_rank_pmi_over_time(agg_pmi_df, group_field = 'term'):
 
     """
     grouped_terms = agg_pmi_df.groupby(group_field)
-    agg_terms = grouped_terms.agg({'year': lambda x: np.min([int(elem) for elem in x]),
+    agg_terms = grouped_terms.agg({'term': 'first',
+                                    'year': lambda x: np.min([int(elem) for elem in x]),
                                    'freq': 'count',
                                    # below we invert rank to make it more intuitive
                                    # so higher values would mean higher importance
                                    'rank': lambda x: np.std([1/elem for elem in x]),
                                    'pmi': lambda x: np.mean(x)})
-    agg_terms.columns = ['year_first_mention', 'num_years', 'st_dev_rank', 'mean_pmi']
+    agg_terms.columns = ['term', 'year_first_mention', 'num_years', 'st_dev_rank', 'mean_pmi']
     agg_terms = agg_terms.round({'year_first_mention': 0, 
                                  'num_years': 0,
                                  'st_dev_rank': 3,
