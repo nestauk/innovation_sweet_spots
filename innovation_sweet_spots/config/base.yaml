@@ -6,7 +6,7 @@ guardian_api:
   page-size: 100
   order-by: "newest"
   lang: "en"
-  show-tags: "contributor"
+  show-tags: "contributor,keyword"
   show-fields: "body,headline,trailText"
 # Juan's parameters
 tokenise:
