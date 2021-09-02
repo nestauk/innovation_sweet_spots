@@ -91,22 +91,26 @@ def search_content(
     else:
         response = r.json()["response"]
         n_total_results = response["total"]
-        n_pages_total = response["pages"]
-        current_page = response["currentPage"]  # should always = 1
-        results_list = [response["results"]]
-        # Get results from all pages
-        if (n_pages_total > 1) and (not only_first_page):
-            while current_page < n_pages_total:
-                # Update url and call again
-                current_page += 1
-                url = create_url(search_term, api_key, {"page": current_page})
-                r = get_request(url)
-                if r.status_code == 200:
-                    results_list.append(r.json()["response"]["results"])
-        results_list = [r for page_results in results_list for r in page_results]
-        percentage_collected = round(len(results_list) / n_total_results * 100)
-        # Save the results
-        logging.info(f"Collected {len(results_list)} ({percentage_collected}%) results")
-        if save_to_cache:
-            save_content_to_cache(search_term, results_list, fpath)
-        return results_list
+        if n_total_results > 0:
+            n_pages_total = response["pages"]
+            current_page = response["currentPage"]  # should always = 1
+            results_list = [response["results"]]
+            # Get results from all pages
+            if (n_pages_total > 1) and (not only_first_page):
+                while current_page < n_pages_total:
+                    # Update url and call again
+                    current_page += 1
+                    url = create_url(search_term, api_key, {"page": current_page})
+                    r = get_request(url)
+                    if r.status_code == 200:
+                        results_list.append(r.json()["response"]["results"])
+            results_list = [r for page_results in results_list for r in page_results]
+            percentage_collected = round(len(results_list) / n_total_results * 100)
+            # Save the results
+            logging.info(f"Collected {len(results_list)} ({percentage_collected}%) results")
+            if save_to_cache:
+                save_content_to_cache(search_term, results_list, fpath)
+            return results_list
+        else:
+            logging.info(f"Search for {search_term} returned no results")
+            return []
