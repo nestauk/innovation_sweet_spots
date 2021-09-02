@@ -39,6 +39,54 @@ DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "discourse_analysis_outputs"
 
 # vader_replacements = {elem: ' ' for elem in vader_exceptions}
 
+# Patterns for phrase matching
+# noun_phrase = [{"POS": "ADJ", "OP": "*"}, 
+#                {'POS': 'NOUN'},
+#                {'POS': 'NOUN', 'OP': '?'},
+#                {'TEXT': 'heat'},
+#                {"TEXT": {'IN': ['pump', 'pumps']}}, 
+#               ]
+
+# adj_phrase = [{"POS": "ADV", "OP": "*"}, 
+#             {'POS': 'ADJ'},
+#             {"POS": "ADJ", "OP": "*"}, 
+#             {'POS': 'NOUN', 'OP': '?'},
+#             {'TEXT': 'heat'},
+#             {"TEXT": {'IN': ['pump', 'pumps']}}, 
+#             ]
+
+
+# term_is = [{'TEXT': 'heat'},
+#            {"TEXT": {'IN': ['pump', 'pumps']}}, 
+#            {"LEMMA": "be"}, 
+#            {"DEP": "neg", "OP": '?'},           
+#            {"POS": "ADV", "OP": "*"},
+#            {"POS": {'IN': ['NOUN', 'ADJ']}}]
+
+
+# term_is_at = [{'TEXT': 'heat'},
+#            {"TEXT": {'IN': ['pump', 'pumps']}}, 
+#            {"LEMMA": "be"}, 
+#            {"DEP": "prep"}, 
+#            {"POS": "DET"},
+#            {"POS": "NOUN"}]
+
+
+# verb_obj = [{'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+#             {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+#             {'POS': 'VERB'},
+#             {'OP': '?'},            
+#             {'TEXT': 'heat'},
+#             {"TEXT": {'IN': ['pump', 'pumps']}}, 
+#             ]
+
+# verb_subj = [{'TEXT': 'heat'},
+#              {"TEXT": {'IN': ['pump', 'pumps']}}, 
+#              {'POS': 'VERB'},
+#              {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+#              {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+#              ]   
+
 
 def extract_text_from_html(html, tags: Iterator[str]) -> Iterator[str]:
     """
@@ -1187,12 +1235,11 @@ def check_collocations(sentence_collection_df, collocated_term, groupby_field = 
     grouped_by_year : pandas groupby object.
 
     """
-    target_collocation = []
     base = r'{}'
     expr = '(?:\s|^){}(?:,?\s|$)'
     combined_expr = base.format(''.join(expr.format(collocated_term)))    
     collocation_df = sentence_collection_df[sentence_collection_df['sentence'].\
-                                            str.contains(combined_expr, regex = True)]
+                                                str.contains(combined_expr, regex = True)]
     grouped_by_year = collocation_df.groupby(groupby_field)
     return grouped_by_year
 
@@ -1215,7 +1262,7 @@ def collocation_summary(grouped_sentences):
     print(f"The terms were mentioned together in {num_sentences} sentences across {num_years} years.")
 
 
-def view_collocations(grouped_sentences):
+def view_collocations(grouped_sentences, metadata_dict, sentence_record_dict):
     """
     Print sentences grouped by year.
 
@@ -1231,8 +1278,14 @@ def view_collocations(grouped_sentences):
     for year, group in grouped_sentences:
         print(year)
         for ix, row in group.iterrows():
-            print(row['sentence'], end = "\n\n")
-        print('----------')
+            sentence = row['sentence']
+            sent_id = sentence_record_dict[sentence]
+            web_url = metadata_dict[sent_id]['url']
+            article_title = metadata_dict[sent_id]['title']
+            print(article_title)
+            print(sentence, end = "\n\n")
+            print(web_url, end = "\n\n")
+            print('----------')
         
 
 def combine_term_sentences(term_sentence_dict, search_terms):
@@ -1506,6 +1559,24 @@ def match_patterns_across_years(sentence_dict, nlp_model,
     return phrases
 
 
+def group_noun_chunks(noun_chunk_dict, n_years = 3):
+    """
+    Collect noun chunks into bundles corresponding to n-year periods.
+    """
+    period = list(noun_chunk_dict.keys())
+    year_chunks = []
+    for i in range(0, len(period), n_years):
+        year_chunks.append(period[i:i + n_years])
+    phrases = collections.defaultdict(list)
+    for chunk in year_chunks:
+        chunk_name = ', '.join(chunk)
+        for year in chunk:
+            year_phrases = noun_chunk_dict.get(year,{})
+            if len(year_phrases):
+                phrases[chunk_name].append(year_phrases)
+    return phrases
+
+
 def aggregate_patterns(phrase_dict, sort_phrases = True):
     """
     Combine found matches and count frequency.
@@ -1657,3 +1728,30 @@ def analyse_rank_pmi_over_time(agg_pmi_df, group_field = 'term'):
                                  'mean_pmi': 3})
     return agg_terms
             
+
+def subset_articles(article_text, included_terms, required_terms, text_field = 'text'):
+    base = r'{}'
+    expr = '(?:\s|^){}(?:,?\s|$)'
+    subsets = []
+    for term in included_terms:
+        combined_expr = base.format(''.join(expr.format(term))) 
+        print(term)
+        subset = article_text[article_text[text_field].str.contains(combined_expr)]
+        subsets.append(subset)
+        print(len(subset))
+    subset_df = pd.concat(subsets)
+    deduplicated_df = subset_df.drop_duplicates()
+    #print(len(deduplicated_df))
+         
+    if len(required_terms) > 0:
+        filtered_subsets = []
+        for term in required_terms:
+            print(term)
+            filtered_subset = deduplicated_df[deduplicated_df[text_field].str.contains(term)]
+            filtered_subsets.append(filtered_subset)
+            print(len(filtered_subset))
+        filtered_subset_df = pd.concat(filtered_subsets)
+        deduplicated_df = filtered_subset_df.drop_duplicates()
+        #print(len(deduplicated_df))
+    return deduplicated_df  
+    
