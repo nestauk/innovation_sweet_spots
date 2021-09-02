@@ -54,58 +54,68 @@ DISC_OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 # %%
 # Patterns for phrase matching:
 
-noun_phrase = [{"POS": "ADJ", "OP": "*"}, 
-               {'POS': 'NOUN'},
-               {'POS': 'NOUN', 'OP': '?'},
-               {'TEXT': 'heat'},
-               {"TEXT": {'IN': ['pump', 'pumps']}}, 
-              ]
+noun_phrase_hydrogen = [{"POS": "ADJ", "OP": "*"}, 
+                        #{'POS': 'NOUN'},
+                        {'POS': 'NOUN', 'OP': '*'},
+                        {'TEXT': 'hydrogen'},
+                        {'POS': 'NOUN', 'OP': '*'}, 
+                       ]
 
-adj_phrase = [{"POS": "ADV", "OP": "*"}, 
-            {'POS': 'ADJ'},
-            {"POS": "ADJ", "OP": "*"}, 
-            {'POS': 'NOUN', 'OP': '?'},
-            {'TEXT': 'heat'},
-            {"TEXT": {'IN': ['pump', 'pumps']}}, 
-            ]
-
-
-term_is = [{'TEXT': 'heat'},
-           {"TEXT": {'IN': ['pump', 'pumps']}}, 
-           {"LEMMA": "be"}, 
-           {"DEP": "neg", "OP": '?'},           
-           {"POS": "ADV", "OP": "*"},
-           {"POS": {'IN': ['NOUN', 'ADJ']}}]
+adj_phrase_hydrogen = [{"POS": "ADV", "OP": "*"}, 
+                       {'POS': 'ADJ'},
+                       {"POS": "ADJ", "OP": "*"}, 
+                       {'POS': 'NOUN', 'OP': '?'},
+                       {'TEXT': 'hydrogen'},
+                       {'POS': 'NOUN', 'OP': '*'}, 
+                      ]
 
 
-term_is_at = [{'TEXT': 'heat'},
-           {"TEXT": {'IN': ['pump', 'pumps']}}, 
-           {"LEMMA": "be"}, 
-           {"DEP": "prep"}, 
-           {"POS": "DET"},
-           {"POS": "NOUN"}]
+term_is_hydrogen = [{'TEXT': 'hydrogen'},
+                    {'POS': 'NOUN', 'OP': '*'}, 
+                    {"LEMMA": "be"}, 
+                    {"DEP": "neg", "OP": '?'},           
+                    {"POS": {'IN': ['ADV', 'DET']}, 'OP': '*'},
+                    {"POS": {'IN': ['NOUN', 'ADJ']}, 'OP': '*'}]
+
+term_can_hydrogen = [{'TEXT': 'hydrogen'},
+                    {'POS': 'NOUN', 'OP': '*'}, 
+                    {"LEMMA": "can"}, 
+                    {"DEP": "neg", "OP": '?'},           
+                    {"POS": {'IN': ['ADV', 'DET']}, 'OP': '*'},
+                    {"POS": {'IN': ['NOUN', 'ADJ']}, 'OP': '*'}]
 
 
-verb_obj = [{'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
-            {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
-            {'POS': 'VERB'},
-            {'OP': '?'},            
-            {'TEXT': 'heat'},
-            {"TEXT": {'IN': ['pump', 'pumps']}}, 
-            ]
+term_is_at_hydrogen = [{'TEXT': 'hydrogen'},
+                       {'POS': 'NOUN', 'OP': '?'}, 
+                       {"LEMMA": "be"}, 
+                       {"DEP": "prep"}, 
+                       {"POS": "DET"},
+                       {"POS": "NOUN"}]
 
-verb_subj = [{'TEXT': 'heat'},
-             {"TEXT": {'IN': ['pump', 'pumps']}}, 
-             {'POS': 'VERB'},
-             {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
-             {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
-             ]   
+
+verb_obj_hydrogen = [{'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+                     {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+                     {'POS': 'VERB'},
+                     {'OP': '?'},
+                     {'TEXT': 'hydrogen'},
+                     {'POS': 'NOUN', 'OP': '?'},
+                    ]
+
+verb_subj_hydrogen = [{'TEXT': 'hydrogen'},
+                      {'POS': 'NOUN', 'OP': '*'},
+                      {'POS': 'VERB'},
+                      {'POS': 'VERB', 'OP': '?'},
+                      {'POS': {'IN': ['NOUN', 'ADJ', 'ADV']}, 'OP': '?'},
+                      {'POS': {'IN': ['NOUN', 'ADJ', 'ADV']}, 'OP': '?'},
+                     ]   
 
 # %%
 nlp = spacy.load("en_core_web_sm")
 
 # %%
-search_terms = ['heat pump', 'heat pumps']
+search_terms = ['hydrogen boiler', 'hydrogen boilers', 
+                 'hydrogen-ready boiler', 'hydrogen-ready boilers', 'hydrogen ready boiler', 'hydrogen ready boilers',
+                 'hydrogen heating', 'hydrogen heat','hydrogen']
 
 # %% [markdown]
 # ## 2. Read in preprocessed data
@@ -113,24 +123,30 @@ search_terms = ['heat pump', 'heat pumps']
 # %%
 # Read in outputs.
 
-article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_heat_pumps.csv'))
+article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hansard_hydro.csv'))
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_heat_pumps.pkl'), "rb") as infile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_hansard_hydro.pkl'), "rb") as infile:
         sentences_by_year = pickle.load(infile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_heat_pumps.pkl'), "rb") as infile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_hansard_hydro.pkl'), "rb") as infile:
         processed_articles_by_year = pickle.load(infile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_heat_pumps.pkl'), "rb") as infile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_hansard_hydro.pkl'), "rb") as infile:
         sentence_records = pickle.load(infile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_heat_pumps.pkl'), "rb") as infile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_record_dict_hansard_hydro.pkl'), "rb") as infile:
+        sentence_record_dict = pickle.load(infile)
+
+with open(os.path.join(DISC_OUTPUTS_DIR, 'metadata_dict_hansard_hydro.pkl'), "rb") as infile:
+        metadata_dict = pickle.load(infile)
+
+with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_hansard_hydro.pkl'), "rb") as infile:
         noun_chunks_all_years = pickle.load(infile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'term_sentences_heat_pumps.pkl'), "rb") as infile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'term_sentences_hansard_hydrogen.pkl'), "rb") as infile:
         term_sentences = pickle.load(infile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'combined_sentences_heat_pumps.pkl'), "rb") as infile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'combined_sentences_hansard_hydrogen.pkl'), "rb") as infile:
         combined_term_sentences = pickle.load(infile)
 
 # %% [markdown]
@@ -140,7 +156,7 @@ related_terms = collections.defaultdict(dict)
 normalised_ranks = collections.defaultdict(dict)
 
 for year in sentences_by_year:
-    #print(year)
+    print(year)
     year_articles = [elem for elem in sentences_by_year[year]] # nested list of sentences within each article
     year_sentences = [sent for art in year_articles for sent in art]
     noun_chunks = noun_chunks_all_years[str(year)]
@@ -153,11 +169,19 @@ for year in sentences_by_year:
 
 # %%
 # Write to disk.
-with open(os.path.join(DISC_OUTPUTS_DIR, 'related_terms_heat_pumps.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'related_terms_hansard_hydrogen.pkl'), "wb") as outfile:
         pickle.dump(related_terms, outfile)
         
-with open(os.path.join(DISC_OUTPUTS_DIR, 'normalised_ranks_heat_pumps.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'normalised_ranks_hansard_hydrogen.pkl'), "wb") as outfile:
         pickle.dump(normalised_ranks, outfile)     
+
+# %%
+# Read in previously generated outputs
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'related_terms_hydrogen.pkl'), "rb") as infile:
+#        related_terms = pickle.load(infile)
+        
+#with open(os.path.join(DISC_OUTPUTS_DIR, 'normalised_ranks_hydrogen.pkl'), "rb") as infile:
+#        normalised_ranks = pickle.load(infile) 
 
 # %% [markdown]
 # ### 3.1 Combine related terms and normalised ranks for a set of terms
@@ -166,13 +190,13 @@ with open(os.path.join(DISC_OUTPUTS_DIR, 'normalised_ranks_heat_pumps.pkl'), "wb
 combined_pmi= disc.combine_pmi(related_terms, search_terms)
 
 # %%
-#combined_pmi['2020']
+combined_pmi['2020']
 
 # %%
 combined_ranks = disc.combine_ranks(normalised_ranks, search_terms)
 
 # %%
-#combined_ranks['2020']
+combined_ranks['2020']
 
 # %%
 combined_pmi_dict = collections.defaultdict(dict)
@@ -198,14 +222,14 @@ agg_terms = disc.analyse_rank_pmi_over_time(agg_pmi)
 
 # %%
 # Save to disc to explore separately.
-agg_pmi.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_pmi_rank_hp.csv'), index = False)
-agg_terms.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'agg_pmi_rank_hp.csv'), index = False)
+agg_pmi.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'combined_pmi_rank_hansard_hydrogen.csv'), index = False)
+agg_terms.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'agg_pmi_rank_hansard_hydrogen.csv'), index = False)
 
 # %% [markdown]
 # ### 3.2 Compare and plot term ranks over time
 
 # %%
-comparative_df = disc.compare_term_rank(pmi_inters_ranks, ['boilers', 'homes', 'government'], measure = 1)
+comparative_df = disc.compare_term_rank(pmi_inters_ranks, ['boilers', 'homes'], measure = 1)
 
 # %%
 disc.plot_ranks(comparative_df, 'Comparison of term ranks over time')
@@ -218,11 +242,11 @@ flat_sentences = pd.concat([combined_term_sentences[y] for y in combined_term_se
 
 # %%
 # Retrieve sentences where a given term was used together with any of the search terms
-grouped_sentences = disc.check_collocations(flat_sentences, 'homes')
+grouped_sentences = disc.check_collocations(flat_sentences, 'green')
 disc.collocation_summary(grouped_sentences)
 
 # %%
-disc.view_collocations(grouped_sentences)
+disc.view_collocations(grouped_sentences, metadata_dict, sentence_record_dict)
 
 # %% [markdown]
 # ## 4. Analyse language used to describe search terms
@@ -232,67 +256,80 @@ disc.view_collocations(grouped_sentences)
 term_phrases = disc.noun_chunks_w_term(noun_chunks_all_years, search_terms)
 
 # %%
-#term_phrases
+term_phrases_agg = disc.aggregate_patterns(group_noun_chunks(term_phrases))
+
+# %%
+term_phrases_agg.keys()
+
+# %%
+term_phrases_agg['2019, 2020, 2021']
 
 # %%
 # Adjectives used to describe heat pumps.
 # NB: patterns are defined at the start of the file.
-adjectives = disc.match_patterns_across_years(combined_term_sentences, nlp, adj_phrase)
+adjectives = disc.match_patterns_across_years(combined_term_sentences, nlp, adj_phrase_hydrogen)
 
 # %%
 adj_aggregated = disc.aggregate_patterns(adjectives)
 
 # %%
-adj_aggregated.keys()
-
-# %%
-#adj_aggregated['2019, 2020, 2021']
+adj_aggregated['2019, 2020, 2021']
 
 # %%
 # Noun phrases that describe heat pumps.
-nouns = disc.match_patterns_across_years(combined_term_sentences, nlp, noun_phrase)
+nouns = disc.match_patterns_across_years(combined_term_sentences, nlp, noun_phrase_hydrogen)
 
 # %%
 nouns_aggregated = disc.aggregate_patterns(nouns)
 
 # %%
-#nouns_aggregated['2007, 2008, 2009']
+nouns_aggregated['2019, 2020, 2021']
 
 # %%
 # Phrases that match the pattern 'heat pumps are ...'
-hp_are = disc.match_patterns_across_years(combined_term_sentences, nlp, term_is)
+hp_are = disc.match_patterns_across_years(combined_term_sentences, nlp, term_is_hydrogen)
 
 # %%
 hp_aggregated = disc.aggregate_patterns(hp_are)
 
 # %%
-#hp_aggregated['2019, 2020, 2021']
+hp_aggregated['2019, 2020, 2021']
+
+# %%
+# Phrases that match the pattern 'heat pumps can ...'
+hp_can = disc.match_patterns_across_years(combined_term_sentences, nlp, term_can_hydrogen)
+
+# %%
+hp_can_aggregated = disc.aggregate_patterns(hp_can)
+
+# %%
+hp_can_aggregated['2019, 2020, 2021']
 
 # %%
 # Verbs that follow heat pumps.
-verbs_follow = disc.match_patterns_across_years(combined_term_sentences, nlp, verb_subj)
+verbs_follow = disc.match_patterns_across_years(combined_term_sentences, nlp, verb_subj_hydrogen)
 
 # %%
 verbs_aggregated = disc.aggregate_patterns(verbs_follow)
 
 # %%
-#verbs_aggregated['2007, 2008, 2009']
+verbs_aggregated['2019, 2020, 2021']
 
 # %%
 # Phrases where verbs precede heat pumps.
-verbs_precede = disc.match_patterns_across_years(combined_term_sentences, nlp, verb_obj)
+verbs_precede = disc.match_patterns_across_years(combined_term_sentences, nlp, verb_obj_hydrogen)
 
 # %%
 verbs_p_aggregated = disc.aggregate_patterns(verbs_precede)
 
 # %%
-#verbs_p_aggregated['2007, 2008, 2009']
+verbs_p_aggregated['2019, 2020, 2021']
 
 # %%
 # Subject verb object triplets with search term acting both as subject and object.
 subject_phrase_dict = collections.defaultdict(list)
 object_phrase_dict = collections.defaultdict(list)
-terms = ['heat pump', 'heat pumps']
+terms = ['hydrogen boiler', 'hydrogen']
 for given_term in terms:
     for year in term_sentences[given_term]:
         given_term_sentences = term_sentences[given_term][year]['sentence']
@@ -332,3 +369,27 @@ with open(os.path.join(DISC_OUTPUTS_DIR, 'subj_heat_pumps.pkl'), "wb") as outfil
 
 with open(os.path.join(DISC_OUTPUTS_DIR, 'obj_heat_pumps.pkl'), "wb") as outfile:
         pickle.dump(object_phrase_dict, outfile)
+
+
+# %% [markdown]
+# ### Appendix
+
+# %%
+def group_noun_chunks(noun_chunk_dict, n_years = 3):
+    """
+    Collect noun chunks into bundles corresponding to n-year periods.
+    """
+    period = list(noun_chunk_dict.keys())
+    year_chunks = []
+    for i in range(0, len(period), n_years):
+        year_chunks.append(period[i:i + n_years])
+    phrases = collections.defaultdict(list)
+    for chunk in year_chunks:
+        chunk_name = ', '.join(chunk)
+        for year in chunk:
+            year_phrases = noun_chunk_dict.get(year,{})
+            if len(year_phrases):
+                phrases[chunk_name].append(year_phrases)
+    return phrases
+
+# %%
