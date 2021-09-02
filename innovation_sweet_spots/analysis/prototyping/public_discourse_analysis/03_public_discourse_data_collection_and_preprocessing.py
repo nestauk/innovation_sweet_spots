@@ -54,9 +54,9 @@ from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
 DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "discourse_analysis_outputs"
 DISC_OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 TAGS = ['p', 'h2']
-CATEGORIES = [['Environment', 'Guardian Sustainable Business', 'Technology', 'Science', 'Business', 
+CATEGORIES = ['Environment', 'Guardian Sustainable Business', 'Technology', 'Science', 'Business', 
                'Money', 'Cities', 'Politics', 'Opinion', 'Global Cleantech 100', 'The big energy debate',
-              'UK news', 'Life and style']]
+              'UK news', 'Life and style']
 
 # %%
 nlp = spacy.load("en_core_web_sm")
@@ -65,11 +65,14 @@ nlp = spacy.load("en_core_web_sm")
 # ## 2. Fetch relevant Guardian articles
 
 # %%
-search_terms = ['heat pump', 'heat pumps']
+#search_terms = ['heat pump', 'heat pumps']
+search_terms =  ['hydrogen boiler', 'hydrogen boilers', 'hydrogen-ready boiler', 'hydrogen-ready boilers', 
+                'hydrogen ready boiler', 'hydrogen ready boilers',
+                 'hydrogen heating', 'hydrogen heat', 'hydrogen systems','hydrogen']
 
 # %%
 # For each search term download corresponding articles.
-articles = [guardian.search_content(search_term) for search_term in search_terms]
+articles = [guardian.search_content(search_term, use_cached = True) for search_term in search_terms]
 
 # %%
 aggregated_articles = [article for sublist in articles for article in sublist]
@@ -79,25 +82,55 @@ filtered_articles = [a for a in aggregated_articles if a['sectionName'] in CATEG
 
 # %%
 # Group returned articles by year.
-sorted_articles = sorted(aggregated_articles, key = lambda x: x['webPublicationDate'][:4])
+sorted_articles = sorted(filtered_articles, key = lambda x: x['webPublicationDate'][:4])
 
 articles_by_year = collections.defaultdict(list)
 for k,v in groupby(sorted_articles,key=lambda x:x['webPublicationDate'][:4]):
     articles_by_year[k] = list(v)
 # %%
-with open(os.path.join(DISC_OUTPUTS_DIR, 'articles_by_year_heat_pumps.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'articles_by_year_hydrogen.pkl'), "wb") as outfile:
         pickle.dump(articles_by_year, outfile)
+
+# %%
+hansard = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'Hansard_data_Hydrogen_heating.csv'))
 
 # %% [markdown]
 # ## 3. Preprocess articles
 
 # %%
 # Extract article metadata
-metadata = disc.get_article_metadata(articles_by_year, 'year', fields_to_extract=['id', 'webUrl'])
+metadata = disc.get_article_metadata(articles_by_year, 'year', fields_to_extract=['id', 'webUrl', 'webTitle'])
 
 # %%
 # Extract article text
 article_text = disc.get_article_text_df(articles_by_year, TAGS, metadata)
+
+# %%
+# Hansard
+article_text = hansard[['id', 'year', 'speech', 'url', 'major_heading']]
+article_text.columns = ['id', 'year', 'text', 'url', 'title']
+
+# %%
+#required_terms = ['UK', 'Britain', 'Scotland', 'Wales', 'England', 'Northern Rreland', 'Britons', 'London']
+#article_text = disc.subset_articles(article_text, required_terms, [])
+#article_text = article_text[~article_text['text'].str.contains('Australia')]
+
+# %%
+# Optional: we can further refine article selection when initial search includes broad terms
+#disambiguation_terms = ['home', 'homes', 'heating, cooling', 'hot water', 'electricity', 'boiler', 'boilers', 
+#                        'house', 'houses', 'building', 'buildings', 'radiators', 'low carbon', 'carbon emissions',
+#                        'domestic', 'heating and cooling', 'heating fuel', 'heating systems', 'heating schemes',
+#                        'hydrogen for heating', 'electric heating', 'electrification of heating', 'electrifying heating', 
+#                        'heating and lighting', 'district heating', 'clean burning hydrogen', 'hydrogen gas heating',
+#                        'gas fired hydrogen', 'gas grid', 'climate targets', 'climate goals', 'households',
+#                        'energy grid', 'energy grids', 'central heating', 'heating homes','net zero', 'net-zero',
+#                        'appliances', 'hobs']
+#required_terms = ['UK', 'Britain', 'Scotland', 'Wales', 'England', 'Northern Rreland', 'Britons', 'London']
+#article_text = disc.subset_articles(article_text, disambiguation_terms, required_terms)
+# Exclude articles that mention hydrogen peroxide
+#article_text = article_text[~article_text['text'].str.contains('peroxide')]
+#article_text = article_text[~article_text['text'].str.contains('hydrogen bomb')]
+#article_text = article_text[~article_text['text'].str.contains('Australia')]
 
 # %%
 # Generate sentence corpus, spacy corpus of articles and sentence records (include original article id).
@@ -108,8 +141,17 @@ article_text = disc.get_article_text_df(articles_by_year, TAGS, metadata)
 sentences_by_year, processed_articles_by_year, sentence_records = disc.get_sentence_corpus(article_text, 
                                                                                            nlp,
                                                                                           'year',
-                                                                                          'text',
+                                                                                          'text', # speech for Hansard
                                                                                           'id')
+
+# %%
+sentence_record_dict = {elem[0]: elem[1] for elem in sentence_records}
+
+# %%
+metadata_dict = collections.defaultdict(dict)
+for ix, row in article_text.iterrows(): #metadata.iterrows():
+    metadata_dict[row['id']]['url'] = row['url'] 
+    metadata_dict[row['id']]['title'] = row['title'] 
 
 # %%
 # Use spacy functionality to identify noun phrases in all sentences in the corpus.
@@ -121,21 +163,27 @@ noun_chunks_all_years = {str(year): disc.get_noun_chunks(processed_articles, rem
 # Persist processed outputs to disk
 
 # Metadata for all articles
-metadata.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_metadata_heat_pumps.csv'), index = False)
+#metadata.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_metadata_hydrogen.csv'), index = False)
 
-article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_heat_pumps.csv'), index = False, quoting = csv.QUOTE_NONNUMERIC)
+article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hansard_hydro.csv'), index = False, quoting = csv.QUOTE_NONNUMERIC)
 
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_heat_pumps.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentences_by_year_hansard_hydro.pkl'), "wb") as outfile:
         pickle.dump(sentences_by_year, outfile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_heat_pumps.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_hansard_hydro.pkl'), "wb") as outfile:
     pickle.dump(processed_articles_by_year, outfile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_heat_pumps.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_hansard_hydro.pkl'), "wb") as outfile:
         pickle.dump(sentence_records, outfile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_heat_pumps.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_record_dict_hansard_hydro.pkl'), "wb") as outfile:
+        pickle.dump(sentence_record_dict, outfile)
+
+with open(os.path.join(DISC_OUTPUTS_DIR, 'metadata_dict_hansard_hydro.pkl'), "wb") as outfile:
+        pickle.dump(metadata_dict, outfile)
+
+with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_hansard_hydro.pkl'), "wb") as outfile:
         pickle.dump(noun_chunks_all_years, outfile)
 
 # %% [markdown]
@@ -155,14 +203,19 @@ term_mentions.append(disc.total_docs(article_text, 'year')) #replace with sample
 mentions_all = pd.DataFrame.from_records(term_mentions)
 mentions_all = mentions_all.T
 mentions_all.columns = search_terms + ['total_documents']
-mentions_all.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'mentions_df.csv'), index = False)
+mentions_all.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'mentions_df_hansard_hydro.csv'))
 
 # %%
 combined_term_sentences = disc.combine_term_sentences(term_sentences, search_terms)
 
 # %%
-with open(os.path.join(DISC_OUTPUTS_DIR, 'term_sentences_heat_pumps.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'term_sentences_hansard_hydrogen.pkl'), "wb") as outfile:
         pickle.dump(term_sentences, outfile)
 
-with open(os.path.join(DISC_OUTPUTS_DIR, 'combined_sentences_heat_pumps.pkl'), "wb") as outfile:
+with open(os.path.join(DISC_OUTPUTS_DIR, 'combined_sentences_hansard_hydrogen.pkl'), "wb") as outfile:
         pickle.dump(combined_term_sentences, outfile)
+
+# %%
+mentions_all
+
+# %%
