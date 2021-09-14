@@ -39,53 +39,6 @@ DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "discourse_analysis_outputs"
 
 # vader_replacements = {elem: ' ' for elem in vader_exceptions}
 
-# Patterns for phrase matching
-# noun_phrase = [{"POS": "ADJ", "OP": "*"}, 
-#                {'POS': 'NOUN'},
-#                {'POS': 'NOUN', 'OP': '?'},
-#                {'TEXT': 'heat'},
-#                {"TEXT": {'IN': ['pump', 'pumps']}}, 
-#               ]
-
-# adj_phrase = [{"POS": "ADV", "OP": "*"}, 
-#             {'POS': 'ADJ'},
-#             {"POS": "ADJ", "OP": "*"}, 
-#             {'POS': 'NOUN', 'OP': '?'},
-#             {'TEXT': 'heat'},
-#             {"TEXT": {'IN': ['pump', 'pumps']}}, 
-#             ]
-
-
-# term_is = [{'TEXT': 'heat'},
-#            {"TEXT": {'IN': ['pump', 'pumps']}}, 
-#            {"LEMMA": "be"}, 
-#            {"DEP": "neg", "OP": '?'},           
-#            {"POS": "ADV", "OP": "*"},
-#            {"POS": {'IN': ['NOUN', 'ADJ']}}]
-
-
-# term_is_at = [{'TEXT': 'heat'},
-#            {"TEXT": {'IN': ['pump', 'pumps']}}, 
-#            {"LEMMA": "be"}, 
-#            {"DEP": "prep"}, 
-#            {"POS": "DET"},
-#            {"POS": "NOUN"}]
-
-
-# verb_obj = [{'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
-#             {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
-#             {'POS': 'VERB'},
-#             {'OP': '?'},            
-#             {'TEXT': 'heat'},
-#             {"TEXT": {'IN': ['pump', 'pumps']}}, 
-#             ]
-
-# verb_subj = [{'TEXT': 'heat'},
-#              {"TEXT": {'IN': ['pump', 'pumps']}}, 
-#              {'POS': 'VERB'},
-#              {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
-#              {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
-#              ]   
 
 
 def extract_text_from_html(html, tags: Iterator[str]) -> Iterator[str]:
@@ -1067,7 +1020,8 @@ def get_key_terms(search_term, sentence_collection, nlp_model, noun_chunks,
     cm, dtm, tn, tc = tokenise_and_count(sentence_collection, nlp_model, mentions_threshold,
                        token_range)
     
-    key_terms, norm_rank = identify_related_terms(search_term, cm, dtm, tn, tc, noun_chunks)
+    key_terms, norm_rank = identify_related_terms(search_term, cm, dtm, tn, tc, 
+                                                  noun_chunks, mentions_threshold)
     return key_terms, norm_rank
     
 
@@ -1269,6 +1223,10 @@ def view_collocations(grouped_sentences, metadata_dict, sentence_record_dict):
     Parameters
     ----------
     grouped_sentences : pandas groupby object.
+    metadata_dict: dict with sentence IDs and urls
+    sentence_record_dict: dict with sentences and corresponding IDs and year
+    sentence_year (int): optional year to subset sentences
+    
 
     Returns
     -------
@@ -1567,7 +1525,7 @@ def group_noun_chunks(noun_chunk_dict, n_years = 3):
     year_chunks = []
     for i in range(0, len(period), n_years):
         year_chunks.append(period[i:i + n_years])
-    phrases = collections.defaultdict(list)
+    phrases = defaultdict(list)
     for chunk in year_chunks:
         chunk_name = ', '.join(chunk)
         for year in chunk:
@@ -1575,7 +1533,6 @@ def group_noun_chunks(noun_chunk_dict, n_years = 3):
             if len(year_phrases):
                 phrases[chunk_name].append(year_phrases)
     return phrases
-
 
 def aggregate_patterns(phrase_dict, sort_phrases = True):
     """
@@ -1601,7 +1558,7 @@ def aggregate_patterns(phrase_dict, sort_phrases = True):
     return agg_results
     
        
-def compare_term_rank(rank_dict, set_of_terms, measure = 1):
+def compare_term_rank(rank_dict, set_of_terms, measure = 0, freq_only = False):
     """
     Collect rank values for a set of terms in a single dataframe for further
     analysis and plotting.
@@ -1611,7 +1568,7 @@ def compare_term_rank(rank_dict, set_of_terms, measure = 1):
     rank_dict (dict): nested dictionary with year and term as keys and (freq, rank, pmi)
     as values.
     set_of_terms (list): list of terms.
-    measure : specifies particular measure we want to retrieve (1 for rank).
+    measure : specifies particular measure we want to retrieve (0 for frequency).
 
     Returns
     -------
@@ -1622,17 +1579,21 @@ def compare_term_rank(rank_dict, set_of_terms, measure = 1):
     years = []
     for year in rank_dict:
         years.append(year)
+        total_collocations = sum([elem[0] for elem in rank_dict[year].values()])
         for term in set_of_terms:
             term_rank = rank_dict[year].get(term, (0,0,0))
             if term_rank[measure] == 0:
                 year_rank_values[term].append(0)
             else:
-                year_rank_values[term].append((1/term_rank[measure]))
+                if freq_only:
+                    year_rank_values[term].append(term_rank[measure])
+                else:
+                    year_rank_values[term].append(term_rank[measure]/total_collocations)
+
     
     rank_values_df = pd.DataFrame.from_dict(year_rank_values)
     rank_values_df['year'] = years    
     return rank_values_df
-
 
 def compare_term_pmi(rank_dict, set_of_terms, measure = 2):
     """
@@ -1669,7 +1630,7 @@ def compare_term_pmi(rank_dict, set_of_terms, measure = 2):
 
 
 
-def plot_ranks(comparative_df, title, fields = ['year', 'terms', 'rank']):
+def plot_ranks(comparative_df, title, fields = ['year', 'terms', 'prop_cooccurrences']):
     """
     Plot values for set of terms over time.
 
@@ -1677,7 +1638,7 @@ def plot_ranks(comparative_df, title, fields = ['year', 'terms', 'rank']):
     ----------
     comparative_df : pandas dataframe with comparative measures.
     title (str): figure title.
-    fields (list): list of fields to plot, the default is ['year', 'terms', 'rank'].
+    fields (list): list of fields to plot, the default is ['year', 'terms', 'prop_cooccurrences'].
 
     Returns
     -------
@@ -1689,7 +1650,7 @@ def plot_ranks(comparative_df, title, fields = ['year', 'terms', 'rank']):
     long_df =  comparative_df.melt(fields[0], 
                                    var_name=fields[1],  
                                    value_name=fields[2])
-    g = sns.catplot(x="year", y="rank", hue='terms', data=long_df, 
+    g = sns.catplot(x="year", y="prop_cooccurrences", hue='terms', data=long_df, 
                     kind='point', palette = 'colorblind', height = 4, aspect =1.8,
                    kws={"s": 10, "linewidth":2, "alpha": 0.2});
     g.fig.subplots_adjust(top=0.9)
@@ -1713,6 +1674,7 @@ def analyse_rank_pmi_over_time(agg_pmi_df, group_field = 'term'):
     total number of years with mentions, standard deviation of the rank and mean pmi.
 
     """
+    agg_pmi_df.sort_values(by = group_field, inplace = True)
     grouped_terms = agg_pmi_df.groupby(group_field)
     agg_terms = grouped_terms.agg({'term': 'first',
                                     'year': lambda x: np.min([int(elem) for elem in x]),
@@ -1754,4 +1716,22 @@ def subset_articles(article_text, included_terms, required_terms, text_field = '
         deduplicated_df = filtered_subset_df.drop_duplicates()
         #print(len(deduplicated_df))
     return deduplicated_df  
-    
+
+def view_phrase_sentences(time_period, phrase_dict, sentence_collection_df, metadata_dict, sentence_record_dict):
+    if len(phrase_dict[time_period]) == 0:
+        print('No phrases in this time period')
+    else:
+        for p in phrase_dict[time_period]:
+            year_subset = []
+            grouped_sentences = check_collocations(sentence_collection_df, p[0])
+            for some_year in time_period.split(', '):
+                if some_year in grouped_sentences.groups:
+                    year_subset.append(grouped_sentences.get_group(some_year))
+            print(p)
+            if len(year_subset) >0:
+                year_subset_df = pd.concat(year_subset)
+                view_collocations(year_subset_df.groupby('year'), metadata_dict, sentence_record_dict)
+            else:
+                print('No results, the term might have been followed with a punctuation character')
+                print('')
+        print('********')
