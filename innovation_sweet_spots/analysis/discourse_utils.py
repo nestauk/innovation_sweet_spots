@@ -1244,7 +1244,36 @@ def view_collocations(grouped_sentences, metadata_dict, sentence_record_dict):
             print(sentence, end = "\n\n")
             print(web_url, end = "\n\n")
             print('----------')
-        
+
+
+def view_collocations_gtr(grouped_sentences, metadata_dict, sentence_record_dict):
+    """
+    Print sentences grouped by year. Adapted to datasets without urls.
+
+    Parameters
+    ----------
+    grouped_sentences : pandas groupby object.
+    metadata_dict: dict with sentence IDs and urls
+    sentence_record_dict: dict with sentences and corresponding IDs and year
+    sentence_year (int): optional year to subset sentences
+    
+
+    Returns
+    -------
+    None.
+
+    """
+    for year, group in grouped_sentences:
+        print(year)
+        for ix, row in group.iterrows():
+            sentence = row['sentence']
+            sent_id = sentence_record_dict[sentence]
+#            web_url = metadata_dict[sent_id]['url']
+            article_title = metadata_dict[sent_id]['title']
+            print(article_title)
+            print(sentence, end = "\n\n")
+#            print(web_url, end = "\n\n")
+            print('----------')        
 
 def combine_term_sentences(term_sentence_dict, search_terms):
     """
@@ -1728,7 +1757,7 @@ def view_phrase_sentences(time_period, phrase_dict, sentence_collection_df, meta
                 if some_year in grouped_sentences.groups:
                     year_subset.append(grouped_sentences.get_group(some_year))
             print(p)
-            if len(year_subset) >0:
+            if len(year_subset) > 0:
                 year_subset_df = pd.concat(year_subset)
                 view_collocations(year_subset_df.groupby('year'), metadata_dict, sentence_record_dict)
             else:
