@@ -27,6 +27,7 @@
 import os
 import pandas as pd
 import csv
+import json
 
 # %%
 # Change first element to location of project folder.
@@ -56,6 +57,11 @@ search_terms = ['heat pump', 'heat pumps']
 # %%
 # For each search term download corresponding articles.
 articles = [guardian.search_content(search_term, use_cached = True) for search_term in search_terms]
+
+# %%
+# Alternatively, load articles collected previously
+with open (os.path.join(DISC_OUTPUTS_DIR, 'articles_hp.json'), "r") as f:   
+    articles = json.load(f)
 
 # %%
 # Combine results across set of search terms
@@ -94,5 +100,10 @@ article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hp.csv'),
                     index = False, 
                     quoting = csv.QUOTE_NONNUMERIC)
 
+
+# %%
+# Save raw data from the Guardian API
+#with open (os.path.join(DISC_OUTPUTS_DIR, 'articles_hp.json'), "w") as outfile:
+#    json.dump(articles, outfile, indent = 4)
 
 # %%
