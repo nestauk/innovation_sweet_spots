@@ -9,6 +9,7 @@ import os
 import re
 from bs4 import BeautifulSoup
 from itertools import groupby
+from collections import defaultdict
 import pandas as pd
 from typing import Iterator
 
@@ -29,6 +30,8 @@ def combine_articles(articles):
     aggregated articles (list)
 
     """
+    assert isinstance(articles, list), 'parameter articles={} not of <class "list">'.\
+        format(articles)
     aggregated_articles = [article for sublist in articles for article in sublist]
     return aggregated_articles
 
@@ -49,6 +52,12 @@ def filter_by_category(aggregated_articles, category_list, field = 'sectionName'
     filtered_articles (list)
 
     """
+    assert isinstance(aggregated_articles, list), 'parameter aggregated_articles={} not of <class "list">'.\
+        format(aggregated_articles)
+    assert isinstance(field, str), 'parameter field={} not of <class "str">'.\
+        format(field)
+    assert isinstance(category_list, list), 'parameter category_list={} not of <class "list">'.\
+        format(category_list)
     filtered_articles = [a for a in aggregated_articles if a[field] in category_list]
     return filtered_articles
     
@@ -69,8 +78,12 @@ def sort_by_year(filtered_articles, date_field = 'webPublicationDate'):
                             articles grouped by year using itertools.
 
     """
+    assert isinstance(filtered_articles, list), 'parameter filtered_articles={} not of <class "list">'.\
+        format(filtered_articles)
+    assert isinstance(date_field, str), 'parameter date_field={} not of <class "str">'.\
+        format(date_field)   
     sorted_articles = sorted(filtered_articles, key = lambda x: x[date_field][:4])
-    articles_by_year = collections.defaultdict(list)
+    articles_by_year = defaultdict(list)
     for k,v in groupby(sorted_articles,key=lambda x:x[date_field][:4]):
         articles_by_year[k] = list(v)
     return articles_by_year
@@ -135,17 +148,15 @@ def get_article_text(articles: Iterator[dict], tags: Iterator[str]):
     return article_text
 
 
-def get_article_metadata(grouped_articles, fields_to_extract=["id",
-                                                              'webUrl',
-                                                              'webTitle',
-                                                              'webPublicationDate']):
+def get_article_metadata(grouped_articles, fields_to_extract=["id"]):
     """
     Extract useful article fields from raw data returned by the Guardian API.
 
     Parameters
     ----------
     grouped_articles (dict): articles grouped by year using itertools.
-    fields_to_extract (list): list of fields.
+    fields_to_extract (list): list of fields. the default is "id", other useful
+                                fields are "webUrl" and "webTitle"
 
     Returns
     -------
@@ -169,7 +180,7 @@ def get_article_metadata(grouped_articles, fields_to_extract=["id",
 
 def get_article_text_df(grouped_articles, tags):
     """
-    Extract article text from articles grouped by year.
+    Extract article text from articles grouped by year. Deduplicate articles.
 
     Parameters
     ----------
