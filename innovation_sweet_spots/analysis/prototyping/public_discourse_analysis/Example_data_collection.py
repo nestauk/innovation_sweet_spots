@@ -106,4 +106,24 @@ article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hp.csv'),
 #with open (os.path.join(DISC_OUTPUTS_DIR, 'articles_hp.json'), "w") as outfile:
 #    json.dump(articles, outfile, indent = 4)
 
+# %% [markdown]
+# ### 3.1. Filtering out irrelevant articles
+
+# %% [markdown]
+# Sometimes we initially have to use a broad search term, such as hydrogen, to catch all the relevant documents. But we then end up with lots of results that we want to filter out. These are irrelevant either because they mention the search term in a context that we are not interested in (e.g. hydrogen in articles about space) or that relate to a geography that's outside of our scope (e.g. Australia).
+#
+# Below is an example of how to generate a subset of articles relevant for hydrogen energy and heating.
+
 # %%
+#disambiguation_terms = ['home', 'homes', 'heating, cooling', 'hot water', 'electricity', 'boiler', 'boilers', 
+#                        'house', 'houses', 'building', 'buildings', 'radiators', 'low carbon', 'carbon emissions',
+#                        'domestic', 'heating and cooling', 'heating fuel', 'heating systems', 'heating schemes',
+#                        'hydrogen for heating', 'electric heating', 'electrification of heating', 'electrifying heating', 
+#                        'heating and lighting', 'district heating', 'clean burning hydrogen', 'hydrogen gas heating',
+#                        'gas fired hydrogen', 'gas grid', 'climate targets', 'climate goals', 'households',
+#                        'energy grid', 'energy grids', 'central heating', 'heating homes','net zero', 'net-zero',
+#                        'appliances', 'hobs']
+#required_terms = ['UK', 'Britain', 'Scotland', 'Wales', 'England', 'Northern Rreland', 'Britons', 'London']
+#article_text = dcu.subset_articles(article_text, disambiguation_terms, required_terms)
+# Exclude articles that mention hydrogen peroxide
+#article_text = dcu.remove_articles(article_text, 'peroxide')
