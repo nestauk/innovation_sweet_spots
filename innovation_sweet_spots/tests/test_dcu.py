@@ -10,9 +10,6 @@ import pytest
 from innovation_sweet_spots.analysis.prototyping.public_discourse_analysis import \
     pd_data_collection_utils as dcu
     
-    
-
-
 
 def test_combine_articles():
     assert dcu.combine_articles([['a'], ['b', 'c']]) == ['a', 'b', 'c'], \
