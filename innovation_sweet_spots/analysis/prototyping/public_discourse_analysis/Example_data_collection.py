@@ -15,7 +15,7 @@
 # ---
 
 # %% [markdown]
-# # Collect and preprocess Guardian articles
+# # Collect Guardian articles, subset relevant documents and extract text
 #
 # - Fetch articles using Guardian API
 # - Extract metadata and text from html
@@ -28,6 +28,8 @@ import os
 import pandas as pd
 import csv
 import json
+from collections import defaultdict
+import pickle
 
 # %%
 # Change first element to location of project folder.
@@ -83,6 +85,15 @@ metadata = dcu.get_article_metadata(articles_by_year, fields_to_extract=['id', '
                                                                                   'webPublicationDate'])
 
 # %%
+# Build dict mapping article ids to url, title and publication date
+# This dict is later used for quick retrieval of original articles when reviewing results
+metadata_dict = defaultdict(dict)
+for ix, row in metadata.iterrows():
+    metadata_dict[row['id']]['url'] = row['webUrl'] 
+    metadata_dict[row['id']]['title'] = row['webTitle']
+    metadata_dict[row['id']]['date'] = row['webPublicationDate']
+
+# %%
 # Extract article text
 article_text = dcu.get_article_text_df(articles_by_year, TAGS)
 
@@ -93,8 +104,9 @@ article_text.head()
 # Persist processed outputs to disk
 
 # Metadata for all articles
-metadata.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_metadata_hp.csv'), index = False)
-
+with open(os.path.join(DISC_OUTPUTS_DIR, 'metadata_dict_hp.pkl'), "wb") as outfile:
+        pickle.dump(metadata_dict, outfile)
+        
 # Article text
 article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hp.csv'), 
                     index = False, 
