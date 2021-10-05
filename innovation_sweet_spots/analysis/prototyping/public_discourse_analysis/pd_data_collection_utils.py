@@ -201,3 +201,70 @@ def get_article_text_df(grouped_articles, tags):
     year_articles = pd.concat(year_articles_across_years)
     year_articles = year_articles.drop_duplicates()
     return year_articles
+
+
+def subset_articles(article_text, refine_terms, required_terms, text_field = 'text'):
+    """
+    This function is used to extract a subset of articles that contain specific terms.
+    It is useful for removing irrelevant articles in instances when a broad general 
+    search term is used during data collection, e.g. `hydrogen`.
+    
+
+    Parameters
+    ----------
+    article_text (pandas.core.frame.DataFrame): dataframe that contains article text and id.
+    refine_terms (list): list of terms that we use to disambiguate the general term.
+    required_terms (list): an article must mention at least one of these terms.
+    text_field (str): name of the column with text, the default is 'text'.
+
+    Returns
+    -------
+    deduplicated_df (pandas.core.frame.DataFrame): dataframe with a subset of articles.
+
+    """
+    # we first generate a 'thematic' subset of articles that are relevant
+    # e.g. applications of hydrogen to heating
+    base = r'{}'
+    expr = '(?:\s|^){}(?:,?\s|$)'
+    subsets = []
+    for term in refine_terms:
+        combined_expr = base.format(''.join(expr.format(term))) 
+        print(term)
+        subset = article_text[article_text[text_field].str.contains(combined_expr)]
+        subsets.append(subset)
+        print(len(subset))
+    subset_df = pd.concat(subsets) #duplicates v likely as article may contain more than one refine_term
+    deduplicated_df = subset_df.drop_duplicates()  
+    # required_terms tend to be geographic areas that we are studying
+    # we select only articles that mention those areas from a 'thematic' set
+    # defined above        
+    if len(required_terms) > 0:
+        filtered_subsets = []
+        for term in required_terms:
+            print(term)
+            filtered_subset = deduplicated_df[deduplicated_df[text_field].str.contains(term)]
+            filtered_subsets.append(filtered_subset)
+            print(len(filtered_subset))
+        filtered_subset_df = pd.concat(filtered_subsets)
+        deduplicated_df = filtered_subset_df.drop_duplicates()
+    return deduplicated_df 
+
+
+def remove_articles(article_text, term: str, text_field = 'text'):
+    """
+    A wrapper around pandas subsetting. This function is used to explicitely
+    remove any articles that mention a particular term ('e.g. hydrogen peroxide).
+
+    Parameters
+    ----------
+    article_text (pandas.core.frame.DataFrame): dataframe that contains article text and id.
+    term (str): term that we don't want to be mentioned in an article
+    text_field (str): name of the column with text, the default is 'text'.
+
+    Returns
+    -------
+    article_text (pandas.core.frame.DataFrame): dataframe with a subset of articles.
+
+    """
+    article_text = article_text[~article_text[text_field].str.contains(term)]
+    return article_text    
