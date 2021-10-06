@@ -13,7 +13,6 @@ DROP_NERS = ["ORG", "DATE", "QUANTITY", "PERSON", "CARDINAL", "ORDINAL", "GPE", 
 DROP_NERS_MIN = []
 
 
-
 def remove_newline(text):
     """Removes new lines from documents"""
     return re.sub("\n", " ", text.lower())
@@ -97,9 +96,9 @@ def pre_process_corpus(text_corpus: list, nlp=None, **kwargs) -> list:
 
     return tok_ngram, ngram_phraser
 
+
 def process_text_disc(doc: spacy.tokens.doc.Doc) -> list:
-    """Adapted from process_text for discourse analysis
-    """
+    """Adapted from process_text for discourse analysis"""
 
     no_stops = [
         x
@@ -113,8 +112,6 @@ def process_text_disc(doc: spacy.tokens.doc.Doc) -> list:
 
     drop_ents = [x.text for x in doc.ents if x.label_ in set(DROP_NERS_MIN)]
 
-    no_ents = [
-        x for x in no_stops if all(x.text not in ent for ent in drop_ents)
-    ]
+    no_ents = [x for x in no_stops if all(x.text not in ent for ent in drop_ents)]
 
     return no_ents
