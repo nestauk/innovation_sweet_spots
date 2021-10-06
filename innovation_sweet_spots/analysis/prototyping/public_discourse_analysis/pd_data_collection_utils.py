@@ -267,4 +267,4 @@ def remove_articles(article_text, term: str, text_field = 'text'):
 
     """
     article_text = article_text[~article_text[text_field].str.contains(term)]
-    return article_text    
+    return article_text  
