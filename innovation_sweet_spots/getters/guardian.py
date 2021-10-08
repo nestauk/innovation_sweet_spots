@@ -76,7 +76,6 @@ def search_content(
     save_to_cache: bool = True,
     fpath=API_RESULTS_DIR,
     only_first_page: bool = False,
-    adjusted_parameters: dict = {},
 ):
     # Check if we have already made such a search
     if use_cached:
@@ -85,7 +84,7 @@ def search_content(
             return results_list
 
     # Do a new search
-    url = create_url(search_term, api_key, adjusted_parameters)
+    url = create_url(search_term, api_key)
     r = get_request(url)
     if r.status_code != 200:
         return r
@@ -100,9 +99,7 @@ def search_content(
             while current_page < n_pages_total:
                 # Update url and call again
                 current_page += 1
-                adjusted_parameters_ = adjusted_parameters.copy()
-                adjusted_parameters_["page"] = current_page
-                url = create_url(search_term, api_key, adjusted_parameters_)
+                url = create_url(search_term, api_key, {"page": current_page})
                 r = get_request(url)
                 if r.status_code == 200:
                     results_list.append(r.json()["response"]["results"])

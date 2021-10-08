@@ -40,8 +40,6 @@ def save_altair(fig, name, driver, path=FIG_PATH):
     )
     # Save html
     fig.save(f"{path}/html/{name}.html")
-    # save svg
-    save(fig, f"{path}/svg/{name}.svg", method="selenium", webdriver=driver)
 
 
 def save_altair_to_path(

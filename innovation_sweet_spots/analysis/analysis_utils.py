@@ -142,18 +142,6 @@ def get_sentences_with_term(search_term, docs):
     return sentences_with_term
 
 
-def get_doc_sentences_with_term(search_term, docs):
-    """ """
-    sentences_with_term = []
-    for doc in docs:
-        doc_sents = []
-        for sent in split_sentences(doc):
-            if search_term in sent:
-                doc_sents.append(sent)
-        sentences_with_term.append(doc_sents)
-    return sentences_with_term
-
-
 # def get_span_with_term(search_term, docs):
 #     """ """
 #     spans_with_term = []
@@ -243,17 +231,17 @@ def show_time_series_points(data, y, x="year", ymax=None, clip=True):
         .encode(
             alt.X("year:O"),
             alt.Y("amount:Q", scale=alt.Scale(domain=(0, ymax))),
-            tooltip=["year", "title", "description", "amount"],
+            tooltip=["title"],
         )
     )
     base.encoding.x.title = capitalise_label(x)
     base.encoding.y.title = capitalise_label(y, "thousands")
-    # base
-    # composite = alt.layer(
-    #     base,
-    #     base.transform_loess("year", "amount").mark_line(color="#3e0c59", size=1.5),
-    # )
-    fig = nicer_axis(base).interactive()
+    base
+    composite = alt.layer(
+        base,
+        base.transform_loess("year", "amount").mark_line(color="#3e0c59", size=1.5),
+    )
+    fig = nicer_axis(composite)
     return fig
 
 
@@ -497,25 +485,6 @@ def get_cb_org_funding_rounds(
     return fund_rounds
 
 
-def get_cb_org_funding_rounds_full_info(
-    orgs: pd.DataFrame, cb_funding_rounds: pd.DataFrame
-) -> pd.DataFrame:
-    """Add funding round information to crunchbase organisations"""
-    fund_rounds = (
-        orgs[["id", "name"]]
-        .rename(columns={"id": "org_id"})
-        .merge(
-            cb_funding_rounds.drop("name", axis=1),
-            on="org_id",
-        )
-        .rename(columns={"id": "funding_round_id"})
-        .sort_values("announced_on")
-    )
-    fund_rounds.raised_amount = fund_rounds.raised_amount / 1000
-    fund_rounds.raised_amount_usd = fund_rounds.raised_amount_usd / 1000
-    return fund_rounds
-
-
 def check_currencies(fund_rounds, verbose=False):
     """# Check if there are different currencies present"""
     currencies = fund_rounds[
@@ -700,18 +669,14 @@ def news_sentiment_over_years(search_term, articles):
     return df
 
 
-def articles_table(articles: Iterator[dict], sort_by_date=True):
+def articles_table(articles: Iterator[dict]):
     """Creates a dataframe with article headlines and dates"""
     df = pd.DataFrame(
         data={
             "headline": [a["fields"]["headline"] for a in articles],
             "date": [a["webPublicationDate"] for a in articles],
-            "section": [a["sectionName"] for a in articles],
-            "url": [a["webUrl"] for a in articles],
         }
-    )
-    if sort_by_date:
-        df = df.sort_values("date", ascending=False)
+    ).sort_values("date", ascending=False)
     return df
 
 
