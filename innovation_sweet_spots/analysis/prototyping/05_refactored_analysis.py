@@ -223,10 +223,29 @@ iss.estimate_growth_level(search_term_funding, column="amount_median")
 importlib.reload(iss)
 
 # %%
-iss.show_time_series_points(df, y="amount", ymax=5000)
+# iss.show_time_series_points(df, y="amount", ymax=5000)
 
 # %%
-iss.show_time_series_points(df, y="amount", ymax=5000, clip=False)
+variable = "no_of_projects"
+df_stats_all = get_year_by_year_stats(variable)
+y_label = "Growth"
+x_label = f"Avg number of {variable} per year"
+x_label = "Average number of projects per year"
+cats = sorted(
+    [
+        "Heat pumps",
+        "Biomass heating",
+        "Hydrogen heating",
+        "Geothermal energy",
+        "Solar thermal",
+        "District heating",
+        "Heat storage",
+        "Insulation & retrofit",
+        "Energy management",
+    ]
+)
+fig = iss.nicer_axis(plot_matrix(variable, cats, x_label, y_label))
+fig
 
 # %%
 alt_save.save_altair(
