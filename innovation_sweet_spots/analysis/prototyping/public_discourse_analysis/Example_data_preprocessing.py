@@ -124,7 +124,7 @@ mentions_s.append(all_documents)
 # Collect into a single dataframe and specify column names
 mentions_df = pd.concat(mentions_s, axis =1)
 mentions_df.columns = search_terms + ['total_documents']
-    
+
 
 # %%
 mentions_df
