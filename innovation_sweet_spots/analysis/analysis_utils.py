@@ -372,10 +372,10 @@ def link_gtr_projects_and_orgs(
     """
     # Link project id and fund id
     gtr_project_to_org = link_gtr_organisations[["project_id", "id", "rel"]].merge(
-        gtr_organisations[["id", "name"]], how="left"
+        gtr_organisations[["id", "name", "addresses"]], how="left"
     )
     # Columns to use in downstream analysis
-    columns = ["project_id", "rel", "name"]
+    columns = ["project_id", "id", "rel", "name", "addresses"]
     return gtr_project_to_org[columns]
 
 
@@ -384,7 +384,7 @@ def get_gtr_project_orgs(
 ) -> pd.DataFrame:
     """Get organisations pertaining to a project"""
     projects_orgs = gtr_projects.merge(project_to_org, how="left").rename(
-        columns={"rel": "rel_organisations"}
+        columns={"rel": "rel_organisations", "id": "id_organisations"}
     )
     return projects_orgs
 
@@ -563,7 +563,14 @@ def get_funding_round_investors(
     """ """
     fund_rounds_investors = fund_rounds.merge(
         cb_investments[
-            ["funding_round_id", "investor_name", "id", "investor_type", "partner_name"]
+            [
+                "funding_round_id",
+                "investor_name",
+                "id",
+                "investor_id",
+                "investor_type",
+                "partner_name",
+            ]
         ],
         on="funding_round_id",
     )
