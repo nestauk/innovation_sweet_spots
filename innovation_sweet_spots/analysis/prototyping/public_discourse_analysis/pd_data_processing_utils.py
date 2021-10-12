@@ -8,6 +8,7 @@ Created on Tue Oct  5 14:37:14 2021
 import os
 from collections import defaultdict
 import pandas as pd
+import re
 from typing import Iterator
 
 from innovation_sweet_spots.utils import text_cleaning_utils as tcu
@@ -16,6 +17,17 @@ from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
 
 
 DEF_LANGUAGE_MODEL = {"model": "en_core_web_sm", "disable": ["tok2vec"]}
+
+
+det_article_replacement = {
+    # old patterns: replacement pattern
+    "^the\s": "",
+    "^a\s": "",
+    "^an\s": ""
+    }
+
+compiled_det_art_patterns = [re.compile(a) for a in det_article_replacement.keys()]
+det_art_replacement = list(det_article_replacement.values())
 
 
 def clean_articles(articles: Iterator[str]):
@@ -36,23 +48,21 @@ def clean_articles(articles: Iterator[str]):
     return clean_article_text
     
     
-def generate_sentence_corpus (clean_article_text: Iterator[str], nlp = None):
+def generate_sentence_corpus (clean_article_text: Iterator[str], nlp_model):
     """
     Clean article text, process with spacy and break up into sentences.
     
     Parameters
     ----------
     articles (list): text of articles.
-    nlp (spacy.lang.en.English, optional): spacy model used. the default is None.
+    nlp (spacy.lang.en.English, optional): spacy model used. 
     
     Returns
     -------
     article_sentences (list): list of sentences.
     spacy_docs (list[]): list of processed spacy docs (spacy.tokens.doc.Doc).
     """
-    if nlp is None:
-        nlp = tpu.setup_spacy_model(DEF_LANGUAGE_MODEL)
-    spacy_docs = [nlp(article) for article in clean_article_text]
+    spacy_docs = [nlp_model(article) for article in clean_article_text]
     article_sentences = [[sent.text for sent in article.sents] for article in spacy_docs]
     return article_sentences, spacy_docs
 
@@ -72,7 +82,6 @@ def generate_sentence_corpus_by_year(article_text_df, nlp_model, year_field,
     
     Returns
     -------
-    sentences_by_year (dict): sentence corpus for each year.
     processed_articles_by_year (dict): spacy docs for each year.
     sentence_records (list): list of tuples with sentence, id, year.
     """
@@ -124,8 +133,8 @@ def get_noun_chunks(spacy_corpus, remove_det_articles = False):
 
 def remove_determiner_articles(text):
     """
-    Remove determiner articles 'a', 'an', 'the'. Used to clean up noun phrases.
-    A regex pattern would make this more elegant.
+    Remove determiner articles 'a', 'an', 'the' at the start of the string. 
+    Used to clean up noun phrases.
     
     Parameters
     ----------
@@ -135,12 +144,8 @@ def remove_determiner_articles(text):
     -------
     text (str): text with determiner articles removed.
     """
-    if text[:2] == 'a ':
-        text = text.lstrip('a').lstrip()
-    elif text[:2] == 'an':
-        text = text.lstrip('an').lstrip()
-    elif text[:2] == 'th':
-        text = text.lstrip('the').lstrip()
+    for a, pattern in enumerate(compiled_det_art_patterns):
+        text = pattern.sub(det_art_replacement[a], text)
     return text
 
 
@@ -175,10 +180,12 @@ def get_flat_sentence_mentions(search_term, sentence_collection):
 def combine_term_sentences(term_sentence_dict, search_terms):
     """
     Bring together all sentences that mention any term from the search term list.
+    
     Parameters
     ----------
     term_sentence_dict (dict): dictionary with sentences for each year and each term.
     search_terms (list): list of terms.
+    
     Returns
     -------
     combined_sentences (dict): dictionary with years as keys and sentence dataframe as values.
