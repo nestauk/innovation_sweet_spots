@@ -42,7 +42,6 @@
 
 # %%
 from innovation_sweet_spots import PROJECT_DIR
-from innovation_sweet_spots.getters import crunchbase, gtr
 import innovation_sweet_spots.analysis.analysis_utils as iss
 
 import innovation_sweet_spots.pipeline.network_analysis as iss_net
@@ -143,4 +142,12 @@ net_plot.interactive()
 # %%
 alt_save.save_altair(net_plot, "heat_pump_network", driver)
 
+# %% [markdown]
+# # Crunchbase
+
 # %%
+# Company - deal - investor table
+cb_deals_investors = pd.read_csv(INPUTS_DIR / "ISS_companies_investors.csv")
+
+# Company - deal - investor table
+cb_investors = pd.read_csv(INPUTS_DIR / "ISS_investor_data.csv")
