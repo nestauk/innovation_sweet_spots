@@ -7,6 +7,7 @@ Created on Mon Oct  4 11:43:43 2021
 """
 
 import pytest
+import spacy
 from innovation_sweet_spots.analysis.prototyping.public_discourse_analysis import \
     pd_data_collection_utils as dcu
     
