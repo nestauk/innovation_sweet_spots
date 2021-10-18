@@ -47,6 +47,11 @@ inputs-pull:
 inputs-push:
 	$(call execute_in_env, aws s3 sync inputs s3://${BUCKET}/inputs  --profile ${PROFILE})
 
+.PHONY: inputs-push
+## Push `outputs/` to S3 (WARNING: this may overwrite existing files!)
+outputs-push:
+	$(call execute_in_env, aws s3 sync outputs s3://${BUCKET}/outputs  --profile ${PROFILE})
+
 .PHONY: docs
 ## Build the API documentation
 docs:

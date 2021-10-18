@@ -173,7 +173,9 @@ def plot_clustering(
     )
 
 
-def topic_keywords(documents, clusters, topic_words, n=10, Vectorizer=TfidfVectorizer):
+def topic_keywords(
+    documents, clusters, topic_words=None, n=10, Vectorizer=TfidfVectorizer
+):
     # Create large "cluster documents" for finding best topic words based on tf-idf scores
     document_cluster_memberships = clusters
     cluster_ids = sorted(np.unique(document_cluster_memberships))
@@ -193,16 +195,27 @@ def topic_keywords(documents, clusters, topic_words, n=10, Vectorizer=TfidfVecto
         zip(list(vectorizer.vocabulary_.values()), list(vectorizer.vocabulary_.keys()))
     )
 
+    if topic_words == "bigrams":
+        topic_words = [
+            w for w in list(vectorizer.vocabulary_.keys()) if len(w.split("_")) > 1
+        ]
+        topic_words_ = [topic_words] * X.shape[0]
+    topic_words = topic_words_
+
     clust_words = []
     for i in range(X.shape[0]):
         x = X[i, :].todense()
-        topic_word_counts = [
-            X[i, vectorizer.vocabulary_[token]] for token in topic_words[i]
-        ]
-        best_i = np.flip(np.argsort(topic_word_counts))
-        top_n = best_i[0:n]
-        words = [topic_words[i][t] for t in top_n]
-        clust_words.append(words)
+        if topic_words is None:
+            x = list(np.flip(np.argsort(np.array(x)))[0])[0:n]
+            clust_words.append([id_to_token[j] for j in x])
+        else:
+            topic_word_counts = [
+                X[i, vectorizer.vocabulary_[token]] for token in topic_words[i]
+            ]
+            best_i = np.flip(np.argsort(topic_word_counts))
+            top_n = best_i[0:n]
+            words = [topic_words[i][t] for t in top_n]
+            clust_words.append(words)
     logging.info(f"Generated keywords for {len(cluster_ids)} topics")
     return clust_words
 
@@ -268,7 +281,7 @@ def get_top2vec_model(run):
     )
 
 
-def umap_document_vectors(top2vec_model):
+def umap_document_vectors(top2vec_model, umap_args_plotting=umap_args_plotting):
     """Create a umap embedding to visualise top2vec model vectors"""
     umap_model = umap.UMAP(**umap_args_plotting).fit(
         top2vec_model._get_document_vectors(norm=False)
