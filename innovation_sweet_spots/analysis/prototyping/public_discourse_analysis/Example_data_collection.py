@@ -30,6 +30,7 @@ import csv
 import json
 from collections import defaultdict
 import pickle
+import itertools
 
 # %%
 # Change first element to location of project folder.
@@ -66,8 +67,8 @@ with open (os.path.join(DISC_OUTPUTS_DIR, 'articles_hp.json'), "r") as f:
     articles = json.load(f)
 
 # %%
-# Combine results across set of search terms
-aggregated_articles = dcu.combine_articles(articles)
+# Unpack results across set of search terms
+aggregated_articles = list(itertools.chain(*articles))
 
 # %%
 # Only keep articles from specified sections
