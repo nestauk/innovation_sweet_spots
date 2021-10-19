@@ -87,11 +87,9 @@ metadata = dcu.get_article_metadata(articles_by_year, fields_to_extract=['id', '
 # %%
 # Build dict mapping article ids to url, title and publication date
 # This dict is later used for quick retrieval of original articles when reviewing results
-metadata_dict = defaultdict(dict)
-for ix, row in metadata.iterrows():
-    metadata_dict[row['id']]['url'] = row['webUrl'] 
-    metadata_dict[row['id']]['title'] = row['webTitle']
-    metadata_dict[row['id']]['date'] = row['webPublicationDate']
+metadata_dict = (metadata
+                 .set_index('id')
+                 .to_dict(orient='index'))
 
 # %%
 # Extract article text

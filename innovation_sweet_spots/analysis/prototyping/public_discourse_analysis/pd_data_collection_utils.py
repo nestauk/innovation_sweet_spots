@@ -36,7 +36,7 @@ def combine_articles(articles):
     return aggregated_articles
 
 
-def filter_by_category(aggregated_articles, category_list, field = 'sectionName'):
+def filter_by_category(aggregated_articles, category_list, field='sectionName'):
     """
     From a list of articles only retain those that fall under specifide category.
 
