@@ -14,28 +14,6 @@ import pandas as pd
 from typing import Iterator
 
 
-
-def combine_articles(articles):
-    """
-    Generate a flat list of articles from a nested list where each element
-    corresponds to result from a Guardian API for a given search term.
-
-    Parameters
-    ----------
-    articles (list): a nested list where each element.
-    corresponds to JSON response from a Guardian API for a given search term.
-
-    Returns
-    -------
-    aggregated articles (list)
-
-    """
-    assert isinstance(articles, list), 'parameter articles={} not of <class "list">'.\
-        format(articles)
-    aggregated_articles = [article for sublist in articles for article in sublist]
-    return aggregated_articles
-
-
 def filter_by_category(aggregated_articles, category_list, field='sectionName'):
     """
     From a list of articles only retain those that fall under specifide category.
