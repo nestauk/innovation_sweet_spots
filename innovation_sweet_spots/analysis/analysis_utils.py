@@ -14,6 +14,8 @@ from collections import Counter
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 import altair as alt
+from currency_converter import CurrencyConverter
+from datetime import datetime
 
 ### Preparation
 
@@ -494,6 +496,8 @@ def get_cb_org_funding_rounds(
     )
     fund_rounds.raised_amount = fund_rounds.raised_amount / 1000
     fund_rounds.raised_amount_usd = fund_rounds.raised_amount_usd / 1000
+    # Convert custom currencies to GBP
+    fund_rounds = convert_deal_currency(fund_rounds)
     return fund_rounds
 
 
@@ -513,6 +517,8 @@ def get_cb_org_funding_rounds_full_info(
     )
     fund_rounds.raised_amount = fund_rounds.raised_amount / 1000
     fund_rounds.raised_amount_usd = fund_rounds.raised_amount_usd / 1000
+    # Convert custom currencies to GBP
+    fund_rounds = convert_deal_currency(fund_rounds)
     return fund_rounds
 
 
@@ -539,6 +545,7 @@ def get_cb_funding_per_year(
             no_of_rounds=("funding_round_id", "count"),
             raised_amount_total=("raised_amount", "sum"),
             raised_amount_usd_total=("raised_amount_usd", "sum"),
+            raised_amount_gbp_total=("raised_amount_gbp", "sum"),
         )
         .reset_index()
         .query(f"year>={min_year}")
@@ -552,9 +559,65 @@ def get_cb_funding_per_year(
             "no_of_rounds": int,
             "raised_amount_total": float,
             "raised_amount_usd_total": float,
+            "raised_amount_gbp_total": float,
         }
     )
     return yearly_stats_imputed
+
+
+def convert_deal_currency(funding: pd.DataFrame):
+    if len(funding[-funding.raised_amount.isnull()]) != 0:
+        c = CurrencyConverter(fallback_on_missing_rate=True)
+        funding["announced_on_date"] = [
+            datetime.strptime(x.split(" ")[0], "%Y-%m-%d")
+            for x in funding["announced_on"]
+        ]
+        funding = funding.query("announced_on_date > '2000-01-01'")
+        funding["year"] = [x.year for x in funding["announced_on_date"]]
+        funding["raised_amount_gbp"] = [
+            c.convert(
+                row["raised_amount_usd"], "USD", "GBP", date=row["announced_on_date"]
+            )
+            for _, row in funding.iterrows()
+        ]
+        funding.loc[
+            funding.raised_amount_currency_code == "GBP", "raised_amount_gbp"
+        ] = funding.loc[funding.raised_amount_currency_code == "GBP", "raised_amount"]
+    else:
+        funding["raised_amount_gbp"] = funding["raised_amount"].copy()
+    return funding
+
+
+# def get_cb_funding_per_year(
+#     fund_rounds: pd.DataFrame, min_year: int = 2007, max_year: int = 2020
+# ) -> pd.DataFrame:
+#     """Calculate raised amount of money across all orgs"""
+#     fund_rounds["year"] = fund_rounds.announced_on.apply(convert_date_to_year)
+#
+#     check_currencies(fund_rounds)
+#
+#     yearly_stats = (
+#         fund_rounds.groupby("year")
+#         .agg(
+#             no_of_rounds=("funding_round_id", "count"),
+#             raised_amount_total=("raised_amount", "sum"),
+#             raised_amount_usd_total=("raised_amount_usd", "sum"),
+#         )
+#         .reset_index()
+#         .query(f"year>={min_year}")
+#         .query(f"year<={max_year}")
+#     )
+#
+#     yearly_stats_imputed = impute_years(
+#         yearly_stats, min_year, max_year, trim_bounds=False
+#     ).astype(
+#         {
+#             "no_of_rounds": int,
+#             "raised_amount_total": float,
+#             "raised_amount_usd_total": float,
+#         }
+#     )
+#     return yearly_stats_imputed
 
 
 def get_funding_round_investors(

@@ -29,14 +29,18 @@ import pandas as pd
 import numpy as np
 import altair as alt
 
+from matplotlib import pyplot as plt
+import seaborn as sns
+
+fontsize_med = 12
+plt.rcParams["svg.fonttype"] = "none"
+
 # %%
 import innovation_sweet_spots.utils.io as iss_io
 
 # %%
-crunchbase.CB_PATH = crunchbase.CB_PATH.parent / "cb_2021"
-
-# %%
 # Import Crunchbase data
+crunchbase.CB_PATH = crunchbase.CB_PATH.parent / "cb_2021"
 cb = crunchbase.get_crunchbase_orgs_full()
 cb_df = cb[-cb.id.duplicated()]
 cb_df = cb_df[cb_df.country == "United Kingdom"]
@@ -60,6 +64,7 @@ PLOT_LCH_CATEGORY_DOMAIN = [
     "Heat storage",
     "Insulation & retrofit",
     "Energy management",
+    "Micro CHP",
 ]
 
 PLOT_LCH_CATEGORY_COLOURS = [
@@ -72,7 +77,7 @@ PLOT_LCH_CATEGORY_COLOURS = [
     "#b279a2",
     "#ff9da6",
     "#9d755d",
-    #     '#bab0ac',
+    "#bab0ac",
 ]
 COLOR_PAL_LCH = (PLOT_LCH_CATEGORY_DOMAIN, PLOT_LCH_CATEGORY_COLOURS)
 
@@ -108,9 +113,9 @@ dark_purple = "#2F1847"
 
 
 # %%
-def get_year_by_year_stats(YEARLY_STATS, variable, year_dif=4):
+def get_year_by_year_stats(yearly_stats, variable, year_dif=4):
     df_stats_all = pd.DataFrame()
-    for cat in list(YEARLY_STATS.keys()):
+    for cat in list(yearly_stats.keys()):
         for y in range(2011, 2021):
             yy = year_dif
             #         if y==2009: yy=1;
@@ -119,7 +124,8 @@ def get_year_by_year_stats(YEARLY_STATS, variable, year_dif=4):
             #         if y>2010: yy=4;
             df_stats = pd.DataFrame(
                 [
-                    get_growth_and_level(cat, variable, y - yy, y) + tuple([cat, y])
+                    get_growth_and_level(yearly_stats, cat, variable, y - yy, y)
+                    + tuple([cat, y])
                     for cat in [cat]
                 ],
                 columns=["growth", variable, "tech_category", "year"],
@@ -273,8 +279,6 @@ def get_growth_and_level(
 
 
 # %%
-from matplotlib import pyplot as plt
-import seaborn as sns
 
 # %%
 import innovation_sweet_spots.utils.altair_save_utils as alt_save
@@ -300,23 +304,46 @@ CB_DOCS_ALL_ = pd.read_csv(
 )
 
 # %%
+YEARLY_STATS["Hydrogen heating"]
+
+# %%
 # GTR_DOCS_ALL_[GTR_DOCS_ALL_.tech_category=='Hydrogen & fuel cells']
 
 # %%
 list(YEARLY_STATS.keys())
 
 # %%
+cb_all_yearly_funding = iss.get_cb_funding_per_year(
+    iss.get_cb_org_funding_rounds(cb_df, cb_funding_rounds), max_year=2021
+)
+
+# %%
+for key in YEARLY_STATS:
+    YEARLY_STATS[key]["no_of_rounds_norm"] = (
+        YEARLY_STATS[key]["no_of_rounds"] / cb_all_yearly_funding["no_of_rounds"]
+    )
+    YEARLY_STATS[key]["raised_amount_gbp_total_norm"] = (
+        YEARLY_STATS[key]["raised_amount_gbp_total"]
+        / cb_all_yearly_funding["raised_amount_gbp_total"]
+    )
+
+
+# %%
 df_all_yearly_stats = pd.DataFrame()
 for key in YEARLY_STATS:
+    YEARLY_STATS[key]
     df_ = YEARLY_STATS[key].copy()
     df_["tech_category"] = key
     df_all_yearly_stats = df_all_yearly_stats.append(df_, ignore_index=True)
 
-# df_all_yearly_stats_norm = pd.DataFrame()
-# for key in YEARLY_STATS_NORM:
-#     df_ = YEARLY_STATS_NORM[key].copy()
-#     df_["tech_category"] = key
-#     df_all_yearly_stats_norm = df_all_yearly_stats_norm.append(df_, ignore_index=True)
+df_all_yearly_stats_norm = pd.DataFrame()
+for key in YEARLY_STATS:
+    YEARLY_STATS_NORM = iss_topics.get_moving_average(
+        YEARLY_STATS[key], window=3, rename_cols=False
+    )
+    df_ = YEARLY_STATS_NORM.copy()
+    df_["tech_category"] = key
+    df_all_yearly_stats_norm = df_all_yearly_stats_norm.append(df_, ignore_index=True)
 
 # %%
 import innovation_sweet_spots.analysis.figures as iss_figures
@@ -363,6 +390,19 @@ fig = iss_figures.plot_bars(YEARLY_STATS, "no_of_projects", cat, "Number of proj
 fig
 
 # %%
+cat = "Low carbon heating"
+fig = iss_figures.plot_bars(YEARLY_STATS, "no_of_projects", cat, "Number of projects")
+fig
+
+# %%
+cat = "Low carbon heating"
+fig = iss_figures.plot_bars(YEARLY_STATS, "amount_total", cat, "Number of projects")
+fig
+
+# %%
+cat = "Energy efficiency & management"
+fig = iss_figures.plot_bars(YEARLY_STATS, "amount_total", cat, "Number of projects")
+fig
 
 # %%
 cat = "Insulation & retrofit"
@@ -403,6 +443,7 @@ cats = sorted(
         "Heat storage",
         "Insulation & retrofit",
         "Energy management",
+        "Micro CHP",
     ]
 )
 fig = iss.nicer_axis(
@@ -423,6 +464,7 @@ df_stats = pd.DataFrame(
 )
 
 # %%
+print(variable)
 df_stats_all = get_year_by_year_stats(YEARLY_STATS, variable, year_dif=4)
 
 # %%
@@ -450,10 +492,6 @@ df_stats.loc[
 ] = "Energy\nmanagement"
 # df_stats.loc[df_stats.tech_category=='Heat pumps', 'tech_label'] = 'Heat\npumps'
 # df_stats.loc[df_stats.tech_category=='Heat storage', 'tech_label'] = 'Heat\nstorage'
-
-# %%
-fontsize_med = 12
-plt.rcParams["svg.fonttype"] = "none"
 
 # %%
 fig, ax = plt.subplots(figsize=(6, 6), dpi=80)
@@ -490,7 +528,10 @@ plt.ylabel("Growth", fontsize=fontsize_med)
 plt.xticks(fontsize=11)
 plt.yticks(fontsize=11)
 
-# plt.savefig(PROJECT_DIR / 'outputs/figures/blog_figures' / 'matrix_LCH_EEM_projects.svg', format='svg')
+plt.savefig(
+    PROJECT_DIR / "outputs/figures/blog_figures" / "matrix_LCH_EEM_projects_2.svg",
+    format="svg",
+)
 plt.show()
 
 # %%
@@ -550,9 +591,6 @@ plt.show()
 #     df_stats[variable],
 #     df_stats.growth,
 # )
-
-# %%
-plt.plot(dates, values, "-o")
 
 # %%
 df_stats
@@ -701,19 +739,55 @@ df_viz = (
     .mean()
     .reset_index()
 )
+df_viz.amount_total = df_viz.amount_total / 1000
+
+sort_order = [
+    "Batteries",
+    "Low carbon heating",
+    "Wind & offshore",
+    "Solar",
+    "Bioenergy",
+    "EEM",
+    "Hydrogen & fuel cells",
+    "Carbon capture & storage",
+]
 
 # %%
 fig = (
     alt.Chart(
-        #         df_all_yearly_stats[df_all_yearly_stats.tech_category.isin(cats)],
         df_viz[df_viz.tech_category.isin(cats)],
         width=200,
     )
     .mark_bar()
     .encode(
-        y=alt.X("tech_category", title=""),
-        x=alt.Y(
+        y=alt.Y("tech_category", title="", sort=sort_order),
+        x=alt.X(
             "no_of_projects",
+            title="Number of new projects",
+        ),
+    )
+)
+fig = iss.nicer_axis(fig)
+fig
+
+# %%
+alt_save.save_altair(fig, "blog_fig_Barplot_Research_no_projects", driver)
+
+# %%
+
+# %%
+fig = (
+    alt.Chart(
+        df_viz[df_viz.tech_category.isin(cats)],
+        width=200,
+    )
+    .mark_bar()
+    .encode(
+        y=alt.Y("tech_category", title="", sort=sort_order),
+        x=alt.X(
+            "amount_total",
+            title="Funding amount",
+            scale=alt.Scale(domain=[0, 60])
             #             stack="normalize",
             #             title="Total amount raised ($1000s)"
         ),
@@ -724,24 +798,7 @@ fig = iss.nicer_axis(fig)
 fig
 
 # %%
-fig = (
-    alt.Chart(
-        #         df_all_yearly_stats[df_all_yearly_stats.tech_category.isin(cats)],
-        df_viz[df_viz.tech_category.isin(cats)],
-        width=200,
-    )
-    .mark_bar()
-    .encode(
-        y=alt.X("tech_category", title=""),
-        x=alt.Y(
-            "amount_total",
-            #             stack="normalize",
-            #             title="Total amount raised ($1000s)"
-        ),
-        #         color="tech_category",
-    )
-)
-iss.nicer_axis(fig)
+alt_save.save_altair(fig, "blog_fig_Barplot_Research_amount", driver)
 
 # %%
 
@@ -755,16 +812,140 @@ CB_DOCS_ALL_.tech_category.unique()
 df = CB_DOCS_ALL_[CB_DOCS_ALL_.tech_category.isin(["LCH & EEM"])]
 
 # %%
-df = CB_DOCS_ALL_[CB_DOCS_ALL_.tech_category.isin(["Low carbon heating"])]
+df = CB_DOCS_ALL_[
+    CB_DOCS_ALL_.tech_category.isin(
+        [
+            "Batteries",
+            "Hydrogen & fuel cells",
+            "Carbon capture & storage",
+            "Bioenergy",
+            "Solar",
+            "Low carbon heating",
+            "Wind & offshore",
+            "Energy efficiency & management",
+            "Heating (other)",
+        ]
+    )
+]
 
 # %%
-df
+# iss.get_cb_org_funding_rounds(df, cb_funding_rounds).sort_values('announed_on')
 
 # %%
 len(df)
 
 # %%
 (len(df) - df.total_funding.isnull().sum()) / len(df)
+
+# %%
+(len(cb_df) - cb_df.total_funding.isnull().sum()) / len(cb_df)
+
+# %%
+YEARLY_STATS["Heat pumps"].head(1)
+
+# %% [markdown]
+# ### Low carbon heating figures
+
+# %%
+cat = "Low carbon heating"
+
+# %%
+iss_figures.get_growth_and_level_std(
+    YEARLY_STATS, cat=cat, variable="raised_amount_gbp_total"
+)
+
+# %%
+iss_figures.get_growth_and_level_std(YEARLY_STATS, cat=cat, variable="no_of_rounds")
+
+# %%
+cb_selected_cat = CB_DOCS_ALL_[CB_DOCS_ALL_.tech_category == cat]
+dff = iss.get_cb_org_funding_rounds(cb_selected_cat, cb_funding_rounds)
+# dff[-dff.raised_amount.isnull()].sort_values("raised_amount")
+
+# %%
+dff.head(1)
+
+# %%
+dff[
+    (dff.announced_on_date >= "2016-01-01") & (dff.announced_on_date <= "2020-12-31")
+].raised_amount_gbp.median()
+
+# %%
+dff[(dff.announced_on_date >= "2016-01-01") & (dff.announced_on_date <= "2021-12-31")]
+
+# %%
+lch_investment = dff[
+    (dff.announced_on_date >= "2007-01-01") & (dff.announced_on_date <= "2021-12-31")
+]
+lch_investment = lch_investment[
+    lch_investment.funding_round_id != "32c568e7-ed7c-4b6b-bd8a-d45703a21b03"
+]
+lch_investment_yearly = iss.get_cb_funding_per_year(lch_investment.copy())
+
+# %%
+df = lch_investment_yearly
+iss_figures.get_growth_and_level_std_(df, variable="raised_amount_gbp_total")
+
+# %% [markdown]
+# ### EEM figures
+
+# %%
+cat = "EEM"
+
+# %%
+iss_figures.get_growth_and_level_std(YEARLY_STATS, cat="EEM", variable="no_of_rounds")
+
+# %%
+iss_figures.get_growth_and_level_std(
+    YEARLY_STATS, cat="EEM", variable="raised_amount_gbp_total"
+)
+
+# %%
+cb_selected_cat = CB_DOCS_ALL_[CB_DOCS_ALL_.tech_category == cat]
+dff = iss.get_cb_org_funding_rounds(cb_selected_cat, cb_funding_rounds)
+# dff[-dff.raised_amount.isnull()].sort_values("raised_amount")
+
+# %%
+dff.head(1)
+
+# %%
+dff[
+    (dff.announced_on_date >= "2016-01-01") & (dff.announced_on_date <= "2020-12-31")
+].raised_amount_gbp.median()
+
+# %%
+dff_ = dff[
+    (dff.announced_on_date >= "2016-01-01") & (dff.announced_on_date <= "2020-12-31")
+]
+dff_[-dff_.raised_amount_gbp.isnull()].sort_values("raised_amount_gbp").tail(15)
+
+# %%
+dff[(dff.announced_on_date >= "2016-01-01") & (dff.name == "Q-Bot")]
+
+# %% [markdown]
+# ### Other categories
+
+# %%
+df = YEARLY_STATS["EEM"]
+df[df.year == 2020].raised_amount_gbp_total.iloc[0] / df[
+    df.year == 2016
+].raised_amount_gbp_total.iloc[0]
+
+# %%
+df = YEARLY_STATS["Low carbon heating"]
+df[df.year == 2020].raised_amount_gbp_total.iloc[0] / df[
+    df.year == 2016
+].raised_amount_gbp_total.iloc[0]
+
+# %%
+df = YEARLY_STATS["Hydrogen & fuel cells"]
+cb_selected_cat = CB_DOCS_ALL_[CB_DOCS_ALL_.tech_category == "Hydrogen & fuel cells"]
+dff = iss.get_cb_org_funding_rounds(cb_selected_cat, cb_funding_rounds)
+# dff[-dff.raised_amount.isnull()].sort_values("raised_amount")
+# dff.tail(10)
+
+# %% [markdown]
+# ### Figures
 
 # %%
 # cats = ['Batteries', 'Hydrogen & Fuel Cells',
@@ -866,27 +1047,65 @@ plt.savefig(
 plt.show()
 
 # %%
-
-# %%
-df_viz = df_all_yearly_stats[df_all_yearly_stats.tech_category.isin(cats)]
+# df_viz = df_all_yearly_stats[df_all_yearly_stats.tech_category.isin(cats)]
+df_viz = df_all_yearly_stats_norm[df_all_yearly_stats_norm.tech_category.isin(cats)]
 fig = (
-    alt.Chart(df_viz, width=500)
+    alt.Chart(df_viz, width=450, height=250)
     .mark_line(opacity=1)
     .encode(
         x=alt.X(
             "year:O", title="Year"
         ),  # scale=alt.Scale(domain=list(range(2015, 2021)))),
         y=alt.Y(
-            "amount_total",
-            #             scale=alt.Scale(type='symlog'),
-            #             stack="normalize",
-            title="Total amount raised ($1000s)",
-            scale=alt.Scale(domain=(0, 60000)),
+            #             "raised_amount_gbp_total",
+            "no_of_rounds",
+            #                         scale=alt.Scale(type='symlog'),
+            #                         stack="normalize",
+            title="Number of investment deals",
+            #             scale=alt.Scale(domain=(0, 60000)),
         ),
         color="tech_category",
     )
 )
-iss.nicer_axis(fig)
+fig = iss.nicer_axis(fig)
+fig
+
+# %%
+alt_save.save_altair(fig, "blog_fig_Lineplot_Investment_deals", driver)
+
+# %%
+importlib.reload(iss)
+
+# %%
+# df_viz = df_all_yearly_stats[df_all_yearly_stats.tech_category.isin(cats)]
+df_viz = df_all_yearly_stats_norm[df_all_yearly_stats_norm.tech_category.isin(cats)]
+fig = (
+    alt.Chart(df_viz, height=250, width=450)
+    .mark_line(opacity=1)
+    .encode(
+        x=alt.X(
+            "year:O", title="Year"
+        ),  # scale=alt.Scale(domain=list(range(2015, 2021)))),
+        y=alt.Y(
+            "raised_amount_gbp_total",
+            #             "no_of_rounds",
+            #             "amount_total"
+            #                         scale=alt.Scale(type='symlog'),
+            #                         stack="normalize",
+            title="Number of investment deals",
+            scale=alt.Scale(domain=(0, 300000)),
+        ),
+        color="tech_category",
+    )
+)
+fig = iss.nicer_axis(fig)
+fig
+
+# %%
+alt_save.save_altair(fig, "blog_fig_Lineplot_Investment_amount", driver)
+
+# %%
+6 / 7
 
 # %%
 df_viz
@@ -988,11 +1207,142 @@ df = pd.DataFrame(
 )
 
 # %%
-df
+df_research = df[df.amount_category == "research"].copy()
+df_investment = df[df.amount_category == "investment"].copy()
+
+# %%
+df_research.amount.sum()
+
+# %%
+df_gtr = GTR_DOCS_ALL_[
+    (GTR_DOCS_ALL_.start >= "2016-01-01") & (GTR_DOCS_ALL_.start <= "2020-12-31")
+]
+df_gtr = df_gtr[df_gtr.tech_category.isin(cats)]
+df_gtr.amount.sum() / 1000
+
+# %%
+df_cb = CB_DOCS_ALL_[CB_DOCS_ALL_.tech_category.isin(cats)]
+
+# %%
+# df_cb[df_cb.doc_id.duplicated(keep=False)].sort_values(['title'])
+
+# %%
+dff = iss.get_cb_org_funding_rounds(df_cb.copy(), cb_funding_rounds)
+dff = dff[
+    (dff.announced_on_date >= "2016-01-01") & (dff.announced_on_date <= "2020-12-31")
+]
+dff.raised_amount_gbp.sum()
+
+
+# %%
+def get_rounds(df):
+    dff = iss.get_cb_org_funding_rounds(df, cb_funding_rounds)
+    dff = dff[
+        (dff.announced_on_date >= "2016-01-01")
+        & (dff.announced_on_date <= "2020-12-31")
+    ]
+    return dff
+
+
+# %%
+# df_test = df_cb[df_cb.tech_category.isin(['Solar'])]
+# df_test_rounds = get_rounds(df_test)
+
+# %%
+df_research["amount_proportion"] = df_research.amount / (df_gtr.amount.sum() / 1000)
+df_investment["amount_proportion"] = df_investment.amount / dff.raised_amount_gbp.sum()
+
+# %%
+# df_investment.amount.sum()
+
+# %%
+# df_research_investment = pd.concat([df_research, df_investment])
 
 # %%
 fig = (
     alt.Chart(df, width=200)
+    .mark_bar()
+    .encode(
+        x=alt.X("amount_category", title=""),
+        y=alt.Y("sum(amount)", stack="normalize", title="Fraction of money"),
+        color="tech_category",
+    )
+)
+fig = iss.nicer_axis(fig)
+fig
+
+# %%
+df_research_investment = df_research.merge(
+    df_investment[["tech_category", "amount_proportion"]], on="tech_category"
+)
+df_research_investment = df_research_investment.rename(
+    columns={"amount_proportion_x": "research", "amount_proportion_y": "investment"}
+)
+df_research_investment = df_research_investment[
+    df_research_investment.tech_category != "Heating (other)"
+]
+df_research_investment = df_research_investment.set_index("tech_category")
+df_research_investment = df_research_investment[["research", "investment"]]
+df_research_investment = df_research_investment.sort_values("research")[
+    ["investment", "research"]
+]
+
+# %%
+df_research_investment
+
+# %%
+# fig, ax = plt.subplots(figsize=(6, 6), dpi=80)
+fig = df_research_investment.plot.barh(figsize=(6, 7), width=0.75)
+plt.xlim(0, 0.6)
+plt.grid(axis="x")
+plt.savefig(
+    PROJECT_DIR / "outputs/figures/blog_figures" / "barplots_proportion_funding.svg",
+    format="svg",
+)
+
+# %%
+
+# %%
+df_viz = df_research_investment[
+    df_research_investment.tech_category != "Heating (other)"
+]
+alt.Chart(df_research_investment).mark_bar().encode(
+    x=alt.X("amount_proportion"),
+    y="amount_category",
+    color="amount_category",
+    row="tech_category",
+)
+
+# %%
+# # set width of bars
+# barWidth = 0.25
+
+# # set heights of bars
+# bars1 = [12, 30, 1, 8, 22]
+# bars2 = [28, 6, 16, 5, 10]
+# bars3 = [29, 3, 24, 25, 17]
+
+# # Set position of bar on X axis
+# r1 = np.arange(len(bars1))
+# r2 = [x + barWidth for x in r1]
+# r3 = [x + barWidth for x in r2]
+
+# # Make the plot
+# plt.bar(r, color='#7f6d5f', width=barWidth, edgecolor='white', label='var1')
+# plt.bar(r2, bars2, color='#557f2d', width=barWidth, edgecolor='white', label='var2')
+# plt.bar(r3, bars3, color='#2d7f5e', width=barWidth, edgecolor='white', label='var3')
+
+# # Add xticks on the middle of the group bars
+# plt.xlabel('group', fontweight='bold')
+# plt.xticks([r + barWidth for r in range(len(bars1))], ['A', 'B', 'C', 'D', 'E'])
+
+# # Create legend & Show graphic
+# plt.legend()
+# plt.show()
+
+# %%
+fig = (
+    alt.Chart(df_research_investment, width=200)
     .mark_bar()
     .encode(
         x=alt.X("amount_category", title=""),
@@ -1078,6 +1428,9 @@ dff[-dff.raised_amount.isnull()].sort_values("announced_on")
 # %%
 discourse_dir = "/Users/karliskanders/Documents/innovation_sweet_spots/outputs/data/intermediate_ISS_outputs/"
 
+# %% [markdown]
+# ### Heat pumps
+
 # %%
 mentions_hp_guardian = pd.read_csv(
     discourse_dir + "term_mentions_guardian/mentions_df_hp.csv"
@@ -1103,6 +1456,9 @@ mentions_hp_guardian = iss_topics.get_moving_average(
 mentions_hp_hansard = iss_topics.get_moving_average(
     mentions_hp_hansard, window=1, rename_cols=False
 )
+
+# %%
+fontsize_med = 12
 
 # %%
 fig, ax = plt.subplots(figsize=(6, 4), dpi=80)
@@ -1139,11 +1495,468 @@ plt.xlabel("Year", fontsize=fontsize_med)
 plt.xticks([2007, 2009, 2011, 2013, 2015, 2017, 2019, 2021], fontsize=11)
 # plt.yticks(fontsize=11)
 
+# plt.savefig(
+#     PROJECT_DIR / "outputs/figures/blog_figures" / "discourse_heatpumps.svg",
+#     format="svg",
+# )
+
+plt.show()
+
+# %% [markdown]
+# ### Hydrogen heating
+
+# %%
+df = pd.read_excel(discourse_dir + "term_mentions_guardian/mentions_comparison.xlsx")
+df = df.rename(columns={"Unnamed: 0": "year"})
+
+# %%
+df.info()
+
+# %%
+fig, ax = plt.subplots(figsize=(6, 4), dpi=80)
+
+plt.plot(df.year, df.prop_hydrogen * 100)
+
+plt.plot(df.year, df.prop_hydrogen_heating * 100)
+
+plt.plot(df.year, df.prop_hp * 100)
+
+# plt.plot(
+#     mentions_hp_hansard.year,
+#     mentions_hp_hansard.total_documents
+# #     fmt='o',
+# #     markersize=6,
+# #     c=dark_purple,
+# #     xerr = df_stats.std_dev
+# )
+
+# plt.plot([0, 30], [1, 1], '--', c='k', linewidth=0.5)
+
+# plt.xlim(2007, 2021)
+plt.ylim(0, 7)
+
+# for i, row in df_stats.iterrows():
+#     plt.annotate(row.tech_label, (row[variable], row.growth-0.05), fontsize=11, va='top', ha='center')
+
+plt.ylabel("Percentage of articles", fontsize=fontsize_med)
+plt.xlabel("Year", fontsize=fontsize_med)
+
+plt.xticks(list(range(2007, 2022, 2)), fontsize=11)
+# plt.yticks(fontsize=11)
+
 plt.savefig(
-    PROJECT_DIR / "outputs/figures/blog_figures" / "discourse_heatpumps.svg",
+    PROJECT_DIR / "outputs/figures/blog_figures" / "discourse_hydrogen_proportion.svg",
     format="svg",
 )
 
 plt.show()
+
+# %%
+year_1 = 2017
+year_2 = 2020
+var = "prop_hydrogen"
+var = "total_hydrogen"
+df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
+
+# %%
+# year_1=2008
+# year_2=2021
+# var = 'prop_hydrogen'
+# df[df.year==year_2][var].iloc[0] /  df[df.year==year_1][var].iloc[0]
+
+# %%
+year_1 = 2017
+year_2 = 2020
+var = "prop_hydrogen_heating"
+# var = 'total_hydrogen_heating'
+df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
+
+# %%
+year_1 = 2017
+year_2 = 2020
+var = "prop_hp"
+df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
+
+# %%
+year_1 = 2017
+year_2 = 2020
+var = "total_hp"
+df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
+
+# %%
+year_1 = 2008
+year_2 = 2021
+var = "prop_hp"
+df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
+
+# %%
+# mentions_hp_guardian = pd.read_csv(
+#     discourse_dir + "term_mentions_guardian/mentions_df_hp.csv"
+# )
+# mentions_hp_hansard = pd.read_excel(
+#     discourse_dir + "term_mentions_hansard/mentions_df_hp_hansard.xlsx"
+# )
+
+# %% [markdown]
+# ### Hansard
+
+# %%
+df = pd.read_excel(
+    discourse_dir + "term_mentions_hansard/mentions_df_comparison_hansard(1).xlsx"
+)
+df = df.rename(columns={"Unnamed: 0": "year"})
+
+# %%
+df.info()
+
+# %%
+fig, ax = plt.subplots(figsize=(6, 4), dpi=80)
+
+plt.plot(df.year, df.total_hydrogen)
+
+plt.plot(df.year, df.total_hydrogen_heating)
+
+plt.plot(df.year, df.total_hp)
+
+# plt.plot(
+#     mentions_hp_hansard.year,
+#     mentions_hp_hansard.total_documents
+# #     fmt='o',
+# #     markersize=6,
+# #     c=dark_purple,
+# #     xerr = df_stats.std_dev
+# )
+
+# plt.plot([0, 30], [1, 1], '--', c='k', linewidth=0.5)
+
+plt.xlim(2007, 2021)
+# plt.ylim(0, 7)
+
+# for i, row in df_stats.iterrows():
+#     plt.annotate(row.tech_label, (row[variable], row.growth-0.05), fontsize=11, va='top', ha='center')
+
+plt.ylabel("Number of speeches", fontsize=fontsize_med)
+plt.xlabel("Year", fontsize=fontsize_med)
+
+plt.xticks(list(range(2007, 2022, 2)), fontsize=11)
+plt.legend(["Hydrogen", "Hydrogen heating", "Heat pumps"])
+# plt.yticks(fontsize=11)
+plt.ticklabel_format(useOffset=False, style="plain")
+
+plt.savefig(
+    PROJECT_DIR / "outputs/figures/blog_figures" / "discourse_hansard.svg",
+    format="svg",
+)
+
+plt.show()
+
+# %% [markdown]
+# ### Small multiples
+
+# %%
+YEARLY_STATS["Heat pumps"]
+
+# %%
+cats = [
+    "Heat pumps",
+    "Hydrogen heating",
+    "District heating",
+    "Biomass heating",
+    "Geothermal energy",
+    "Solar thermal",
+    #     "Heat storage",
+    "Micro CHP",
+    "Insulation & retrofit",
+    "Energy management",
+]
+
+# %%
+YEARLY_STATS["Solar thermal"]
+
+# %%
+iss_topics.get_moving_average(YEARLY_STATS[cat], window=3)
+
+# %%
+
+# %%
+fig, ax = plt.subplots(figsize=(9, 6), dpi=80)
+fig.tight_layout()
+
+# Make a data frame
+df = pd.DataFrame(
+    {
+        "x": range(1, 11),
+        "y1": np.random.randn(10),
+        "y2": np.random.randn(10) + range(1, 11),
+        "y3": np.random.randn(10) + range(11, 21),
+        "y4": np.random.randn(10) + range(6, 16),
+        "y5": np.random.randn(10) + range(4, 14) + (0, 0, 0, 0, 0, 0, 0, -3, -8, -6),
+        "y6": np.random.randn(10) + range(2, 12),
+        "y7": np.random.randn(10) + range(5, 15),
+        "y8": np.random.randn(10) + range(4, 14),
+        "y9": np.random.randn(10) + range(4, 14),
+    }
+)
+
+# Initialize the figure style
+# plt.style.use('seaborn-whitegrid')
+plt.style.use("classic")
+plt.rcParams["svg.fonttype"] = "none"
+
+# create a color palette
+palette = plt.get_cmap("Set1")
+
+# multiple line plot
+num = 0
+# for column in df.drop('x', axis=1):
+for cat in cats:
+    num += 1
+
+    # Find the right spot on the plot
+    plt.subplot(3, 3, num)
+
+    yearly_df = YEARLY_STATS[cat].copy().fillna(0)
+    y = iss_topics.get_moving_average(yearly_df, window=3, rename_cols=False).articles
+    y.fillna(0)
+    y = y / np.max(y)
+
+    y2 = iss_topics.get_moving_average(yearly_df, window=3, rename_cols=False).speeches
+    y2 = y2 / np.max(y2)
+
+    # Plot the lineplot
+    plt.plot(
+        yearly_df.year,
+        y,
+        marker="",
+        color=palette(num),
+        linewidth=1.9,
+        alpha=0.9,
+        label=column,
+    )
+
+    plt.plot(
+        yearly_df.year,
+        y2,
+        marker="",
+        ls="--",
+        color=palette(num),
+        linewidth=1.9,
+        alpha=0.9,
+        label=column,
+    )
+
+    # Same limits for every chart
+    plt.xlim(2007, 2021)
+    plt.ylim(0, 1.05)
+
+    plt.xticks(range(2008, 2021, 4))
+    plt.ticklabel_format(useOffset=False, style="plain")
+
+    # Not ticks everywhere
+    if num in range(7):
+        plt.tick_params(labelbottom="off")
+    if num not in [1, 4, 7]:
+        plt.tick_params(labelleft="off")
+
+    #     ax.spines['top'].set_visible(False)
+    #     plt.spines['right'].set_visible(False)
+    #     ax.spines['bottom'].set_visible(False)
+    #     ax.spines['left'].set_visible(False)
+
+    # Add title
+    plt.title(cat, loc="left", fontsize=12, fontweight=0, color=palette(num))
+
+# general title
+# plt.suptitle("How the 9 students improved\nthese past few days?", fontsize=13, fontweight=0, color='black', style='italic', y=1.02)
+
+# Axis titles
+# plt.text(0.5, 0.02, 'Time', ha='center', va='center')
+# plt.text(0.06, 0.5, 'Note', ha='center', va='center', rotation='vertical')
+
+plt.savefig(
+    PROJECT_DIR / "outputs/figures/blog_figures" / "discourse_small_multiples.svg",
+    format="svg",
+)
+
+# Show the graph
+plt.show()
+
+# %%
+fig, ax = plt.subplots(figsize=(9, 6), dpi=80)
+fig.tight_layout()
+
+# Make a data frame
+df = pd.DataFrame(
+    {
+        "x": range(1, 11),
+        "y1": np.random.randn(10),
+        "y2": np.random.randn(10) + range(1, 11),
+        "y3": np.random.randn(10) + range(11, 21),
+        "y4": np.random.randn(10) + range(6, 16),
+        "y5": np.random.randn(10) + range(4, 14) + (0, 0, 0, 0, 0, 0, 0, -3, -8, -6),
+        "y6": np.random.randn(10) + range(2, 12),
+        "y7": np.random.randn(10) + range(5, 15),
+        "y8": np.random.randn(10) + range(4, 14),
+        "y9": np.random.randn(10) + range(4, 14),
+    }
+)
+
+# Initialize the figure style
+# plt.style.use('seaborn-whitegrid')
+plt.style.use("classic")
+plt.rcParams["svg.fonttype"] = "none"
+
+# create a color palette
+palette = plt.get_cmap("Set1")
+
+# multiple line plot
+num = 0
+# for column in df.drop('x', axis=1):
+for cat in cats:
+    num += 1
+
+    # Find the right spot on the plot
+    plt.subplot(3, 3, num)
+
+    yearly_df = YEARLY_STATS[cat].copy().fillna(0)
+    y = iss_topics.get_moving_average(yearly_df, window=3, rename_cols=False).articles
+    y.fillna(0)
+    #     y = y / np.max(y)
+
+    y2 = iss_topics.get_moving_average(yearly_df, window=3, rename_cols=False).speeches
+    #     y2 = y2 / np.max(y2)
+
+    # Plot the lineplot
+    plt.plot(
+        yearly_df.year,
+        y,
+        marker="",
+        color=palette(num),
+        linewidth=1.9,
+        alpha=0.9,
+        label=column,
+    )
+
+    plt.plot(
+        yearly_df.year,
+        y2,
+        marker="",
+        ls="--",
+        color=palette(num),
+        linewidth=1.9,
+        alpha=0.9,
+        label=column,
+    )
+
+    # Same limits for every chart
+    plt.xlim(2007, 2021)
+    #     plt.ylim(0, 1.05)
+
+    plt.xticks(range(2008, 2021, 4))
+    plt.ticklabel_format(useOffset=False, style="plain")
+
+    # Not ticks everywhere
+    if num in range(7):
+        plt.tick_params(labelbottom="off")
+    if num not in [1, 4, 7]:
+        plt.tick_params(labelleft="off")
+
+    #     ax.spines['top'].set_visible(False)
+    #     plt.spines['right'].set_visible(False)
+    #     ax.spines['bottom'].set_visible(False)
+    #     ax.spines['left'].set_visible(False)
+
+    # Add title
+    plt.title(cat, loc="left", fontsize=12, fontweight=0, color=palette(num))
+
+# general title
+# plt.suptitle("How the 9 students improved\nthese past few days?", fontsize=13, fontweight=0, color='black', style='italic', y=1.02)
+
+# Axis titles
+# plt.text(0.5, 0.02, 'Time', ha='center', va='center')
+# plt.text(0.06, 0.5, 'Note', ha='center', va='center', rotation='vertical')
+
+# plt.savefig(
+#     PROJECT_DIR / "outputs/figures/blog_figures" / "discourse_small_multiples.svg",
+#     format="svg",
+# )
+
+# Show the graph
+plt.show()
+
+# %%
+# df_viz = df_all_yearly_stats[df_all_yearly_stats.tech_category.isin(cats)]
+df_viz = df_all_yearly_stats_norm[df_all_yearly_stats_norm.tech_category.isin(cats)]
+fig = (
+    alt.Chart(df_viz, width=450, height=250)
+    .mark_line(opacity=1)
+    .encode(
+        x=alt.X(
+            "year:O", title="Year"
+        ),  # scale=alt.Scale(domain=list(range(2015, 2021)))),
+        y=alt.Y(
+            #             "raised_amount_gbp_total",
+            "no_of_rounds",
+            #                         scale=alt.Scale(type='symlog'),
+            #                         stack="normalize",
+            title="Number of investment deals",
+            #             scale=alt.Scale(domain=(0, 60000)),
+        ),
+        color="tech_category",
+    )
+)
+fig = iss.nicer_axis(fig)
+fig
+
+# %%
+df_viz = (
+    df_all_yearly_stats[df_all_yearly_stats.year.isin(list(range(2016, 2021)))]
+    .groupby("tech_category")
+    .mean()
+    .reset_index()
+)
+df_viz.amount_total = df_viz.amount_total / 1000
+
+sort_order = [
+    "Batteries",
+    "Low carbon heating",
+    "Wind & offshore",
+    "Solar",
+    "Bioenergy",
+    "EEM",
+    "Hydrogen & fuel cells",
+    "Carbon capture & storage",
+]
+
+fig = (
+    alt.Chart(
+        df_viz[df_viz.tech_category.isin(cats)],
+        width=200,
+    )
+    .mark_bar()
+    .encode(
+        y=alt.Y("tech_category", title="", sort=sort_order),
+        x=alt.X(
+            "no_of_projects",
+            title="Number of new projects",
+        ),
+    )
+)
+fig = iss.nicer_axis(fig)
+fig
+
+# %%
+len(cb_df)
+
+# %%
+len(CB_DOCS_ALL_[-CB_DOCS_ALL_.total_funding.isnull()]) / len(CB_DOCS_ALL_)
+
+# %%
+len(cb_df[-cb_df.total_funding.isnull()]) / len(cb_df)
+
+# %%
+cb = crunchbase.get_crunchbase_orgs_full()
+print(len(cb[-cb.total_funding.isnull()]) / len(cb))
+del cb
 
 # %%

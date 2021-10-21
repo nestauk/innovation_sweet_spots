@@ -293,12 +293,17 @@ def get_reliable_funds(gtr_docs, FUNDS_RELIABLE):
 cb_df_cat = add_crunchbase_categories(cb_df, doc_column="id")
 gtr_cat = add_gtr_categories(funded_projects)
 
-
 # %%
 # nn = gtr_cat[gtr_cat.text!='Unclassified'].drop_duplicates('project_id').project_id.to_list()
 # n_projects_with_categories = len(nn)
 # n_projects_without_categories = len(gtr_cat[(gtr_cat.text=='Unclassified') & (gtr_cat.project_id.isin(dd)==False)].drop_duplicates('project_id'))
 # n_projects_without_categories / len(gtr_projects)
+
+# %%
+import importlib
+
+importlib.reload(iss)
+
 
 # %%
 # Find documents using substring matching
@@ -342,7 +347,7 @@ def get_yearly_stats(gtr_docs, cb_docs, guardian_articles, speeches):
     )
     # CB data
     df_deals = iss.get_cb_org_funding_rounds(cb_doc_dedup, cb_funding_rounds)
-    df_deals_per_year = iss.get_cb_funding_per_year(df_deals)
+    df_deals_per_year = iss.get_cb_funding_per_year(df_deals, max_year=2021)
     df_cb_orgs_founded_per_year = iss.cb_orgs_founded_by_year(
         cb_doc_dedup, max_year=2021
     )
@@ -551,17 +556,27 @@ search_terms = {
         "micro chp",
         "micro-combined heat and power",
         "micro combined heat and power",
-        "combined heat and power",
+        "micro-chp",
     ],
-    "Heat storage": ["heat storage", "heat store"],
+    "Heat storage": [
+        "heat storage",
+        "heat store",
+        "thermal storage",
+        "thermal energy storage",
+    ],
 }
+
+# %%
+# USE_CACHED_GUARDIAN = False
+USE_CACHED_GUARDIAN = True
 
 # %%
 # Get guardian articles
 category_articles = {}
 for category in search_terms:
     category_articles[category] = [
-        guardian.search_content(search_term) for search_term in search_terms[category]
+        guardian.search_content(search_term, use_cached=USE_CACHED_GUARDIAN)
+        for search_term in search_terms[category]
     ]
 
 # %% [markdown]
@@ -721,9 +736,6 @@ for cat in CATEGORY_NAMES:
     GTR_DOCS_ALL = GTR_DOCS_ALL.append(gtr_docs, ignore_index=True)
     CB_DOCS_ALL = CB_DOCS_ALL.append(cb_docs, ignore_index=True)
 
-
-# %%
-df.head(1)
 
 # %%
 cat = "Heating & Building Energy Efficiency"
@@ -1320,6 +1332,14 @@ DF_REF[cat].head(1)
 cat = "Hydrogen & Fuel Cells"
 DF_REF[cat].head(1)
 
+# %%
+# DF_REF["Hydrogen & Fuel Cells"] =
+cat = "Hydrogen & Fuel Cells"
+DF_REF[cat] = DF_REF[cat][DF_REF[cat].cluster_keywords.str.contains("stars") == False]
+DF_REF[cat] = DF_REF[cat][
+    DF_REF[cat].cluster_keywords.str.contains("standard_model") == False
+]
+
 
 # %%
 def aggregate_guardian_articles_2(category_articles, CATEGORY_NAMES):
@@ -1499,6 +1519,7 @@ for cat in [
     gtr_docs = gtr_docs[
         (gtr_docs.manual_ok == 1) | (gtr_docs.topic_probs > THRESH_TOPIC_PROB)
     ]
+
     gtr_docs = get_reliable_funds(gtr_docs, FUNDS_RELIABLE)
     #     gtr_docs = process_gtr_docs(DF_REF[cat][DF_REF[cat].source=='gtr'])
     cb_docs_ = pd.concat(
@@ -1514,7 +1535,8 @@ for cat in [
     cb_docs = add_crunchbase_data(cb_docs_)
 
     category_articles[cat] = [
-        guardian.search_content(search_term) for search_term in REF_TERMS[cat]
+        guardian.search_content(search_term, use_cached=False)
+        for search_term in REF_TERMS[cat]
     ]
     guardian_articles = aggregate_guardian_articles(category_articles, [cat])
     guardian_articles_ = process_guardian_articles(guardian_articles)
@@ -1565,7 +1587,6 @@ for cat in [
     print(cat)
     print(get_growth_and_level(cat, "no_of_projects", year_1=2016, year_2=2020))
     print(get_growth_and_level(cat, "amount_total", year_1=2016, year_2=2020))
-
 
 # %%
 print(THRESH_TOPIC_PROB)
@@ -2558,6 +2579,7 @@ alt_save.save_altair(fig, f"_key_findings_Reference_{variable}", driver)
 # variable = 'no_of_rounds'
 # variable = 'articles'
 # variable = 'speeches'
+variable = "amount_total"
 df_stats_all = get_year_by_year_stats(variable)
 y_label = "Growth"
 x_label = "Average funding amount per year (£1000s)"
@@ -2850,7 +2872,7 @@ fig = iss.nicer_axis(
 fig
 
 # %%
-variable = "raised_amount_usd_total"
+variable = "raised_amount_gbp_total"
 df_stats_all = get_year_by_year_stats(variable)
 y_label = "Growth"
 x_label = "Avg amount invested per year ($1000)"
@@ -2960,7 +2982,7 @@ fig
 variable = "raised_amount_usd_total"
 df_stats_all = get_year_by_year_stats(variable)
 y_label = "Growth"
-x_label = "Avg number of deals per year"
+# x_label = "Avg number of deals per year"
 fig = iss.nicer_axis(plot_matrix(variable, cats, x_label, y_label))
 fig
 

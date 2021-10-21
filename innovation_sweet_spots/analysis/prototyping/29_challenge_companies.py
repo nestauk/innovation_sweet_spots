@@ -137,12 +137,18 @@ df.to_csv(
 # request_orgs.merge(df, how='left')
 
 # %%
+importlib.reload(iss)
+
+# %%
 df_deals = iss.get_cb_org_funding_rounds_full_info(df, cb_funding_rounds)
 df_deals = df_deals.sort_values("announced_on")
-df_deals.to_csv(
-    PROJECT_DIR / "outputs/data/misc/requests/vidal_oct2021_cb_companies_deals.csv",
-    index=False,
-)
+# df_deals.to_csv(
+#     PROJECT_DIR / "outputs/data/misc/requests/vidal_oct2021_cb_companies_deals.csv",
+#     index=False,
+# )
+
+# %%
+df_deals.head(3)
 
 # %%
 df_investors = iss.get_funding_round_investors(df_deals, cb_investments)

@@ -92,6 +92,21 @@ def get_growth_and_level_std(
     return growth_rate, level, level_std
 
 
+def get_growth_and_level_std_(df, variable, year_1=2016, year_2=2020, window=3):
+    df = df.copy()
+    df = df[df.year <= 2020]
+    df_ma = iss_topics.get_moving_average(df, window=window, rename_cols=False)
+    df = df.set_index("year")
+    df_ma = df_ma.set_index("year")
+    if df_ma.loc[year_1, variable] != 0:
+        growth_rate = df_ma.loc[year_2, variable] / df_ma.loc[year_1, variable]
+    else:
+        growth_rate = np.nan
+    level = df.loc[year_1:year_2, variable].mean()
+    level_std = df.loc[year_1:year_2, variable].std()
+    return growth_rate, level, level_std
+
+
 def get_year_by_year_stats(YEARLY_STATS, variable, year_dif=4):
     df_stats_all = pd.DataFrame()
     for cat in list(YEARLY_STATS.keys()):
