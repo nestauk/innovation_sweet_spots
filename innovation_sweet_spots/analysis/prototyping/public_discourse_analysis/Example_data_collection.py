@@ -59,7 +59,8 @@ search_terms = ['heat pump', 'heat pumps']
 
 # %%
 # For each search term download corresponding articles.
-articles = [guardian.search_content(search_term, use_cached = True) for search_term in search_terms]
+articles = [guardian.search_content(search_term, use_cached = True) for search_term \
+            in search_terms]
 
 # %%
 # Alternatively, load articles collected previously
@@ -67,44 +68,33 @@ with open (os.path.join(DISC_OUTPUTS_DIR, 'articles_hp.json'), "r") as f:
     articles = json.load(f)
 
 # %%
-# Unpack results across set of search terms
+# Combine results across set of search terms
 aggregated_articles = list(itertools.chain(*articles))
 
 # %%
 # Only keep articles from specified sections
 filtered_articles = dcu.filter_by_category(aggregated_articles, CATEGORIES)
 
-# %%
-articles_by_year = dcu.sort_by_year(filtered_articles)
-
 # %% [markdown]
 # ## 3. Extract metadata and text
 
 # %%
 # Extract article metadata
-metadata = dcu.get_article_metadata(articles_by_year, fields_to_extract=['id', 'webUrl', 'webTitle', 
-                                                                                  'webPublicationDate'])
-
-# %%
-# Build dict mapping article ids to url, title and publication date
 # This dict is later used for quick retrieval of original articles when reviewing results
-metadata_dict = (metadata
-                 .set_index('id')
-                 .to_dict(orient='index'))
+metadata = dcu.get_article_metadata(filtered_articles, fields_to_extract=['webUrl', 
+                                                                          'webTitle', 
+                                                                          'webPublicationDate'])
 
 # %%
 # Extract article text
-article_text = dcu.get_article_text_df(articles_by_year, TAGS)
-
-# %%
-article_text.head()
+article_text = dcu.get_article_text_df(filtered_articles, TAGS)
 
 # %%
 # Persist processed outputs to disk
 
 # Metadata for all articles
 with open(os.path.join(DISC_OUTPUTS_DIR, 'metadata_dict_hp.pkl'), "wb") as outfile:
-        pickle.dump(metadata_dict, outfile)
+        pickle.dump(metadata, outfile)
         
 # Article text
 article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hp.csv'), 
@@ -123,7 +113,9 @@ article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hp.csv'),
 # %% [markdown]
 # Sometimes we initially have to use a broad search term, such as hydrogen, to catch all the relevant documents. But we then end up with lots of results that we want to filter out. These are irrelevant either because they mention the search term in a context that we are not interested in (e.g. hydrogen in articles about space) or that relate to a geography that's outside of our scope (e.g. Australia).
 #
-# Below is an example of how to generate a subset of articles relevant for hydrogen energy and heating.
+# Below is an example of how to generate a subset of articles:
+# * hydrogen (focus on energy and heating + UK specific)
+# * heat pumps (UK specific)
 
 # %%
 #disambiguation_terms = ['home', 'homes', 'heating, cooling', 'hot water', 'electricity', 'boiler', 'boilers', 
@@ -134,7 +126,16 @@ article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hp.csv'),
 #                        'gas fired hydrogen', 'gas grid', 'climate targets', 'climate goals', 'households',
 #                        'energy grid', 'energy grids', 'central heating', 'heating homes','net zero', 'net-zero',
 #                        'appliances', 'hobs']
-#required_terms = ['UK', 'Britain', 'Scotland', 'Wales', 'England', 'Northern Rreland', 'Britons', 'London']
+#required_terms = ['UK', 'Britain', 'Scotland', 'Wales', 'England', 'Northern Ireland', 'Britons', 'London']
 #article_text = dcu.subset_articles(article_text, disambiguation_terms, required_terms)
 # Exclude articles that mention hydrogen peroxide
 #article_text = dcu.remove_articles(article_text, 'peroxide')
+
+# %%
+# Ensuring heat pump articles focus on UK
+required_terms = ['UK', 'Britain', 'Scotland', 'Wales', 'England', 'Northern Ireland', 
+                  'Britons', 'London']
+article_text = dcu.subset_articles(article_text, required_terms, [])
+article_text = dcu.remove_articles(article_text, 'Australia')
+
+# %%
