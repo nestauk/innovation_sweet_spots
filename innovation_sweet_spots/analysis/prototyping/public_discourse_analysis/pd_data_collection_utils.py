@@ -40,32 +40,6 @@ def filter_by_category(aggregated_articles, category_list, field='sectionName'):
     return filtered_articles
     
 
-def sort_by_year(filtered_articles, date_field='webPublicationDate'):
-    """Sorts articles and groups them by year.
-
-    Args:
-        filtered_articles: A list of articles (each a JSON nested dict).
-        date_field: A string that corresponds to the field containing information
-            about article date. Default is 'webPublicationDate'.
-
-    Returns:
-        A dict mapping years to the corresponding lists of articles.
-    
-    Raises:
-        TypeError: If incorrect data type was passed in args.
-    """
-    if not isinstance(filtered_articles, list):
-        raise TypeError('parameter filtered_articles should be a list')
-    if not isinstance(date_field, str):
-        raise TypeError('parameter date_field should be a string')
-        
-    sorted_articles = sorted(filtered_articles, key = lambda x: x[date_field][:4])
-    articles_by_year = defaultdict(list)
-    for k,v in groupby(sorted_articles,key=lambda x:x[date_field][:4]):
-        articles_by_year[k] = list(v)
-    return articles_by_year
-        
-
 def extract_text_from_html(html, tags):
     """Extracts text from specified html tags.
 
@@ -140,25 +114,20 @@ def get_article_metadata(filtered_articles, fields_to_extract, id_field = 'id'):
     return metadata_dict
 
 
-def get_article_text_df(grouped_articles, tags):
+def get_article_text_df(filtered_articles, tags):
     """Extracts article text, deduplicates articles and organises them by year.
 
     Args:
-        grouped_articles: A dict with articles mapped to years using itertools.
+        grouped_articles: A list of raw articles.
         tags: A list of html tags to extract content from.
 
     Returns:
         A pandas dataframe with article text, id and year.
     """
-    year_articles_across_years = []
-    for year, articles in grouped_articles.items():
-        article_text = get_article_text(articles, tags)
-        article_id = [article["id"] for article in articles]
-        year_article_df = pd.DataFrame({"id": article_id, "text": article_text})
-        year_articles_across_years.append(year_article_df)
-    year_articles = pd.concat(year_articles_across_years)
-    year_articles = year_articles.drop_duplicates()
-    return year_articles
+    article_text = get_article_text(filtered_articles, tags)
+    article_id = [article["id"] for article in filtered_articles]
+    article_df = pd.DataFrame({"id": article_id, "text": article_text}).drop_duplicates()
+    return article_df
 
 
 def subset_articles(article_text, refine_terms, required_terms, text_field='text'):
