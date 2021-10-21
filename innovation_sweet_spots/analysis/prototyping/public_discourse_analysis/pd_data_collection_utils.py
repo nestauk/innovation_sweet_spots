@@ -119,29 +119,25 @@ def get_article_text(articles, tags):
     return article_text
 
 
-def get_article_metadata(grouped_articles, fields_to_extract=["id"]):
+def get_article_metadata(filtered_articles, fields_to_extract, id_field = 'id'):
     """Extracts useful article fields from raw data returned by the Guardian API.
 
     Args:
-        grouped_articles: Articles grouped by year using itertools.
-        fields_to_extract: A list of fields to extract data from. The default 
-            is "id", other useful fields are "webUrl" and "webTitle"
+        filtered_articles: A list of raw articles.
+        fields_to_extract: A list of fields to extract data from. The useful fields 
+        are "webUrl", "webTitle" and "webPublicationDate"
+        id_field: A string that referrs to field containing article ID.
 
     Returns:
-        A pandas dataframe with content of article fields.
+        A dict mapping article IDs to other useful fields.
     """
-    year_article_dfs = []
-    for year, articles in grouped_articles.items():
-        year_data = dict()
+    metadata_dict = defaultdict(dict)
+    for article in filtered_articles:
+        article_id = article[id_field]
         for field in fields_to_extract:
-            article_field = [article[field] for article in articles]
-            year_data[field] = article_field
-            year_data["year"] = year
-        year_article_df = pd.DataFrame(year_data)
-        year_article_dfs.append(year_article_df)
-    year_article_df_combined = pd.concat(year_article_dfs)
-    year_article_df_combined = year_article_df_combined.drop_duplicates()
-    return year_article_df_combined
+            article_field = article[field]
+            metadata_dict[article_id][field] = article_field
+    return metadata_dict
 
 
 def get_article_text_df(grouped_articles, tags):
