@@ -27,8 +27,7 @@ def filter_by_category(aggregated_articles, category_list, field='sectionName'):
         A list of filtered articles.
     
     Raises:
-        TypeError: If aggregated_articles and category_list are not of type list.
-            And field is not of type str.
+        TypeError: If incorrect data type was passed in args.
     """
     if not isinstance(aggregated_articles, list):
         raise TypeError, 'parameter aggregated_articles={} not of <class "list">'
@@ -53,8 +52,7 @@ def sort_by_year(filtered_articles, date_field='webPublicationDate'):
         A dict mapping years to the corresponding lists of articles.
     
     Raises:
-        TypeError: If filtered_articles is not of type list and date_field is not
-            of type str.
+        TypeError: If incorrect data type was passed in args.
     """
     if not isinstance(filtered_articles, list):
         raise TypeError, 'parameter filtered_articles={} not of <class "list">'
@@ -79,7 +77,7 @@ def extract_text_from_html(html, tags):
         A list of chunks (e.g. paragraphs) of text extracted from the tags.
         
     Raises:
-        TypeError: If html is not of type str and tags is not of type list.
+        TypeError: If incorrect data type was passed in args.
     """
     if not isinstance(html, str):
         raise TypeError, 'parameter html={} not of <class "str">'
@@ -189,22 +187,19 @@ def subset_articles(article_text, refine_terms, required_terms, text_field='text
     subsets = []
     for term in refine_terms:
         combined_expr = base.format(''.join(expr.format(term))) 
-        print(term)
         subset = article_text[article_text[text_field].str.contains(combined_expr)]
         subsets.append(subset)
-        print(len(subset))
     subset_df = pd.concat(subsets) #duplicates v likely as article may contain more than one refine_term
     deduplicated_df = subset_df.drop_duplicates()  
+    
     # required_terms tend to be geographic areas that we are studying
     # we select only articles that mention those areas from a 'thematic' set
     # defined above        
     if len(required_terms) > 0:
         filtered_subsets = []
         for term in required_terms:
-            print(term)
             filtered_subset = deduplicated_df[deduplicated_df[text_field].str.contains(term)]
             filtered_subsets.append(filtered_subset)
-            print(len(filtered_subset))
         filtered_subset_df = pd.concat(filtered_subsets)
         deduplicated_df = filtered_subset_df.drop_duplicates()
     return deduplicated_df 
