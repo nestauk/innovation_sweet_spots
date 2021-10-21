@@ -30,11 +30,11 @@ def filter_by_category(aggregated_articles, category_list, field='sectionName'):
         TypeError: If incorrect data type was passed in args.
     """
     if not isinstance(aggregated_articles, list):
-        raise TypeError, 'parameter aggregated_articles={} not of <class "list">'
+        raise TypeError('parameter aggregated_articles should be a list')
     if not isinstance(category_list, list):
-        raise TypeError, 'parameter category_list={} not of <class "list">'
+        raise TypeError('parameter category_list should be a list')
     if not isinstance(field, str):
-        raise TypeError, 'parameter field={} not of <class "str">'   
+        raise TypeError('parameter field should be a string')   
         
     filtered_articles = [a for a in aggregated_articles if a[field] in category_list]
     return filtered_articles
@@ -55,9 +55,9 @@ def sort_by_year(filtered_articles, date_field='webPublicationDate'):
         TypeError: If incorrect data type was passed in args.
     """
     if not isinstance(filtered_articles, list):
-        raise TypeError, 'parameter filtered_articles={} not of <class "list">'
+        raise TypeError('parameter filtered_articles should be a list')
     if not isinstance(date_field, str):
-        raise TypeError, 'parameter date_field={} not of <class "str">'
+        raise TypeError('parameter date_field should be a string')
         
     sorted_articles = sorted(filtered_articles, key = lambda x: x[date_field][:4])
     articles_by_year = defaultdict(list)
@@ -80,9 +80,9 @@ def extract_text_from_html(html, tags):
         TypeError: If incorrect data type was passed in args.
     """
     if not isinstance(html, str):
-        raise TypeError, 'parameter html={} not of <class "str">'
+        raise TypeError('parameter html should be a string')
     if not isinstance(tags, list):
-        raise TypeError, 'parameter tags={} not of <class "list">'
+        raise TypeError('parameter tags should be a list')
         
     segments = BeautifulSoup(html, "html.parser").find_all(tags)
     no_html = [seg.get_text() for seg in segments]
@@ -184,23 +184,21 @@ def subset_articles(article_text, refine_terms, required_terms, text_field='text
     # e.g. applications of hydrogen to heating
     base = r'{}'
     expr = '(?:\s|^){}(?:,?\s|$)'
-    subsets = []
     for term in refine_terms:
-        combined_expr = base.format(''.join(expr.format(term))) 
-        subset = article_text[article_text[text_field].str.contains(combined_expr)]
-        subsets.append(subset)
-    subset_df = pd.concat(subsets) #duplicates v likely as article may contain more than one refine_term
-    deduplicated_df = subset_df.drop_duplicates()  
+        combined_expressions = [base.format(''.join(expr.format(term))) for term in \
+                                refine_terms] 
+        joined_expressions = '|'.join(combined_expressions)
+    subset_df = article_text[article_text[text_field].str.contains(joined_expressions)]
+    deduplicated_df = subset_df.drop_duplicates()
     
     # required_terms tend to be geographic areas that we are studying
     # we select only articles that mention those areas from a 'thematic' set
     # defined above        
     if len(required_terms) > 0:
-        filtered_subsets = []
         for term in required_terms:
-            filtered_subset = deduplicated_df[deduplicated_df[text_field].str.contains(term)]
-            filtered_subsets.append(filtered_subset)
-        filtered_subset_df = pd.concat(filtered_subsets)
+            combined_terms = '|'.join(required_terms)
+        filtered_subset_df = deduplicated_df[deduplicated_df[text_field].\
+                                              str.contains(combined_terms)]
         deduplicated_df = filtered_subset_df.drop_duplicates()
     return deduplicated_df 
 
