@@ -39,7 +39,7 @@ def clean_articles(articles: Iterator[str]):
 
     Returns
     -------
-    clean)article_text (list): clean text of articles.
+    clean_article_text (list): clean text of articles.
     """
     # Minimum cleaning includes: split camel-case, convert to lower case, 
     # clean punctuation, remove extra spaces
