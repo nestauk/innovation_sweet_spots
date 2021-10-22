@@ -202,3 +202,68 @@ def combine_term_sentences(term_sentence_dict, search_terms):
         year_corpus = pd.concat(year_sents)
         combined_sentences[str(year)] = year_corpus.drop_duplicates()
     return combined_sentences
+
+###########
+# Utility functions for quickly checking collocations
+def check_collocations(sentence_collection_df, collocated_term, groupby_field = 'year'):
+    """
+    Retrieve sentences where the collocated_term was mentioned together with one
+    of the search terms.
+    Parameters
+    ----------
+    sentence_collection_df (pandas.core.frame.DataFrame): dataframe with sentences
+    collocated_term (str): term of interest.
+    groupby_field (str): this is the field on which sentence dataframe will be grouped.
+    Returns
+    -------
+    grouped_by_year : pandas groupby object.
+    """
+    base = r'{}'
+    expr = '(?:\s|^){}(?:,?\s|$)'
+    combined_expr = base.format(''.join(expr.format(collocated_term)))    
+    collocation_df = sentence_collection_df[sentence_collection_df['sentence'].\
+                                                str.contains(combined_expr, regex = True)]
+    grouped_by_year = collocation_df.groupby(groupby_field)
+    return grouped_by_year
+
+
+def collocation_summary(grouped_sentences):
+    """
+    Print quick summary of collocations.
+    Parameters
+    ----------
+    grouped_sentences : pandas groupby object.
+    Returns
+    -------
+    None.
+    """
+    num_years = len(grouped_sentences)
+    num_sentences = sum([len(group) for name, group in grouped_sentences])
+    print(f"The terms were mentioned together in {num_sentences} sentences across {num_years} years.")
+
+
+def view_collocations(grouped_sentences, metadata_dict, sentence_record_dict):
+    """
+    Print sentences grouped by year.
+    Parameters
+    ----------
+    grouped_sentences : pandas groupby object.
+    metadata_dict: dict with sentence IDs and urls
+    sentence_record_dict: dict with sentences and corresponding IDs and year
+    sentence_year (int): optional year to subset sentences
+    
+    Returns
+    -------
+    None.
+    """
+    for year, group in grouped_sentences:
+        print(year)
+        for ix, row in group.iterrows():
+            sentence = row['sentence']
+            sent_id = sentence_record_dict[sentence]
+            web_url = metadata_dict[sent_id]['url']
+            article_title = metadata_dict[sent_id]['title']
+            print(article_title)
+            print(sentence, end = "\n\n")
+            print(web_url, end = "\n\n")
+            print('----------')
