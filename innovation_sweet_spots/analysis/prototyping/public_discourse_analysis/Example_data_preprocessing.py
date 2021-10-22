@@ -20,7 +20,7 @@
 # - Basic cleaning of articles
 # - Extracting sentences (default context) and noun chunks for subsequent analysis
 # - Analyse mentions of search terms over time
-# - Appendix: alternative options for defining context around search terms
+# - Appendix: quick exploration of co-locations
 
 # %% [markdown]
 # ## 1. Import dependencies
@@ -31,10 +31,6 @@ import pandas as pd
 import csv
 import spacy
 import pickle
-
-# %%
-# Change first element to location of project folder.
-os.chdir(os.path.join('/Users/jdjumalieva/Documents/Analysis/', 'innovation_sweet_spots'))
 
 # %%
 from innovation_sweet_spots.analysis.prototyping.public_discourse_analysis import pd_data_processing_utils as dpu
@@ -63,7 +59,7 @@ with open(os.path.join(DISC_OUTPUTS_DIR, 'metadata_dict_hp.pkl'), "rb") as infil
         metadata_dict = pickle.load(infile)
 
 # %%
-article_text['year'] = article_text['id'].apply(lambda x: metadata_dict[x]['date'][:4])
+article_text['year'] = article_text['id'].apply(lambda x: metadata_dict[x]['webPublicationDate'][:4])
 
 # %% [markdown]
 # ### 2.1. Extract sentences
@@ -128,3 +124,41 @@ mentions_df.columns = search_terms + ['total_documents']
 
 # %%
 mentions_df
+
+# %%
+# Save outputs
+with open(os.path.join(DISC_OUTPUTS_DIR, 'processed_articles_by_year_hp.pkl'), "wb") as outfile:
+    pickle.dump(processed_articles_by_year, outfile)
+
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_records_hp.pkl'), "wb") as outfile:
+        pickle.dump(sentence_records, outfile)
+
+with open(os.path.join(DISC_OUTPUTS_DIR, 'sentence_record_dict_hp.pkl'), "wb") as outfile:
+        pickle.dump(sentence_record_dict, outfile)
+
+with open(os.path.join(DISC_OUTPUTS_DIR, 'noun_chunks_hp.pkl'), "wb") as outfile:
+        pickle.dump(noun_chunks_all_years, outfile)
+
+with open(os.path.join(DISC_OUTPUTS_DIR, 'term_sentences_hp.pkl'), "wb") as outfile:
+        pickle.dump(term_sentences, outfile)
+
+with open(os.path.join(DISC_OUTPUTS_DIR, 'combined_sentences_hp.pkl'), "wb") as outfile:
+        pickle.dump(combined_term_sentences, outfile)
+
+mentions_df.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'mentions_df_hp.csv'))
+
+# %% [markdown]
+# ## Appendix. Quick exploration of co-locations
+
+# %%
+flat_sentences = pd.concat([combined_term_sentences[y] for y in combined_term_sentences])
+
+# %%
+# Retrieve sentences where a given term was used together with any of the search terms
+grouped_sentences = dpu.check_collocations(flat_sentences, 'installation')
+dpu.collocation_summary(grouped_sentences)
+
+# %%
+dpu.view_collocations(grouped_sentences, metadata_dict, sentence_record_dict)
+
+# %%
