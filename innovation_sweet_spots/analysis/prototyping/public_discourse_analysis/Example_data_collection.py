@@ -90,19 +90,6 @@ metadata = dcu.get_article_metadata(filtered_articles, fields_to_extract=['webUr
 article_text = dcu.get_article_text_df(filtered_articles, TAGS)
 
 # %%
-# Persist processed outputs to disk
-
-# Metadata for all articles
-with open(os.path.join(DISC_OUTPUTS_DIR, 'metadata_dict_hp.pkl'), "wb") as outfile:
-        pickle.dump(metadata, outfile)
-        
-# Article text
-article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hp.csv'), 
-                    index = False, 
-                    quoting = csv.QUOTE_NONNUMERIC)
-
-
-# %%
 # Save raw data from the Guardian API
 #with open (os.path.join(DISC_OUTPUTS_DIR, 'articles_hp.json'), "w") as outfile:
 #    json.dump(articles, outfile, indent = 4)
@@ -137,5 +124,15 @@ required_terms = ['UK', 'Britain', 'Scotland', 'Wales', 'England', 'Northern Ire
                   'Britons', 'London']
 article_text = dcu.subset_articles(article_text, required_terms, [])
 article_text = dcu.remove_articles(article_text, 'Australia')
-
 # %%
+# Persist processed outputs to disk
+
+# Metadata for all articles
+with open(os.path.join(DISC_OUTPUTS_DIR, 'metadata_dict_hp.pkl'), "wb") as outfile:
+        pickle.dump(metadata, outfile)
+        
+# Article text
+article_text.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hp.csv'), 
+                    index = False, 
+                    quoting = csv.QUOTE_NONNUMERIC)
+
