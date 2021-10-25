@@ -130,16 +130,18 @@ def get_article_text_df(filtered_articles, tags):
     return article_df
 
 
-def subset_articles(article_text, refine_terms, required_terms, text_field='text'):
+def subset_articles(article_text, filter_1, filter_2, text_field='text'):
     """Extracts a subset of articles that contain specific terms.
     
     It is useful for removing irrelevant articles in instances when a broad general 
-    search term is used during data collection, e.g. `hydrogen`.
+    search term is used during data collection, e.g. `hydrogen`. In this example,
+    the filter_1 terms were used to generate a subset of articles related to heating.
+    The filter_2 terms were then used to select articles relevant to the UK from this subset.
     
     Args:
         article_text: A pandas dataframe that contains article text and id.
-        refine_terms: A list of terms that we use to disambiguate the general term.
-        required_terms: A list of terms. An article must mention at least one of these terms.
+        filter_1: A list of terms that we use for the first round of filtering.
+        filter_2: A list of terms that we use for subsequent filtering.
         text_field: A string referring to the name of the column with text, the default is 'text'.
 
     Returns:
@@ -149,9 +151,9 @@ def subset_articles(article_text, refine_terms, required_terms, text_field='text
     # e.g. applications of hydrogen to heating
     base = r'{}'
     expr = '(?:\s|^){}(?:,?\s|$)'
-    for term in refine_terms:
+    for term in filter_1:
         combined_expressions = [base.format(''.join(expr.format(term))) for term in \
-                                refine_terms] 
+                                filter_1] 
         joined_expressions = '|'.join(combined_expressions)
     subset_df = article_text[article_text[text_field].str.contains(joined_expressions)]
     deduplicated_df = subset_df.drop_duplicates()
@@ -159,9 +161,9 @@ def subset_articles(article_text, refine_terms, required_terms, text_field='text
     # required_terms tend to be geographic areas that we are studying
     # we select only articles that mention those areas from a 'thematic' set
     # defined above        
-    if len(required_terms) > 0:
-        for term in required_terms:
-            combined_terms = '|'.join(required_terms)
+    if len(filter_2) > 0:
+        for term in filter_2:
+            combined_terms = '|'.join(filter_2)
         filtered_subset_df = deduplicated_df[deduplicated_df[text_field].\
                                               str.contains(combined_terms)]
         deduplicated_df = filtered_subset_df.drop_duplicates()
