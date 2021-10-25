@@ -52,7 +52,7 @@ nlp = spacy.load("en_core_web_sm")
 
 # %%
 # Read in article_text dataframe
-article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hp.csv'))
+article_text = pd.read_csv(DISC_OUTPUTS_DIR / 'article_text_hp.csv')
 
 # %%
 with open(os.path.join(DISC_OUTPUTS_DIR, 'metadata_dict_hp.pkl'), "rb") as infile:
