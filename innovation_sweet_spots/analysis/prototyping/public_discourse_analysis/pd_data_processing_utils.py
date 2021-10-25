@@ -242,7 +242,8 @@ def collocation_summary(grouped_sentences):
     print(f"The terms were mentioned together in {num_sentences} sentences across {num_years} years.")
 
 
-def view_collocations(grouped_sentences, metadata_dict, sentence_record_dict):
+def view_collocations(grouped_sentences, metadata_dict, sentence_record_dict, 
+                      url_field = 'webUrl', title_field = 'webTitle'):
     """
     Print sentences grouped by year.
     Parameters
@@ -261,8 +262,8 @@ def view_collocations(grouped_sentences, metadata_dict, sentence_record_dict):
         for ix, row in group.iterrows():
             sentence = row['sentence']
             sent_id = sentence_record_dict[sentence]
-            web_url = metadata_dict[sent_id]['url']
-            article_title = metadata_dict[sent_id]['title']
+            web_url = metadata_dict[sent_id][url_field]
+            article_title = metadata_dict[sent_id][title_field]
             print(article_title)
             print(sentence, end = "\n\n")
             print(web_url, end = "\n\n")
