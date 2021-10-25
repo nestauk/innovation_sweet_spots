@@ -38,19 +38,17 @@ def test_filter_by_category():
                     'body': '<p>The government has scrapped its flagship green homes grant scheme, just over six months after its launch.</p>'}}
         ]
     categories = ['Environment', 'Technology', 'Science']
-    assert dcu.filter_by_category(mock_articles, categories) == [
-        {'id': 'environment/2021/mar/27/uk-government-scraps-green-homes-grant-after-six-months',
-         'type': 'article',
-         'sectionId': 'environment',
-         'sectionName': 'Environment',
-         'webPublicationDate': '2021-03-27T21:00:38Z',
-         'webTitle': 'UK government scraps green homes grant after six months',
-         'webUrl': 'https://www.theguardian.com/environment/2021/mar/27/uk-government-scraps-green-homes-grant-after-six-months',
-         'apiUrl': 'https://content.guardianapis.com/environment/2021/mar/27/uk-government-scraps-green-homes-grant-after-six-months',
-         'fields': {'headline': 'UK government scraps green homes grant after six months',
-                    'trailText': '£1.5bn scheme at heart of Boris Johnson’s ‘build back better’ promise has struggled since launch',
-                    'body': '<p>The government has scrapped its flagship green homes grant scheme, just over six months after its launch.</p>'}}
-                                                                ]
+    assert dcu.filter_by_category(mock_articles, categories) == [{'id': 'environment/2020/mar/27/uk-government-scraps-green-homes-grant-after-six-months',
+  'type': 'article',
+  'sectionId': 'environment',
+  'sectionName': 'Environment',
+  'webPublicationDate': '2020-03-27T21:00:38Z',
+  'webTitle': 'UK government scraps green homes grant after six months',
+  'webUrl': 'https://www.theguardian.com/environment/2020/mar/27/uk-government-scraps-green-homes-grant-after-six-months',
+  'apiUrl': 'https://content.guardianapis.com/environment/2020/mar/27/uk-government-scraps-green-homes-grant-after-six-months',
+  'fields': {'headline': 'UK government scraps green homes grant after six months',
+   'trailText': '£1.5bn scheme at heart of Boris Johnson’s ‘build back better’ promise has struggled since launch',
+   'body': '<p>The government has scrapped its flagship green homes grant scheme, just over six months after its launch.</p>'}}]
 
 
             
