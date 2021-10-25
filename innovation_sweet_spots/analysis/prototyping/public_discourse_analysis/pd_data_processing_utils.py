@@ -67,8 +67,8 @@ def generate_sentence_corpus (clean_article_text: Iterator[str], nlp_model):
     return article_sentences, spacy_docs
 
 
-def generate_sentence_corpus_by_year(article_text_df, nlp_model, year_field, 
-                                     text_field, id_field):
+def generate_sentence_corpus_by_year(article_text_df, nlp_model, year_field = 'year', 
+                                     text_field = 'text', id_field = 'id'):
     """
     Generate corpus of sentences, spacy processed docs and sentence records
     for each year in the dataset.
@@ -86,7 +86,6 @@ def generate_sentence_corpus_by_year(article_text_df, nlp_model, year_field,
     sentence_records (list): list of tuples with sentence, id, year.
     """
     sentence_records = []
-    # sentences_by_year = defaultdict(dict)
     processed_articles_by_year = defaultdict(dict)
     for year, group in article_text_df.groupby(year_field):
         clean_article_text = clean_articles(group[text_field])
@@ -97,9 +96,7 @@ def generate_sentence_corpus_by_year(article_text_df, nlp_model, year_field,
             article_id = sentence_bunch[1]
             for sentence in sentence_bunch[0]:
                 sentence_records.append((sentence, article_id, year))
-        # sentences_by_year[str(year)] = sentences
         processed_articles_by_year[str(year)] = processed_articles
-    # return(sentences_by_year, processed_articles_by_year, sentence_records)
     return(processed_articles_by_year, sentence_records)
 
 
