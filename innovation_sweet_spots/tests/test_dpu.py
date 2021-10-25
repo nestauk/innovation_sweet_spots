@@ -5,8 +5,11 @@ Created on Thu Oct  7 11:38:37 2021
 
 @author: jdjumalieva
 """
-
+import os
 import pytest
+import spacy
+import pandas as pd
+
 from innovation_sweet_spots.analysis.prototyping.public_discourse_analysis import \
     pd_data_processing_utils as dpu
 
@@ -93,7 +96,7 @@ def test_get_noun_chunks():
                        'hotspot temperature',
                        'city’s future energy architecture',
                        'SiCEDS']
-    assert(func_output == expected_output)
+    assert(set(func_output) == set(expected_output))
 
 
 def test_remove_determiner_articles():
