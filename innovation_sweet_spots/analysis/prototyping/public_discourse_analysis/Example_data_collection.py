@@ -61,9 +61,9 @@ articles = [guardian.search_content(search_term, use_cached = True) for search_t
             in search_terms]
 
 # %%
-# Alternatively, load articles collected previously
-with open (os.path.join(DISC_OUTPUTS_DIR, 'articles_hp.json'), "r") as f:   
-    articles = json.load(f)
+# # Alternatively, load articles collected previously
+# with open (os.path.join(DISC_OUTPUTS_DIR, 'articles_hp.json'), "r") as f:   
+#     articles = json.load(f)
 
 # %%
 # Combine results across set of search terms
