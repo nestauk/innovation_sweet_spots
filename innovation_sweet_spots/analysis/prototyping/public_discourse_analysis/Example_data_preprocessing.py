@@ -102,8 +102,8 @@ noun_chunks_all_years = {str(year): dpu.get_noun_chunks(processed_articles, remo
 term_sentences = {term: dpu.get_flat_sentence_mentions(term, sentence_records) for term in search_terms}
 
 # %%
-# More streamlined version of the above: sentence corpus aggregated across the set of search terms
-combined_term_sentences = dpu.combine_term_sentences(term_sentences, search_terms)
+# Sentence corpus aggregated across the set of search terms
+combined_term_sentences = dpu.get_flat_sentence_mentions(search_terms, sentence_records)
 
 # %% [markdown]
 # ### 3.2. Count mentions across set of terms over time
