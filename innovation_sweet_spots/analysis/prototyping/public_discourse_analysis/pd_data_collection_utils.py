@@ -150,11 +150,11 @@ def subset_articles(article_text, filter_1, filter_2, text_field='text'):
     # we first generate a 'thematic' subset of articles that are relevant
     # e.g. applications of hydrogen to heating
     base = r'{}'
-    expr = '(?:\s|^){}(?:,?\s|$)'
+    expr = '(?:\s|^){}(?:,?\s|\.|$)'
     for term in filter_1:
         combined_expressions = [base.format(''.join(expr.format(term))) for term in \
                                 filter_1] 
-        joined_expressions = '|'.join(combined_expressions)
+    joined_expressions = '|'.join(combined_expressions)
     subset_df = article_text[article_text[text_field].str.contains(joined_expressions)]
     deduplicated_df = subset_df.drop_duplicates()
     
