@@ -30,37 +30,39 @@ compiled_det_art_patterns = [re.compile(a) for a in det_article_replacement.keys
 det_art_replacement = list(det_article_replacement.values())
 
 
-def clean_articles(articles: Iterator[str]):
-    """
-    Clean article text.
-    Parameters
-    ----------
-    articles (list): text of articles.
+def clean_articles(articles):
+    """Performs minimal clearning of article text.
+    
+    Minimum cleaning includes: split camel-case, convert to lower case, clean 
+    punctuation, remove extra spaces.
+    
+    Args:
+        articles: A list of articles.
 
-    Returns
-    -------
-    clean_article_text (list): clean text of articles.
+    Returns:
+        clean_article_text (list): clean text of articles.
+        
+    Raises:
+        TypeError: If incorrect data type was passed in args.
     """
-    # Minimum cleaning includes: split camel-case, convert to lower case, 
-    # clean punctuation, remove extra spaces
     clean_article_text = [tcu.clean_text_minimal(article) for article in articles]
     clean_article_text = [elem for elem in clean_article_text if elem != 'sentence is blank']
     return clean_article_text
     
     
-def generate_sentence_corpus (clean_article_text: Iterator[str], nlp_model):
-    """
-    Clean article text, process with spacy and break up into sentences.
+def generate_sentence_corpus(clean_article_text, nlp_model):
+    """Generates a collection of sentences and a spacy corpus.
     
-    Parameters
-    ----------
-    articles (list): text of articles.
-    nlp (spacy.lang.en.English, optional): spacy model used. 
+    Cleans article text, processes the articles with spacy and break them up into 
+    sentences.
     
-    Returns
-    -------
-    article_sentences (list): list of sentences.
-    spacy_docs (list[]): list of processed spacy docs (spacy.tokens.doc.Doc).
+    Args:
+        articles: A list of articles.
+        nlp: A spacy language model.
+    
+    Returns:
+       A list of sentences.
+       A list of processed spacy docs.
     """
     spacy_docs = [nlp_model(article) for article in clean_article_text]
     article_sentences = [[sent.text for sent in article.sents] for article in spacy_docs]
@@ -69,26 +71,23 @@ def generate_sentence_corpus (clean_article_text: Iterator[str], nlp_model):
 
 def generate_sentence_corpus_by_year(article_text_df, nlp_model, year_field = 'year', 
                                      text_field = 'text', id_field = 'id'):
-    """
-    Generate corpus of sentences, spacy processed docs and sentence records
-    for each year in the dataset.
+    """Generates spacy processed docs and sentence records for each year in the dataset.
+    
     Several outputs are produced at once to avoid repeating pre-processing with
     spacy.
     
-    Parameters
-    ----------
-    article_text_df (pandas.core.frame.DataFrame): dataframe with article text, id and year.
-    nlp_model (spacy.lang.en.English): spacy model used.
+    Args:
+        article_text_df: A pandas dataframe with article text, id and year.
+        nlp_model: A spacy language model used.
     
-    Returns
-    -------
-    processed_articles_by_year (dict): spacy docs for each year.
-    sentence_records (list): list of tuples with sentence, id, year.
+    Returns:
+        A dict with spacy docs for each year.
+        A list of tuples with sentence, id, year.
     """
     sentence_records = []
     processed_articles_by_year = defaultdict(dict)
     for year, group in article_text_df.groupby(year_field):
-        clean_article_text = clean_articles(group[text_field])
+        clean_article_text = clean_articles(group[text_field].values)
         sentences, processed_articles = generate_sentence_corpus\
             (clean_article_text, nlp_model)
         ids = group[id_field]
@@ -100,20 +99,16 @@ def generate_sentence_corpus_by_year(article_text_df, nlp_model, year_field = 'y
     return(processed_articles_by_year, sentence_records)
 
 
-# Addressing determiner articles, but not stopwords
 def get_noun_chunks(spacy_corpus, remove_det_articles = False):
-    """
-    Extract noun phrases from articles using spacy's inbuilt methods.
+    """Extracts noun phrases from articles using spacy's inbuilt methods.
     
-    Parameters
-    ----------
-    spacy_corpus (): spacy processed documents.
-    remove_det_articles (boolean): option to remove determiner articles (a, an, the).
-    the default is False.
+    Args:
+        spacy_corpus: A dict mapping years to a list of spacy processed documents.
+        remove_det_articles: A boolean option to remove determiner articles (a, an, the).
+            The default is False.
     
-    Returns
-    -------
-    dedup_noun_chunks (list): deduplicated list of noun chunks as strings.
+    Returns:
+        A deduplicated list of strings.
     """
     noun_chunks = []
     for article in spacy_corpus:
@@ -129,94 +124,65 @@ def get_noun_chunks(spacy_corpus, remove_det_articles = False):
 
 
 def remove_determiner_articles(text):
-    """
-    Remove determiner articles 'a', 'an', 'the' at the start of the string. 
-    Used to clean up noun phrases.
+    """Removes determiner articles 'a', 'an', 'the' at the start of the string. 
     
-    Parameters
-    ----------
-    text (str): some text.
+    This function is used to clean up noun phrases.
     
-    Returns
-    -------
-    text (str): text with determiner articles removed.
+    Args:
+        text: A string with some text.
+    
+    Returns:
+        A string with determiner articles removed.
     """
     for a, pattern in enumerate(compiled_det_art_patterns):
         text = pattern.sub(det_art_replacement[a], text)
     return text
 
 
-def get_flat_sentence_mentions(search_term, sentence_collection):
-    """
-    Identify sentences that contain search_term using regex.
-    Convert list of lists (i.e. lists of sentences in a given article) into
-    a flat list of sentences.
+def get_flat_sentence_mentions(search_terms, sentence_collection):
+    """Retrieves sentences that mention a given search_term.
     
-    Parameters
-    ----------
-    search_term (str): term of interest.
-    sentence_collection (list): list of tuples with sentence, id, year.
+    Identifies sentences that contain search_term using regex.
     
-    Returns
-    -------
-    year_flat_sentences (dict): sentences with term in each year.
+    Args:
+        search_term: A term of interest.
+        sentence_collection: A list of tuples with sentence, id, year.
+    
+    Returns:
+        A dict mapping years to sentences containing the search_term.
     """
     base = r'{}'
     expr = '(?:\s|^){}(?:,?\s|\.|$)'
-    combined_expr = base.format(''.join(expr.format(search_term)))
+    for term in search_terms:
+        combined_expressions = [base.format(''.join(expr.format(term))) for term in \
+                                search_terms] 
+    joined_expressions = '|'.join(combined_expressions)
+    
     year_flat_sentences = dict()
     sentence_collection_df = pd.DataFrame(sentence_collection)
     sentence_collection_df.columns = ['sentence', 'id', 'year']
     for year, sentences in sentence_collection_df.groupby('year'):
         sentences_with_term = sentences[sentences['sentence'].\
-                                        str.contains(combined_expr, regex = True)]
+                                        str.contains(joined_expressions)]    
         year_flat_sentences[str(year)] = sentences_with_term
     return year_flat_sentences
 
 
-def combine_term_sentences(term_sentence_dict, search_terms):
-    """
-    Bring together all sentences that mention any term from the search term list.
-    
-    Parameters
-    ----------
-    term_sentence_dict (dict): dictionary with sentences for each year and each term.
-    search_terms (list): list of terms.
-    
-    Returns
-    -------
-    combined_sentences (dict): dictionary with years as keys and sentence dataframe as values.
-    """
-    combined_sentences = defaultdict(dict)
-    all_keys = [term_sentence_dict[term].keys() for term in search_terms]
-    all_years = sorted(list(set([year for sublist in all_keys for year in sublist])))
-    for year in all_years:
-        year_sents = []
-        for term in search_terms:
-            year_term_sentences = term_sentence_dict[term].\
-            get(year, pd.DataFrame({'sentence': [], 'id':[], 'year':[]}))
-            year_sents.append(year_term_sentences)
-        year_corpus = pd.concat(year_sents)
-        combined_sentences[str(year)] = year_corpus.drop_duplicates()
-    return combined_sentences
-
 ###########
 # Utility functions for quickly checking collocations
 def check_collocations(sentence_collection_df, collocated_term, groupby_field = 'year'):
-    """
-    Retrieve sentences where the collocated_term was mentioned together with one
-    of the search terms.
-    Parameters
-    ----------
-    sentence_collection_df (pandas.core.frame.DataFrame): dataframe with sentences
-    collocated_term (str): term of interest.
-    groupby_field (str): this is the field on which sentence dataframe will be grouped.
-    Returns
-    -------
-    grouped_by_year : pandas groupby object.
+    """Retrieves sentences with collocations.
+    
+    Args:
+        sentence_collection_df: A pandas dataframe with sentences.
+        collocated_term: A string referring to the term of interest.
+        groupby_field: A string referring to the field on which sentence dataframe 
+            will be grouped.
+    Returns:
+        A pandas groupby object.
     """
     base = r'{}'
-    expr = '(?:\s|^){}(?:,?\s|$)'
+    expr = '(?:\s|^){}(?:,?\s|\.|$)'
     combined_expr = base.format(''.join(expr.format(collocated_term)))    
     collocation_df = sentence_collection_df[sentence_collection_df['sentence'].\
                                                 str.contains(combined_expr, regex = True)]
@@ -225,14 +191,13 @@ def check_collocations(sentence_collection_df, collocated_term, groupby_field = 
 
 
 def collocation_summary(grouped_sentences):
-    """
-    Print quick summary of collocations.
-    Parameters
-    ----------
-    grouped_sentences : pandas groupby object.
-    Returns
-    -------
-    None.
+    """Prints a quick summary of collocations.
+    
+    Args:
+        grouped_sentences: A pandas groupby object.
+        
+    Returns:
+        None.
     """
     num_years = len(grouped_sentences)
     num_sentences = sum([len(group) for name, group in grouped_sentences])
@@ -241,18 +206,15 @@ def collocation_summary(grouped_sentences):
 
 def view_collocations(grouped_sentences, metadata_dict, sentence_record_dict, 
                       url_field = 'webUrl', title_field = 'webTitle'):
-    """
-    Print sentences grouped by year.
-    Parameters
-    ----------
-    grouped_sentences : pandas groupby object.
-    metadata_dict: dict with sentence IDs and urls
-    sentence_record_dict: dict with sentences and corresponding IDs and year
-    sentence_year (int): optional year to subset sentences
+    """Prints sentences and corresponding article metadata grouped by year.
     
-    Returns
-    -------
-    None.
+    Args:
+        grouped_sentences: A pandas groupby object.
+        metadata_dict: A dict mapping article IDs to original article metadata.
+        sentence_record_dict: A dict mapping sentences to article IDs.
+    
+    Returns:
+        None.
     """
     for year, group in grouped_sentences:
         print(year)
