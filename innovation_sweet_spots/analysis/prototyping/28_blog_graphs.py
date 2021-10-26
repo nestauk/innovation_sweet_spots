@@ -50,6 +50,9 @@ cb_investors = crunchbase.get_crunchbase_investors()
 cb_investments = crunchbase.get_crunchbase_investments()
 cb_funding_rounds = crunchbase.get_crunchbase_funding_rounds()
 
+# %%
+gtr_projects = gtr.get_gtr_projects()
+
 # %% [markdown]
 # ## Functions for graphs
 
@@ -279,8 +282,6 @@ def get_growth_and_level(
 
 
 # %%
-
-# %%
 import innovation_sweet_spots.utils.altair_save_utils as alt_save
 
 driver = alt_save.google_chrome_driver_setup()
@@ -409,6 +410,42 @@ cat = "Insulation & retrofit"
 iss_figures.plot_bars(YEARLY_STATS, "no_of_projects", cat, "Number of projects")
 
 # %%
+df = YEARLY_STATS["Insulation & retrofit"]
+print(df[df.year.isin(list(range(2016, 2018)))].amount_total.mean())
+print(df[df.year.isin(list(range(2018, 2021)))].amount_total.mean())
+
+# %%
+iss_topics.get_moving_average(df, window=3, rename_cols=False)[
+    ["year", "no_of_projects"]
+]
+
+# %%
+iss_topics.get_moving_average(df, window=3, rename_cols=True)[
+    ["year", "no_of_projects", "no_of_projects_sma3"]
+]
+
+# %%
+np.mean([10, 12, 8])
+
+# %%
+df[df.year != 2021].rolling(window=3, min_periods=1).mean()
+
+# %%
+(28 + 23 + 10) / 3
+
+# %%
+(28 + 9 + 8) / 3
+
+# %%
+df.set_index("year").loc[2016:2020, variable].mean()
+
+# %%
+iss_topics.get_moving_average(df, window=3, rename_cols=False)
+
+# %%
+get_growth_and_level_2(df[df.year.isin([2021]) == False], "no_of_projects")
+
+# %%
 cat = "Geothermal energy"
 iss_figures.plot_bars(YEARLY_STATS, "no_of_projects", cat, "Number of projects")
 
@@ -420,6 +457,160 @@ cat = "Hydrogen heating"
 iss_figures.plot_bars(YEARLY_STATS, "no_of_projects", cat, "Number of projects")
 
 # %%
+cat = "Micro CHP"
+iss_figures.plot_bars(YEARLY_STATS, "no_of_projects", cat, "Number of projects")
+
+# %%
+cat = "EEM"
+iss_figures.plot_bars(YEARLY_STATS, "amount_total", cat, "Total amount")
+
+# %%
+cat = "Low carbon heating"
+iss_figures.plot_bars(YEARLY_STATS, "amount_total", cat, "Total amount")
+
+# %%
+cat = "Heat pumps"
+
+# %%
+iss_figures.get_growth_and_level_std(YEARLY_STATS, cat=cat, variable="no_of_projects")
+
+# %%
+iss_figures.get_growth_and_level_std(YEARLY_STATS, cat=cat, variable="amount_total")
+
+# %%
+cat = "Low carbon heating"
+iss_figures.get_growth_and_level_std(YEARLY_STATS, cat=cat, variable="amount_total")
+
+# %%
+iss_figures.get_growth_and_level_std(YEARLY_STATS, cat=cat, variable="amount_total")
+
+
+# %% [markdown]
+# ### Get project and funding benchmark
+
+# %%
+def get_growth_and_level_2(df, variable, year_1=2016, year_2=2020, window=3):
+    df = df[df.year <= 2020]
+    df_ma = iss_topics.get_moving_average(df, window=window, rename_cols=False)
+    df = df.set_index("year")
+    df_ma = df_ma.set_index("year")
+    growth_rate = df_ma.loc[year_2, variable] / df_ma.loc[year_1, variable]
+    level = df.loc[year_1:year_2, variable].mean()
+    return growth_rate, level
+
+
+# %%
+def get_ma_values(df, variable, year_1=2016, year_2=2020, window=3):
+    df = df[df.year <= 2020]
+    df_ma = iss_topics.get_moving_average(df, window=window, rename_cols=False)
+    df = df.set_index("year")
+    df_ma = df_ma.set_index("year")
+    return df_ma.loc[year_2, variable], df_ma.loc[year_1, variable]
+
+
+# %%
+def get_percent_increase(x):
+    return (x[0] - x[1]) / x[1] * 100
+
+
+# %%
+gtr_funding_amounts = pd.read_csv(
+    PROJECT_DIR / "outputs/GTR_funds.csv", names=["i", "doc_id", "amount"]
+)
+
+# %%
+gtr_projects_ = gtr_projects.merge(
+    gtr_funding_amounts, left_on="project_id", right_on="doc_id", how="left"
+)
+
+# %%
+# gtr_projects_
+
+# %%
+gtr_projects_["year"] = gtr_projects_.start.apply(iss.convert_date_to_year)
+gtr_total_projects = gtr_projects_.groupby("year").count().reset_index()
+gtr_total_projects_amounts = gtr_projects_.groupby("year").sum().reset_index()
+
+# %%
+get_growth_and_level_2(gtr_total_projects, "project_id", year_1=2016, year_2=2020)
+
+# %%
+get_growth_and_level_2(gtr_total_projects_amounts, "amount", year_1=2016, year_2=2020)
+
+# %%
+get_ma_values(gtr_total_projects_amounts, "amount", year_1=2016, year_2=2020)
+
+# %%
+(4476675022.333333 - 3457875821.0) / 3457875821.0
+
+# %%
+plt.plot(gtr_total_projects_amounts.year, gtr_total_projects_amounts.amount)
+
+# %%
+df = gtr_total_projects_amounts
+x = (df[df.year == 2020].amount.iloc[0], df[df.year == 2016].amount.iloc[0])
+(x[0] - x[1]) / x[1]
+
+# %%
+x = get_ma_values(df, "amount", year_1=2016, year_2=2020, window=3)
+(x[0] - x[1]) / x[1]
+
+# %%
+get_ma_values(
+    YEARLY_STATS["Heat pumps"], "amount_total", year_1=2016, year_2=2020, window=3
+)
+
+# %%
+(19442 - 2289.9863333333337) / 2289.9863333333337
+
+# %%
+# df=YEARLY_STATS['Heat pumps']
+# df[df.year==2020].amount_total.iloc[0] / df[df.year==2017].amount_total.iloc[0]
+
+# %%
+cat = "Low carbon heating"
+x = get_ma_values(YEARLY_STATS[cat], "amount_total", year_1=2016, year_2=2020, window=3)
+
+# %%
+iss_figures.get_growth_and_level_std(YEARLY_STATS, cat=cat, variable="amount_total")
+
+# %%
+(x[0] - x[1]) / x[1]
+
+# %% [markdown]
+# ### Get crunchbase benchmark
+
+# %%
+len(cb_df)
+
+# %%
+cb_df_rounds = iss.get_cb_org_funding_rounds(cb_df, cb_funding_rounds)
+
+# %%
+cb_df_yearly_funding = iss.get_cb_funding_per_year(cb_df_rounds)
+
+# %%
+cb_df_yearly_funding.head(2)
+
+# %%
+get_growth_and_level_2(cb_df_yearly_funding, variable="raised_amount_gbp_total")
+
+# %%
+get_growth_and_level_2(cb_df_yearly_funding, variable="no_of_rounds")
+
+# %%
+get_percent_increase(
+    get_ma_values(cb_df_yearly_funding, variable="raised_amount_gbp_total")
+)
+
+# %%
+df = cb_df_yearly_funding
+get_percent_increase(
+    (
+        df[df.year == 2020].raised_amount_gbp_total.iloc[0],
+        df[df.year == 2016].raised_amount_gbp_total.iloc[0],
+    )
+)
 
 # %% [markdown]
 # ## Matrix
@@ -511,6 +702,8 @@ for cat in ["Heat pumps", "District heating", "Insulation & retrofit"]:
 
 plt.plot([0, 30], [1, 1], "--", c="k", linewidth=0.5)
 
+plt.plot([0, 30], [1.53, 1.53], "--", c="k", linewidth=0.5)
+
 plt.xlim(0, 30)
 plt.ylim(0, 3.5)
 
@@ -558,7 +751,8 @@ plt.errorbar(
     #     xerr = df_stats.std_dev
 )
 
-# plt.plot([0, 30], [1, 1], '--', c='k', linewidth=0.5)
+plt.plot([0, 16000], [1, 1], "--", c="k", linewidth=0.5)
+plt.plot([0, 16000], [1.295, 1.295], "--", c="k", linewidth=0.5)
 
 plt.xlim(0, 16000)
 plt.ylim(0, 9)
@@ -633,6 +827,9 @@ iss.nicer_axis(
 )
 
 # %%
+# YEARLY_STATS['EEM'] = YEARLY_STATS['Energy efficiency & management']
+
+# %%
 variable = "amount_total"
 y_label = "Growth"
 x_label = "Average new funding per year (£1000s)"
@@ -678,6 +875,7 @@ plt.errorbar(
 #     plt.plot(df[variable], df.growth, '.--')
 
 plt.plot([0, 60000], [1, 1], "--", c="k", linewidth=0.5)
+plt.plot([0, 60000], [1.295, 1.295], "--", c="k", linewidth=0.5)
 
 plt.xlim(0, 60000)
 plt.ylim(0, 3.75)
@@ -901,6 +1099,10 @@ iss_figures.get_growth_and_level_std(
 )
 
 # %%
+x = get_ma_values(YEARLY_STATS[cat], variable="raised_amount_gbp_total")
+(x[0] - x[1]) / x[1]
+
+# %%
 cb_selected_cat = CB_DOCS_ALL_[CB_DOCS_ALL_.tech_category == cat]
 dff = iss.get_cb_org_funding_rounds(cb_selected_cat, cb_funding_rounds)
 # dff[-dff.raised_amount.isnull()].sort_values("raised_amount")
@@ -997,6 +1199,19 @@ fig = iss.nicer_axis(
 fig
 
 # %%
+fig = iss.nicer_axis(
+    iss_figures.plot_matrix(
+        YEARLY_STATS,
+        "raised_amount_gbp_total",
+        cats,
+        "Average number of deals",
+        "Growth index",
+        color_pal=(PLOT_REF_CATEGORY_DOMAIN, PLOT_REF_CATEGORY_COLOURS),
+    )
+)
+fig
+
+# %%
 df_stats = pd.DataFrame(
     [
         iss_figures.get_growth_and_level(
@@ -1019,8 +1234,9 @@ plt.errorbar(
     c=dark_purple,
     #     xerr = df_stats.std_dev
 )
-
-# plt.plot([0, 30], [1, 1], '--', c='k', linewidth=0.5)
+#
+plt.plot([0, 20], [1, 1], "--", c="k", linewidth=0.5)
+plt.plot([0, 20], [1.187, 1.187], "--", c="k", linewidth=0.5)
 
 plt.xlim(0, 20)
 plt.ylim(0, 3)
@@ -1141,6 +1357,7 @@ cats = sorted(
         "Heat storage",
         "Building insulation",
         "Energy management",
+        "Micro CHP",
     ]
 )
 
@@ -1163,6 +1380,9 @@ df = pd.DataFrame(
 df[df.amount_category == "research"]
 
 # %%
+df[df.amount_category == "research"].amount.median()
+
+# %%
 df[df.amount_category == "research"].no_of_projects_deals.median()
 
 # %%
@@ -1175,6 +1395,7 @@ cats = [
     "Low carbon heating",
     "Wind & offshore",
     "EEM",
+    "Heating (other)",
 ]
 
 # %%
@@ -1190,6 +1411,12 @@ df = pd.DataFrame(
     x, columns=["tech_category", "amount", "no_of_projects_deals", "amount_category"]
 )
 df[df.amount_category == "research"].amount.median()
+
+# %%
+df
+
+# %%
+df[df.amount_category == "investment"].no_of_projects_deals.median()
 
 # %%
 x = []
@@ -1301,17 +1528,46 @@ plt.savefig(
 )
 
 # %%
+cats = [
+    "Batteries",
+    "Hydrogen & fuel cells",
+    "Carbon capture & storage",
+    "Bioenergy",
+    "Solar",
+    "Low carbon heating",
+    "Wind & offshore",
+    "EEM",
+    "Heating (other)",
+]
 
 # %%
-df_viz = df_research_investment[
-    df_research_investment.tech_category != "Heating (other)"
-]
-alt.Chart(df_research_investment).mark_bar().encode(
-    x=alt.X("amount_proportion"),
-    y="amount_category",
-    color="amount_category",
-    row="tech_category",
+x = []
+for cat in cats:
+    df = YEARLY_STATS[cat]
+    df = df[df.year.isin(list(range(2016, 2021)))]
+    df_sum = df.mean()
+    x += [(cat, df_sum.amount_total, df_sum.no_of_projects, "research")] + [
+        (cat, df_sum.raised_amount_usd_total, df_sum.no_of_rounds, "investment")
+    ]
+df = pd.DataFrame(
+    x, columns=["tech_category", "amount", "no_of_projects_deals", "amount_category"]
 )
+df[df.amount_category == "research"].amount.median()
+
+# %%
+
+# %%
+
+# %%
+# df_viz = df_research_investment[
+#     df_research_investment.tech_category != "Heating (other)"
+# ]
+# alt.Chart(df_research_investment).mark_bar().encode(
+#     x=alt.X("amount_proportion"),
+#     y="amount_category",
+#     color="amount_category",
+#     row="tech_category",
+# )
 
 # %%
 # # set width of bars
@@ -1341,28 +1597,30 @@ alt.Chart(df_research_investment).mark_bar().encode(
 # plt.show()
 
 # %%
-fig = (
-    alt.Chart(df_research_investment, width=200)
-    .mark_bar()
-    .encode(
-        x=alt.X("amount_category", title=""),
-        y=alt.Y("sum(amount)", stack="normalize", title="Fraction of money"),
-        color="tech_category",
-    )
-)
-fig = iss.nicer_axis(fig)
-fig
+# fig = (
+#     alt.Chart(df_research_investment, width=200)
+#     .mark_bar()
+#     .encode(
+#         x=alt.X("amount_category", title=""),
+#         y=alt.Y("sum(amount)", stack="normalize", title="Fraction of money"),
+#         color="tech_category",
+#     )
+# )
+# fig = iss.nicer_axis(fig)
+# fig
 
 # %%
 cats = [
-    "Batteries",
-    "Hydrogen & fuel cells",
-    "Carbon capture & storage",
-    "Bioenergy",
-    "Solar",
-    "Low carbon heating",
-    "Wind & offshore",
-    "EEM",
+    "Heat pumps",
+    "Biomass heating",
+    "Hydrogen heating",
+    "Geothermal energy",
+    "Solar thermal",
+    "District heating",
+    "Heat storage",
+    "Insulation & retrofit",
+    "Energy management",
+    "Micro CHP",
     "Heating (other)",
 ]
 
@@ -1370,14 +1628,39 @@ x = []
 for cat in cats:
     df = YEARLY_STATS[cat]
     df = df[df.year.isin(list(range(2016, 2021)))]
-    df_sum = df.mean()
+    df_sum = df.sum()
     x += [(cat, df_sum.amount_total, df_sum.no_of_projects, "research")] + [
         (cat, df_sum.raised_amount_usd_total, df_sum.no_of_rounds, "investment")
     ]
 df = pd.DataFrame(
     x, columns=["tech_category", "amount", "no_of_projects_deals", "amount_category"]
 )
-df[df.amount_category == "investment"].no_of_projects_deals.mean()
+
+# %%
+df_investment = df[df.amount_category == "investment"][
+    ["tech_category", "no_of_projects_deals", "amount_category"]
+]
+df_investment.no_of_projects_deals = df_investment.no_of_projects_deals.astype(int)
+df_investment = df_investment.sort_values("no_of_projects_deals")
+
+# %%
+fig, ax = plt.subplots(figsize=(4, 6), dpi=80)
+plt.barh(y=df_investment["tech_category"], width=df_investment["no_of_projects_deals"])
+plt.grid(axis="x")
+plt.xlabel("Number of investment deals")
+
+# %%
+# # fig, ax = plt.subplots(figsize=(6, 6), dpi=80)
+# fig = df_investment.plot.barh(figsize=(6, 7), y='tech_category', width='no_of_projects_deals')
+# # plt.xlim(0, 80)
+# # plt.grid(axis="x")
+# # plt.savefig(
+# #     PROJECT_DIR / "outputs/figures/blog_figures" / "barplots_proportion_funding.svg",
+# #     format="svg",
+# # )
+
+# %%
+df_investment
 
 # %%
 alt_save.save_altair(fig, "blog_fig_Barplot_Research_vs_Investment", driver)
@@ -1410,6 +1693,37 @@ fig = iss.nicer_axis(
     )
 )
 fig
+
+# %%
+variable = "raised_amount_usd_total"
+# variable='no_of_rounds'
+y_label = "Growth"
+x_label = f"Avg number of {variable} per year"
+# x_label = "Average number of projects per year"
+
+cats = [
+    "Heat pumps",
+    "Biomass heating",
+    "Hydrogen heating",
+    "Geothermal energy",
+    "Solar thermal",
+    "District heating",
+    "Heat storage",
+    "Insulation & retrofit",
+    "Energy management",
+    "Micro CHP",
+]
+
+fig = iss.nicer_axis(
+    iss_figures.plot_matrix(
+        YEARLY_STATS,
+        variable,
+        cats,
+        x_label,
+        y_label,
+    )
+)
+fig.interactive()
 
 # %%
 cat = "Low carbon heating"
@@ -1552,11 +1866,22 @@ plt.savefig(
 plt.show()
 
 # %%
-year_1 = 2017
+plt.plot(df.year, df.total_environment)
+
+# %%
+year_1 = 2016
 year_2 = 2020
 var = "prop_hydrogen"
 var = "total_hydrogen"
 df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
+
+# %%
+x = get_ma_values(df, "total_hydrogen", year_1=2016, year_2=2020, window=3)
+(x[0] - x[1]) / x[1]
+
+# %%
+x = get_ma_values(df, "prop_hydrogen", year_1=2016, year_2=2020, window=3)
+(x[0] - x[1]) / x[1]
 
 # %%
 # year_1=2008
@@ -1572,22 +1897,59 @@ var = "prop_hydrogen_heating"
 df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
 
 # %%
-year_1 = 2017
+x = get_ma_values(df, "prop_hydrogen_heating", year_1=2016, year_2=2020, window=3)
+(x[0] - x[1]) / x[1]
+
+# %%
+year_1 = 2016
 year_2 = 2020
 var = "prop_hp"
 df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
 
 # %%
-year_1 = 2017
+year_1 = 2016
 year_2 = 2020
 var = "total_hp"
 df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
 
 # %%
-year_1 = 2008
-year_2 = 2021
+year_1 = 2016
+year_2 = 2020
 var = "prop_hp"
 df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
+
+# %%
+x = get_ma_values(df, "prop_hp", year_1=2016, year_2=2020, window=3)
+print(x[0] / x[1])
+(x[0] - x[1]) / x[1] * 100
+
+# %%
+year_1 = 2008
+year_2 = 2016
+var = "prop_hp"
+df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
+
+# %%
+year_1 = 2008
+year_2 = 2016
+var = "total_hp"
+df[df.year == year_2][var].iloc[0] / df[df.year == year_1][var].iloc[0]
+
+# %%
+x = get_ma_values(df, "total_hp", year_1=2008, year_2=2016, window=3)
+(x[0] - x[1]) / x[1] * 100
+
+# %%
+x = get_ma_values(df, "prop_hp", year_1=2008, year_2=2016, window=3)
+(x[0] - x[1]) / x[1] * 100
+
+# %%
+x = get_ma_values(df, "total_hp", year_1=2008, year_2=2016, window=1)
+(x[0] - x[1]) / x[1] * 100
+
+# %%
+x = get_ma_values(df, "total_hp", year_1=2016, year_2=2020, window=1)
+(x[0] - x[1]) / x[1] * 100
 
 # %%
 # mentions_hp_guardian = pd.read_csv(

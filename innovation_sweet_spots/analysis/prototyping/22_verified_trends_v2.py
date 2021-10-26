@@ -2052,6 +2052,9 @@ CB_DOCS_ALL_.to_csv(
 # # Trajectories
 
 # %%
+import innovation_sweet_spots.utils.io as iss_io
+
+# %%
 YEARLY_STATS = iss_io.load_pickle(
     PROJECT_DIR
     / "outputs/data/results_august/FINAL_TABLES_yearly_stats_all_categories_2021_Funds.p"
