@@ -99,7 +99,7 @@ noun_chunks_all_years = {str(year): dpu.get_noun_chunks(processed_articles, remo
 
 # %%
 # Dict with year, search term as keys and corpus of sentences as values.
-term_sentences = {term: dpu.get_flat_sentence_mentions(term, sentence_records) for term in search_terms}
+term_sentences = {term: dpu.get_flat_sentence_mentions([term], sentence_records) for term in search_terms}
 
 # %%
 # Sentence corpus aggregated across the set of search terms
@@ -155,7 +155,7 @@ flat_sentences = pd.concat([combined_term_sentences[y] for y in combined_term_se
 
 # %%
 # Retrieve sentences where a given term was used together with any of the search terms
-grouped_sentences = dpu.check_collocations(flat_sentences, 'installation')
+grouped_sentences = dpu.check_collocations(flat_sentences, 'retrofit')
 dpu.collocation_summary(grouped_sentences)
 
 # %%
