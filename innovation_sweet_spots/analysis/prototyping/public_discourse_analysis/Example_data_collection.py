@@ -33,8 +33,6 @@ import pickle
 import itertools
 
 # %%
-# Change first element to location of project folder.
-os.chdir(os.path.join('/Users/jdjumalieva/Documents/Analysis/', 'innovation_sweet_spots'))
 
 # %%
 from innovation_sweet_spots.getters import guardian
