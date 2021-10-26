@@ -114,22 +114,10 @@ def test_get_flat_mentions():
                   ('heat pumps, solar panels and hydrogen are often mentioned together', 6, '2021'),
                   ('these represent low carbon heating technologies', 6, '2021'),
                   ('many would consider installing a heat pump.', 7, '2021')]
-    func_output = dpu.get_flat_sentence_mentions('heat pumps', mock_data)
+    func_output = dpu.get_flat_sentence_mentions(['heat pumps'], mock_data)
     assert(sum([len(v) for v in func_output.values()]) == 3)
-
-
-def test_combine_term_sentences():
     search_terms = ['heat pump', 'heat pumps']
-    mock_data  = [('this sentence mentions heat pumps.', 4, '2020'),
-                  ('no such mentions in this', 4, '2020'),
-                  ('heat pump operates like a fridge in reverse', 4, '2020'),
-                  ('heat pumps are referenced here',5, '2021'),
-                  ('heat pumps, solar panels and hydrogen are often mentioned together', 6, '2021'),
-                  ('these represent low carbon heating technologies', 6, '2021'),
-                  ('many would consider installing a heat pump.', 7, '2021')]
-    term_sentences = {term: dpu.get_flat_sentence_mentions(term, mock_data) \
-                      for term in search_terms}
-    func_output = dpu.combine_term_sentences(term_sentences, search_terms)
-    assert(sum([len(v) for v in func_output.values()]) == 5)
+    func_output2 = dpu.get_flat_sentence_mentions(search_terms, mock_data) 
+    assert(sum([len(v) for v in func_output2.values()]) == 5)
 
 
