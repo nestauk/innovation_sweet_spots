@@ -82,8 +82,6 @@ def preprocess_text_clean_sentences(text: str) -> Iterator[str]:
 
 
 ### Search term analysis
-
-
 def is_term_present(search_term: str, docs: Iterator[str]) -> Iterator[bool]:
     """Simple method to check if a keyword or keyphrase is in the set of documents"""
     return [search_term in doc for doc in docs]
@@ -106,6 +104,37 @@ def search_via_docs(search_term: str, docs: Iterator[str], item_table: pd.DataFr
     """Returns table with only the items whose documents contain the search term"""
     bool_mask = is_term_present(search_term, docs)
     return item_table[bool_mask].copy()
+
+
+def get_docs_with_keyphrases(keyphrases, corpus_texts, corpus_df, verbose=False):
+    """Searches for documents containing provided sets of keyphrases"""
+    x = np.array([False] * len(corpus_texts))
+    for terms in keyphrases:
+        if verbose:
+            print(terms)
+        x = x | find_docs_with_all_terms(
+            terms,
+            corpus_texts=corpus_texts,
+            corpus_df=corpus_df,
+            return_dataframe=False,
+        )
+    return corpus_df.iloc[x]
+
+
+def find_docs_with_all_terms(
+    terms,
+    corpus_texts,
+    corpus_df,
+    return_dataframe=True,
+):
+    """Searches for documents containing all provided keyphrases"""
+    x = np.array([True] * len(corpus_texts))
+    for term in terms:
+        x = x & np.array(is_term_present(term, corpus_texts))
+    if return_dataframe:
+        return corpus_df.iloc[x]
+    else:
+        return x
 
 
 def convert_date_to_year(str_date: str) -> int:
@@ -534,7 +563,7 @@ def check_currencies(fund_rounds, verbose=False):
 def get_cb_funding_per_year(
     fund_rounds: pd.DataFrame, min_year: int = 2007, max_year: int = 2020
 ) -> pd.DataFrame:
-    """Calculate raised amount of money across all orgs"""
+    """Calculate raised amount of money across all orgs (thousands)"""
     fund_rounds["year"] = fund_rounds.announced_on.apply(convert_date_to_year)
 
     check_currencies(fund_rounds)
@@ -573,6 +602,7 @@ def convert_deal_currency(funding: pd.DataFrame):
             for x in funding["announced_on"]
         ]
         funding = funding.query("announced_on_date > '2000-01-01'")
+        funding = funding.copy()
         funding["year"] = [x.year for x in funding["announced_on_date"]]
         funding["raised_amount_gbp"] = [
             c.convert(
