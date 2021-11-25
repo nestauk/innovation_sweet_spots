@@ -93,7 +93,7 @@ broader_group_to_industries = dict(zip(df.category_groups, df.categories.to_list
 
 # %%
 # Example: Check if parenting is in the list of categories
-"Parenting" in categories
+"Parenting" in industries
 
 # %%
 # Check which broader category group does 'Parenting' belong to
