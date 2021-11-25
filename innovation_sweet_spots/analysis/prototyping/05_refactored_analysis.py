@@ -54,6 +54,12 @@ funded_projects = iss.get_gtr_project_funds(gtr_projects, gtr_project_funds)
 del link_gtr_funds
 
 # %%
+# gtr_projects
+
+# %%
+# gtr_projects.info()
+
+# %%
 project_to_org = iss.link_gtr_projects_and_orgs(
     gtr_organisations, link_gtr_organisations
 )
@@ -70,8 +76,14 @@ cb_investments = crunchbase.get_crunchbase_investments()
 cb_funding_rounds = crunchbase.get_crunchbase_funding_rounds()
 
 # %%
+cb_df[-cb_df.updated_at.isnull()].sort_values("updated_at").updated_at
+
+# %%
 hans = get_hansard_data()
 hans_docs = iss.create_documents_from_dataframe(hans, columns=["speech"])
+
+# %%
+hans.tail(1)
 
 # %%
 gtr_columns = ["title", "abstractText", "techAbstractText"]
@@ -81,6 +93,8 @@ gtr_docs = iss.create_documents_from_dataframe(gtr_projects, gtr_columns)
 # %%
 cb_columns = ["name", "short_description", "long_description"]
 cb_docs = iss.create_documents_from_dataframe(cb_df, cb_columns)
+
+# %%
 
 # %% [markdown]
 # ### Characterise data sets

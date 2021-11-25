@@ -253,32 +253,12 @@ def articles_table(articles):
 
 # %%
 # NB this is created down the line in this same notebook
-FUNDS_RELIABLE_old = pd.read_csv(
+FUNDS_RELIABLE = pd.read_csv(
     PROJECT_DIR / "outputs/data/results_august/RELIABLE_GTR_FUNDS_3.csv"
 )
 
 # %%
-len(FUNDS_RELIABLE_old)
-
-# %%
-# FUNDS_RELIABLE = FUNDS_RELIABLE[FUNDS_RELIABLE.is_api_fund_reliable]
-
-# %%
-(FUNDS_RELIABLE_old.api_funds != FUNDS_RELIABLE_old.amount).sum()
-
-# %%
-FUNDS_RELIABLE_old.head(1)
-
-# %%
-# gtr_projects[gtr_projects.project_id=='B5F0DEF6-A2D3-4C8D-B56D-77DB5F621401']
-
-# %%
-FUNDS_RELIABLE = pd.read_csv(
-    PROJECT_DIR / "outputs/GTR_funds.csv", names=["i", "doc_id", "amount"]
-)
-
-# %%
-FUNDS_RELIABLE.head(1)
+FUNDS_RELIABLE = FUNDS_RELIABLE[FUNDS_RELIABLE.is_api_fund_reliable]
 
 # %%
 len(FUNDS_RELIABLE)
@@ -382,45 +362,6 @@ def get_yearly_stats(gtr_docs, cb_docs, guardian_articles, speeches):
 
     df_per_year = (
         df_research_per_year.merge(df_deals_per_year, how="left")
-        .merge(df_cb_orgs_founded_per_year, how="left")
-        .merge(df_articles_per_year, how="left")
-        .merge(speeches_per_year, how="left")
-    )
-    return df_per_year
-
-
-def get_yearly_stats_funds(
-    gtr_docs, gtr_docs_funds, cb_docs, guardian_articles, speeches
-):
-    # Deduplicated versions (when combining several categories)
-    gtr_docs_dedup = deduplicate_docs(gtr_docs)
-    gtr_docs_funds_dedup = deduplicate_docs(gtr_docs_funds)
-    cb_doc_dedup = deduplicate_docs(cb_docs)
-    # GTR data
-    df_research_per_year = iss.gtr_funding_per_year(
-        gtr_docs_dedup, min_year=2007, max_year=2021
-    )[["year", "no_of_projects"]]
-    df_research_per_year_funds = iss.gtr_funding_per_year(
-        gtr_docs_funds_dedup, min_year=2007, max_year=2021
-    )[["year", "amount_total", "amount_median"]]
-    # CB data
-    df_deals = iss.get_cb_org_funding_rounds(cb_doc_dedup, cb_funding_rounds)
-    df_deals_per_year = iss.get_cb_funding_per_year(df_deals, max_year=2021)
-    df_cb_orgs_founded_per_year = iss.cb_orgs_founded_by_year(
-        cb_doc_dedup, max_year=2021
-    )
-    # Guardian data
-    df_articles_per_year = iss.get_guardian_mentions_per_year(
-        guardian_articles, max_year=2021
-    )
-    # Hansard
-    speeches_per_year = iss.get_hansard_mentions_per_year(
-        speeches, max_year=2021
-    ).rename(columns={"mentions": "speeches"})
-
-    df_per_year = (
-        df_research_per_year.merge(df_research_per_year_funds, how="left")
-        .merge(df_deals_per_year, how="left")
         .merge(df_cb_orgs_founded_per_year, how="left")
         .merge(df_articles_per_year, how="left")
         .merge(speeches_per_year, how="left")
@@ -648,7 +589,6 @@ REF_YEAR = 2016
 # %%
 def process_gtr_docs(df):
     gtr_docs = add_project_data(df[df.source == "gtr"])
-    gtr_docs = get_reliable_funds(gtr_docs, FUNDS_RELIABLE)
     # Deduplicate
     gtr_docs_dedup = gtr_docs.groupby(["title", "description"]).sum().reset_index()
     gtr_docs_ = (
@@ -658,12 +598,6 @@ def process_gtr_docs(df):
     )
     gtr_docs_ = gtr_docs_.drop_duplicates(["title", "description"], keep="first")
     return gtr_docs_
-
-
-def process_gtr_docs_funds(df):
-    gtr_docs_funds = add_project_data(df[df.source == "gtr"])
-    gtr_docs_funds = get_reliable_funds(gtr_docs_funds, FUNDS_RELIABLE)
-    return gtr_docs_funds
 
 
 def dedup_gtr_docs(gtr_docs):
@@ -759,7 +693,6 @@ CATEGORY_NAMES = [
 YEARLY_STATS = {}
 YEARLY_STATS_NORM = {}
 GTR_DOCS_ALL = pd.DataFrame()
-GTR_DOCS_ALL_FUNDS = pd.DataFrame()
 CB_DOCS_ALL = pd.DataFrame()
 for cat in CATEGORY_NAMES:
     df = get_verified_docs([cat])
@@ -785,8 +718,7 @@ for cat in CATEGORY_NAMES:
     df = pd.concat([df, df_add]).drop_duplicates("doc_id")
     # Extract GTR and CB into separate dataframes
     gtr_docs = process_gtr_docs(df)
-    gtr_docs_funds = process_gtr_docs_funds(df)
-    #     gtr_docs = get_reliable_funds(gtr_docs, FUNDS_RELIABLE)
+    gtr_docs = get_reliable_funds(gtr_docs, FUNDS_RELIABLE)
     cb_docs = add_crunchbase_data(df[df.source == "cb"])
     # Guardian articles
     guardian_articles = aggregate_guardian_articles(category_articles, [cat])
@@ -794,10 +726,7 @@ for cat in CATEGORY_NAMES:
     # Speeches
     speeches = aggregate_hansard_speeches([cat])
     # Yearly stats
-    #     df_per_year = get_yearly_stats(gtr_docs, cb_docs, guardian_articles, speeches)
-    df_per_year = get_yearly_stats_funds(
-        gtr_docs, gtr_docs_funds, cb_docs, guardian_articles, speeches
-    )
+    df_per_year = get_yearly_stats(gtr_docs, cb_docs, guardian_articles, speeches)
     df_per_year_norm = normalise_timeseries(
         iss_topics.get_moving_average(df_per_year, window=3, rename_cols=False),
         ref_year=REF_YEAR,
@@ -805,7 +734,6 @@ for cat in CATEGORY_NAMES:
     YEARLY_STATS[cat] = df_per_year
     YEARLY_STATS_NORM[cat] = df_per_year_norm
     GTR_DOCS_ALL = GTR_DOCS_ALL.append(gtr_docs, ignore_index=True)
-    GTR_DOCS_ALL_FUNDS = GTR_DOCS_ALL_FUNDS.append(gtr_docs_funds, ignore_index=True)
     CB_DOCS_ALL = CB_DOCS_ALL.append(cb_docs, ignore_index=True)
 
 
@@ -813,7 +741,6 @@ for cat in CATEGORY_NAMES:
 cat = "Heating & Building Energy Efficiency"
 # Combined heating and building efficiency
 gtr_docs = GTR_DOCS_ALL.copy().drop_duplicates("doc_id")
-gtr_docs_funds = GTR_DOCS_ALL_FUNDS.copy().drop_duplicates("doc_id")
 cb_docs = CB_DOCS_ALL.copy().drop_duplicates("doc_id")
 # Guardian articles
 guardian_articles = aggregate_guardian_articles(category_articles, CATEGORY_NAMES)
@@ -821,10 +748,7 @@ guardian_articles = process_guardian_articles(guardian_articles)
 # Speeches
 speeches = aggregate_hansard_speeches(CATEGORY_NAMES)
 # Yearly stats
-# df_per_year = get_yearly_stats(gtr_docs, cb_docs, guardian_articles, speeches)
-df_per_year = get_yearly_stats_funds(
-    gtr_docs, gtr_docs_funds, cb_docs, guardian_articles, speeches
-)
+df_per_year = get_yearly_stats(gtr_docs, cb_docs, guardian_articles, speeches)
 df_per_year_norm = normalise_timeseries(
     iss_topics.get_moving_average(df_per_year, window=3, rename_cols=False),
     ref_year=REF_YEAR,
@@ -833,10 +757,8 @@ YEARLY_STATS[cat] = df_per_year
 YEARLY_STATS_NORM[cat] = df_per_year_norm
 
 gtr_docs["tech_category"] = "Heating & Building Energy Efficiency"
-gtr_docs_funds["tech_category"] = "Heating & Building Energy Efficiency"
 cb_docs["tech_category"] = "Heating & Building Energy Efficiency"
 GTR_DOCS_ALL_HEAT_BUILD = gtr_docs.copy()
-GTR_DOCS_ALL_HEAT_BUILD_FUNDS = gtr_docs_funds.copy()
 CB_DOCS_ALL_HEAT_BUILD = cb_docs.copy()
 
 # %%
@@ -873,13 +795,6 @@ gtr_docs = (
     .copy()
     .drop_duplicates("doc_id")
 )
-
-gtr_docs_funds = (
-    GTR_DOCS_ALL_FUNDS[GTR_DOCS_ALL_FUNDS.tech_category.isin(CATEGORY_NAMES)]
-    .copy()
-    .drop_duplicates("doc_id")
-)
-
 cb_docs = pd.concat(
     [
         CB_DOCS_ALL[CB_DOCS_ALL.tech_category.isin(CATEGORY_NAMES)].copy(),
@@ -893,10 +808,7 @@ guardian_articles = process_guardian_articles(guardian_articles)
 # Speeches
 speeches = aggregate_hansard_speeches(CATEGORY_NAMES)
 # Yearly stats
-# df_per_year = get_yearly_stats(gtr_docs, cb_docs, guardian_articles, speeches)
-df_per_year = get_yearly_stats_funds(
-    gtr_docs, gtr_docs_funds, cb_docs, guardian_articles, speeches
-)
+df_per_year = get_yearly_stats(gtr_docs, cb_docs, guardian_articles, speeches)
 df_per_year_norm = normalise_timeseries(
     iss_topics.get_moving_average(df_per_year, window=3, rename_cols=False),
     ref_year=REF_YEAR,
@@ -905,10 +817,8 @@ YEARLY_STATS[cat] = df_per_year
 YEARLY_STATS_NORM[cat] = df_per_year_norm
 
 gtr_docs["tech_category"] = "Heating (all)"
-gtr_docs_funds["tech_category"] = "Heating (all)"
 cb_docs["tech_category"] = "Heating (all)"
 GTR_DOCS_ALL_HEAT = gtr_docs.copy()
-GTR_DOCS_ALL_HEAT_FUNDS = gtr_docs_funds.copy()
 CB_DOCS_ALL_HEAT = cb_docs.copy()
 
 # %%
@@ -923,13 +833,6 @@ gtr_docs = (
     .copy()
     .drop_duplicates("doc_id")
 )
-
-gtr_docs_funds = (
-    GTR_DOCS_ALL_FUNDS[GTR_DOCS_ALL_FUNDS.tech_category.isin(CATEGORY_NAMES)]
-    .copy()
-    .drop_duplicates("doc_id")
-)
-
 cb_docs = pd.concat(
     [
         CB_DOCS_ALL[CB_DOCS_ALL.tech_category.isin(CATEGORY_NAMES)].copy(),
@@ -943,10 +846,7 @@ guardian_articles = process_guardian_articles(guardian_articles)
 # Speeches
 speeches = aggregate_hansard_speeches(CATEGORY_NAMES)
 # Yearly stats
-# df_per_year = get_yearly_stats(gtr_docs, cb_docs, guardian_articles, speeches)
-df_per_year = get_yearly_stats_funds(
-    gtr_docs, gtr_docs_funds, cb_docs, guardian_articles, speeches
-)
+df_per_year = get_yearly_stats(gtr_docs, cb_docs, guardian_articles, speeches)
 df_per_year_norm = normalise_timeseries(
     iss_topics.get_moving_average(df_per_year, window=3, rename_cols=False),
     ref_year=REF_YEAR,
@@ -955,10 +855,8 @@ YEARLY_STATS[cat] = df_per_year
 YEARLY_STATS_NORM[cat] = df_per_year_norm
 
 gtr_docs["tech_category"] = "Building Energy Efficiency"
-gtr_docs_funds["tech_category"] = "Building Energy Efficiency"
 cb_docs["tech_category"] = "Building Energy Efficiency"
 GTR_DOCS_ALL_BUILDINGS = gtr_docs.copy()
-GTR_DOCS_ALL_BUILDINGS_FUNDS = gtr_docs_funds.copy()
 CB_DOCS_ALL_BUILDINGS = cb_docs.copy()
 
 # %%
@@ -1013,7 +911,6 @@ cb_docs["tech_category"] = "Heating (other)"
 GTR_DOCS_ALL_HEAT_OTHER = gtr_docs.copy()
 CB_DOCS_ALL_HEAT_OTHER = cb_docs.copy()
 
-
 # %%
 # CB_DOCS_ALL_HEAT_OTHER
 
@@ -1032,16 +929,17 @@ CB_DOCS_ALL_HEAT_OTHER = cb_docs.copy()
 # df.to_csv('ISS_example_gtr_data_August17.csv', index=False)
 
 # %%
-# df = (
-#     gtr_docs[["title", "amount", "start"]]
-#     .sort_values("start")
-#     .drop_duplicates("title", keep="first")
-# )
-# df["year"] = df.start.apply(iss.convert_date_to_year)
-# df["amount"] = df["amount"] / 1000
-# df = df[["title", "amount", "year"]]
-# df = df.rename(columns={"amount": "amount (1000s)"})
-# df
+df = (
+    gtr_docs[["title", "amount", "start"]]
+    .sort_values("start")
+    .drop_duplicates("title", keep="first")
+)
+df["year"] = df.start.apply(iss.convert_date_to_year)
+df["amount"] = df["amount"] / 1000
+df = df[["title", "amount", "year"]]
+df = df.rename(columns={"amount": "amount (1000s)"})
+df
+
 
 # %% [markdown]
 # #### Define growth calculation
@@ -1144,72 +1042,6 @@ CATEGORY_NAMES_ = [
 iss.nicer_axis(
     plot_matrix(
         variable="no_of_projects",
-        category_names=CATEGORY_NAMES_,
-        x_label="Avg number of projects per year",
-    )
-)
-
-# %%
-CATEGORY_NAMES_ = [
-    "Heat pumps",
-    "Heat storage",
-    "Geothermal energy",
-    "Solar thermal",
-    "District heating",
-    "Building insulation",
-    "Energy management",
-    "Hydrogen heating",
-    "Biomass heating",
-]
-iss.nicer_axis(
-    plot_matrix(
-        variable="no_of_projects",
-        category_names=CATEGORY_NAMES_,
-        x_label="Avg number of projects per year",
-    )
-)
-
-# %%
-cat = "District heating"
-# cat = 'Energy management'
-# cat = 'Heat pumps'
-
-df = iss.gtr_funding_per_year(
-    GTR_DOCS_ALL_FUNDS[GTR_DOCS_ALL_FUNDS.tech_category == cat],
-    min_year=2007,
-    max_year=2021,
-)
-df[df.year.isin(list(range(2016, 2021)))].mean()
-
-# %%
-print(len(GTR_DOCS_ALL_FUNDS))
-len(GTR_DOCS_ALL)
-
-# %%
-df = iss.gtr_funding_per_year(
-    GTR_DOCS_ALL[GTR_DOCS_ALL.tech_category == cat], min_year=2007, max_year=2021
-)
-df[df.year.isin(list(range(2016, 2021)))].mean()
-
-# %%
-GTR_DOCS_ALL
-
-# %%
-CATEGORY_NAMES_ = [
-    "Heat pumps",
-    "Heat storage",
-    "Geothermal energy",
-    "Solar thermal",
-    "District heating",
-    "Building insulation",
-    "Energy management",
-    "Hydrogen heating",
-    "Biomass heating",
-    "Micro CHP",
-]
-iss.nicer_axis(
-    plot_matrix(
-        variable="amount_total",
         category_names=CATEGORY_NAMES_,
         x_label="Avg number of projects per year",
     )
@@ -1659,9 +1491,6 @@ CB_DOCS_REF_ALL = pd.DataFrame()
 THRESH_TOPIC_PROB = 0.1
 
 # %%
-GTR_DOCS_REF_ALL_FUNDS = pd.DataFrame()
-
-# %%
 # cat='Batteries'
 # DF_REF[cat] = DF_REF[cat].rename(columns={'category': 'tech_category'})
 # DF_REF[cat]['tech_category']=cat
@@ -1686,19 +1515,12 @@ for cat in [
     DF_REF[cat] = DF_REF[cat].rename(columns={"category": "tech_category"})
     DF_REF[cat]["tech_category"] = cat
     gtr_docs = add_project_data(DF_REF[cat][DF_REF[cat].source == "gtr"])
-    gtr_docs = get_reliable_funds(gtr_docs, FUNDS_RELIABLE)
     gtr_docs = dedup_gtr_docs(gtr_docs)
     gtr_docs = gtr_docs[
         (gtr_docs.manual_ok == 1) | (gtr_docs.topic_probs > THRESH_TOPIC_PROB)
     ]
-    # Funds
-    gtr_docs_funds = add_project_data(DF_REF[cat][DF_REF[cat].source == "gtr"])
-    gtr_docs_funds = get_reliable_funds(gtr_docs_funds, FUNDS_RELIABLE)
-    gtr_docs_funds = gtr_docs_funds[
-        (gtr_docs_funds.manual_ok == 1)
-        | (gtr_docs_funds.topic_probs > THRESH_TOPIC_PROB)
-    ]
-    #     gtr_docs = get_reliable_funds(gtr_docs, FUNDS_RELIABLE)
+
+    gtr_docs = get_reliable_funds(gtr_docs, FUNDS_RELIABLE)
     #     gtr_docs = process_gtr_docs(DF_REF[cat][DF_REF[cat].source=='gtr'])
     cb_docs_ = pd.concat(
         [
@@ -1713,7 +1535,7 @@ for cat in [
     cb_docs = add_crunchbase_data(cb_docs_)
 
     category_articles[cat] = [
-        guardian.search_content(search_term, use_cached=True)
+        guardian.search_content(search_term, use_cached=False)
         for search_term in REF_TERMS[cat]
     ]
     guardian_articles = aggregate_guardian_articles(category_articles, [cat])
@@ -1726,11 +1548,7 @@ for cat in [
 
     speeches = aggregate_hansard_speeches_2(narrow_ref_keywords[cat])
 
-    #     df_per_year = get_yearly_stats(gtr_docs, cb_docs, guardian_articles_, speeches)
-    df_per_year = get_yearly_stats_funds(
-        gtr_docs, gtr_docs_funds, cb_docs, guardian_articles_, speeches
-    )
-
+    df_per_year = get_yearly_stats(gtr_docs, cb_docs, guardian_articles_, speeches)
     df_per_year_norm = normalise_timeseries(
         iss_topics.get_moving_average(df_per_year, window=3, rename_cols=False),
         ref_year=REF_YEAR,
@@ -1739,9 +1557,6 @@ for cat in [
     YEARLY_STATS_NORM[cat] = df_per_year_norm
 
     GTR_DOCS_REF_ALL = GTR_DOCS_REF_ALL.append(gtr_docs, ignore_index=True)
-    GTR_DOCS_REF_ALL_FUNDS = GTR_DOCS_REF_ALL_FUNDS.append(
-        gtr_docs_funds, ignore_index=True
-    )
     CB_DOCS_REF_ALL = CB_DOCS_REF_ALL.append(cb_docs, ignore_index=True)
 
 # %%
@@ -1814,18 +1629,6 @@ GTR_DOCS_ALL_ = pd.concat(
 )
 
 # %%
-GTR_DOCS_ALL_FUNDS_ = pd.concat(
-    [
-        GTR_DOCS_ALL_FUNDS,
-        GTR_DOCS_REF_ALL_FUNDS,
-        GTR_DOCS_ALL_HEAT_FUNDS,
-        GTR_DOCS_ALL_BUILDINGS_FUNDS,
-        GTR_DOCS_ALL_HEAT_BUILD_FUNDS,
-        #         GTR_DOCS_ALL_HEAT_OTHER_FUNDS,
-    ]
-)
-
-# %%
 # gtr_docs_ = gtr_docs.sort_values('start').drop_duplicates('doc_id', keep='first').merge(gtr_docs.groupby('doc_id').agg(amount=('amount', 'sum')).reset_index())
 # len(gtr_docs)
 
@@ -1833,11 +1636,11 @@ GTR_DOCS_ALL_FUNDS_ = pd.concat(
 list(YEARLY_STATS.keys())
 
 # %%
-# iss_io.save_pickle(
-#     YEARLY_STATS,
-#     PROJECT_DIR
-#     / "outputs/data/results_august/yearly_stats_all_categories_2021_Funds.csv",
-# )
+iss_io.save_pickle(
+    YEARLY_STATS,
+    PROJECT_DIR
+    / "outputs/data/results_august/yearly_stats_all_categories_2021_Funds.csv",
+)
 
 # %%
 # iss_io.save_pickle(YEARLY_STATS, PROJECT_DIR / 'outputs/data/results_august/yearly_stats_all_categories_2021_Funds.p')
@@ -2194,21 +1997,19 @@ r
 # %%
 category_names_new = {
     "Building insulation": "Insulation & retrofit",
-    #     "Building Energy Efficiency": "Energy efficiency & management",
+    "Building Energy Efficiency": "Energy efficiency & management",
     "Heating (all)": "Low carbon heating",
     "Hydrogen & Fuel Cells": "Hydrogen & fuel cells",
     "Wind & Offshore": "Wind & offshore",
     "Carbon Capture & Storage": "Carbon capture & storage",
     "Heating & Building Energy Efficiency": "LCH & EEM",
-    #     "Energy efficiency & management": "EEM",
-    "Building Energy Efficiency": "EEM",
+    "Energy efficiency & management": "EEM",
 }
 
 
 # %%
 YEARLY_STATS_backup = YEARLY_STATS.copy()
 GTR_DOCS_ALL_backup = GTR_DOCS_ALL_.copy()
-GTR_DOCS_ALL_FUNDS_backup = GTR_DOCS_ALL_FUNDS_.copy()
 CB_DOCS_ALL_backup = CB_DOCS_ALL_.copy()
 
 # %%
@@ -2227,46 +2028,25 @@ def change_name(x):
 
 # %%
 GTR_DOCS_ALL_.tech_category = GTR_DOCS_ALL_.tech_category.apply(change_name)
-GTR_DOCS_ALL_FUNDS_.tech_category = GTR_DOCS_ALL_FUNDS_.tech_category.apply(change_name)
-CB_DOCS_ALL_.tech_category = CB_DOCS_ALL_.tech_category.apply(change_name)
-
-# %%
-GTR_DOCS_ALL_.tech_category = GTR_DOCS_ALL_.tech_category.apply(change_name)
-GTR_DOCS_ALL_FUNDS_.tech_category = GTR_DOCS_ALL_FUNDS_.tech_category.apply(change_name)
 CB_DOCS_ALL_.tech_category = CB_DOCS_ALL_.tech_category.apply(change_name)
 
 # %%
 GTR_DOCS_ALL_.tech_category.unique()
 
 # %%
-GTR_DOCS_ALL_FUNDS_.tech_category.unique()
-
-# %%
-list(YEARLY_STATS.keys())
-
-# %%
 iss_io.save_pickle(
     YEARLY_STATS,
     PROJECT_DIR
-    / "outputs/data/results_august/FINAL_TABLES_yearly_stats_all_categories_2021_Funds_fixed.p",
+    / "outputs/data/results_august/FINAL_TABLES_yearly_stats_all_categories_2021_Funds.p",
 )
 
 # %%
 GTR_DOCS_ALL_.to_csv(
-    PROJECT_DIR / "outputs/data/results_august/FINAL_TABLES_GTR_fixed.csv", index=False
+    PROJECT_DIR / "outputs/data/results_august/FINAL_TABLES_GTR.csv", index=False
 )
 CB_DOCS_ALL_.to_csv(
     PROJECT_DIR / "outputs/data/results_august/FINAL_TABLES_CB.csv", index=False
 )
-
-# %%
-GTR_DOCS_ALL_FUNDS_.to_csv(
-    PROJECT_DIR / "outputs/data/results_august/FINAL_TABLES_GTR_FUNDS_fixed.csv",
-    index=False,
-)
-
-# %%
-len(GTR_DOCS_ALL_), len(GTR_DOCS_ALL_FUNDS_)
 
 # %% [markdown]
 # # Trajectories
