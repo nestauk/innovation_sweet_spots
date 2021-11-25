@@ -101,7 +101,7 @@ lint:
 ## Install our package and requirements in editable mode (including development dependencies)
 pip-install:
 	# $(call execute_in_env, pip install -e ".[dev]")
-	$(call execute_in_env, pip install -r requirements_data_getters.txt --quiet)
+	# $(call execute_in_env, pip install -r requirements_data_getters.txt --quiet)
 	$(call execute_in_env, pip install -r requirements.txt --quiet)
 	$(call execute_in_env, pip install -r requirements_dev.txt --quiet)
 	$(call execute_in_env, pip install -e . --quiet)
