@@ -224,6 +224,19 @@ def cleanhtml(raw_html: str) -> str:
     return cleantext
 
 
+def get_moving_average(
+    timeseries_df: pd.DataFrame, window: int = 3, rename_cols: bool = True
+):
+    df_ma = timeseries_df.rolling(window, min_periods=1).mean().drop("year", axis=1)
+    if rename_cols:
+        column_names = timeseries_df.drop("year", axis=1).columns
+        new_column_names = ["{}_sma{}".format(s, window) for s in column_names]
+        df_ma = df_ma.rename(columns=dict(zip(column_names, new_column_names)))
+        return pd.concat([timeseries_df, df_ma], axis=1)
+    else:
+        return pd.concat([timeseries_df[["year"]], df_ma], axis=1)
+
+
 ### Visualisations
 
 
