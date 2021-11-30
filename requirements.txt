@@ -26,3 +26,5 @@ umap-learn
 corextopic
 wiki_topic_labels @ git+https://github.com/nestauk/wiki_topic_labels.git
 vaderSentiment
+nltk
+CurrencyConverter
