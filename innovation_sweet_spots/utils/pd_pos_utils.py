@@ -110,7 +110,40 @@ def aggregate_matches(phrase_dict, sort_phrases = True):
     return agg_results
 
 
-def view_phrase_sentences(time_period, agg_phrases, sentence_collection_df, 
+def view_phrase_sentences(year, agg_phrases, sentence_collection_df, 
+                          metadata_dict, sentence_record_dict, year_field = 'year',
+                          output_data = False, output_path = OUTPUT_DATA_PATH):
+    """Prints out the original sentences in which phrases were were used.
+    
+
+    Args:
+        time_period: A list of years included in a given time_period.
+        agg_phrases: A dict with period name as key and list of (phrase, count) 
+            tuples as values.
+        sentence_collection_df: A pandas dataframe with sentences.
+        metadata_dict: A dict mapping article IDs to original article metadata.
+        sentence_record_dict: A dict mapping sentences to article IDs.
+        year_field: A string referring to the dataframe field with year of the article.
+            The default is 'year'.
+
+    Returns:
+        None.
+    """
+    print(year)
+    if len(agg_phrases[year]) == 0:
+        print('No phrases in this time period')
+    else:
+        for p in agg_phrases[year]:
+            grouped_sentences = dpu.check_collocations(sentence_collection_df, p[0])
+            if year in grouped_sentences.groups:
+                dpu.view_collocations_given_year(grouped_sentences.get_group(year), 
+                                                 metadata_dict, 
+                                                 sentence_record_dict)
+            else:
+                continue
+        
+
+def view_phrase_sentences_period(time_period, agg_phrases, sentence_collection_df, 
                           metadata_dict, sentence_record_dict, year_field = 'year'):
     """Prints out the original sentences in which phrases were were used.
     
@@ -140,7 +173,8 @@ def view_phrase_sentences(time_period, agg_phrases, sentence_collection_df,
             print(p)
             if len(year_subset) > 0:
                 year_subset_df = pd.concat(year_subset)
-                dpu.view_collocations(year_subset_df.groupby('year'), metadata_dict, sentence_record_dict)
+                dpu.view_collocations(year_subset_df.groupby('year'), metadata_dict, 
+                                      sentence_record_dict)
             else:
                 print('No results')
                 print('')
@@ -209,3 +243,16 @@ def get_svo_phrases(svo_subject, svo_object):
     
     object_phrases = list(set(object_phrases))
     return subject_phrases, object_phrases
+
+
+def save_phrases(phrase_objects):
+    results = []
+    for obj in phrase_objects:
+        for time_period, phrases in obj.items():
+            for p in phrases:
+                results.append([time_period, p[0], p[1], st])
+    result_df = pd.DataFrame.from_records(results)
+    result_df.columns = ["year", "phrase", "number_of_mentions"]
+    return result_df
+            
+            
