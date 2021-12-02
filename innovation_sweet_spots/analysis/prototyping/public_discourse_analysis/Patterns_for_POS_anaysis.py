@@ -39,7 +39,78 @@ DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "discourse_analysis_lookups"
 DISC_OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # %% [markdown]
-# ## 2. Patterns for hydrogen energy
+# ## 2. Generating patterns with provided search terms
+
+# %%
+search_terms = ['unhealthy food advertisements', 'hfss', 'junk food', 'childhood obesity', 'ad ban']
+# Bigrams and trigrams will not be picked up when phrase matching
+pattern_terms = search_terms + ['obesity', 'health', 'child', 'poverty', 'food', 'foods', 'diet', 'school', 'online',
+                                'social', 'media', 'advertisements', 'ads', 'adverts', 'portion', 'retailers', 'retailer',
+                                'supermarkets', 'supermarket', 'exposure', 'salt', 'family', 'environment',
+                                'calories', 'calorie', 'ban', 'meals', 'policy', 'risk', 'benefit', 'healhty', 'unhealthy',
+                                'fresh food', 'excess weight', 'sugar', 'fat', 'nutrition', 'nutritional',
+                                 'fast food', 'purchase', 'purchases', 'revenue', 'revenues', 'marketing', 'promotion', 
+                                 'lobby', 'burden', 'action', 'legislation', 'consumption', 'healthier', 'early years',
+                                'intake', 'intakes', 'intervention', 'snacks', 'evidence', 'obese', 'health conditions',
+                                'disease', 'ill', 'illness']
+
+# %%
+generic_phrases = {
+    'noun_phrase': [{"POS": "ADJ", "OP": "*"}, 
+                    {'POS': 'NOUN'},
+                    {'POS': 'NOUN', 'OP': '?'},
+                    {"TEXT": {'IN': pattern_terms}}, 
+                   ],
+    'adj_phrase': [{"POS": "ADV", "OP": "*"}, 
+                   {'POS': 'ADJ'},
+                   {"POS": "ADJ", "OP": "*"}, 
+                   {'POS': 'NOUN', 'OP': '?'},
+                   {"TEXT": {'IN': pattern_terms}}, 
+                     ],
+    'term_is': [{"TEXT": {'IN': pattern_terms}}, 
+                {"LEMMA": "be"}, 
+                {"DEP": "neg", "OP": '?'},           
+                {"POS": {'IN': ['ADV', 'DET']}, 'OP': '*'},
+                {"POS": {'IN': ['NOUN', 'ADJ']}, 'OP': '*'}
+               ],
+    'term_has': [{"TEXT": {'IN': pattern_terms}},
+                 {"LEMMA": "have"}, 
+                 {"DEP": "neg", "OP": '?'},           
+                 {"POS": {'IN': ['ADV', 'DET']}, 'OP': '*'},
+                 {"POS": {'IN': ['NOUN', 'ADJ']}, 'OP': '*'}
+                ],
+    'term_can': [{"TEXT": {'IN': pattern_terms}},
+                 {"LEMMA": "have"}, 
+                 {"LEMMA": "can"}, 
+                 {"DEP": "neg", "OP": '?'},           
+                 {"POS": {'IN': ['ADV', 'DET']}, 'OP': '*'},
+                 {"POS": {'IN': ['NOUN', 'ADJ']}, 'OP': '*'}
+                ],
+    'term_is_a': [{"TEXT": {'IN': pattern_terms}}, 
+                  {"LEMMA": "be"}, 
+                  {"DEP": "prep"}, 
+                  {"POS": "DET"},
+                  {"POS": "NOUN"}
+                 ],
+    'verb_obj': [{'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+                 {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+                 {'POS': 'VERB'},
+                 {'OP': '?'},            
+                 {"TEXT": {'IN': pattern_terms}}, 
+                ],
+    'verb_subj': [{"TEXT": {'IN': pattern_terms}}, 
+                  {'POS': 'VERB'},
+                  {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+                  {'POS': {'IN': ['NOUN', 'ADJ', 'ADV', 'VERB']}, 'OP': '?'},
+                 ]
+}
+
+# %%
+with open (os.path.join(DISC_OUTPUTS_DIR, 'phrases_foods.json'), "w") as outfile:
+    json.dump(generic_phrases, outfile, indent = 4)
+
+# %% [markdown]
+# ## 3. Patterns used for hydrogen energy
 
 # %%
 hydrogen_phrases = {
@@ -107,7 +178,7 @@ with open (os.path.join(DISC_OUTPUTS_DIR, 'hydrogen_phrases.json'), "w") as outf
     json.dump(hydrogen_phrases, outfile, indent = 4)
 
 # %% [markdown]
-# ## 3. Patterns for heat pumps
+# ## 4. Patterns used for heat pumps
 
 # %%
 heat_pump_phrases = {
