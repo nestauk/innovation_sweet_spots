@@ -19,7 +19,7 @@
 
 # %% [markdown]
 # - [x] Identify key related terms using PMI and normalised rank
-# - [ ] Aggregate across set of terms
+# - [x] Aggregate across set of terms
 # - [ ] Analyse changes over time
 # - [ ] Plot various measures of relevance over time
 
@@ -114,7 +114,5 @@ agg_terms = cu.analyse_rank_pmi_over_time(agg_pmi)
 
 # %%
 # Save to disc to explore separately.
-agg_pmi.to_csv(DISC_OUTPUTS_DIR / 'flat_freq_rank_pmi_hp.csv', index = False)
-agg_terms.to_csv(DISC_OUTPUTS_DIR / 'agg_freq_rank_pmi_hp.csv', index = False)
-
-# %%
+agg_pmi.to_csv(DISC_OUTPUTS_DIR / 'agg_terms_long_hp.csv', index = False)
+agg_terms.to_csv(DISC_OUTPUTS_DIR / 'agg_terms_stats_hp.csv', index = False)
