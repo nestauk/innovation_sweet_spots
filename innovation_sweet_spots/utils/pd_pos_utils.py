@@ -250,7 +250,7 @@ def save_phrases(phrase_objects):
     for obj in phrase_objects:
         for time_period, phrases in obj.items():
             for p in phrases:
-                results.append([time_period, p[0], p[1], st])
+                results.append([time_period, p[0], p[1]])
     result_df = pd.DataFrame.from_records(results)
     result_df.columns = ["year", "phrase", "number_of_mentions"]
     return result_df
