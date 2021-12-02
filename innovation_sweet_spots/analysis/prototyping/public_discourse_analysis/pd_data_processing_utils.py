@@ -227,3 +227,26 @@ def view_collocations(grouped_sentences, metadata_dict, sentence_record_dict,
             print(sentence, end = "\n\n")
             print(web_url, end = "\n\n")
             print('----------')
+
+
+def view_collocations_given_year(year_sentences, metadata_dict, sentence_record_dict, 
+                      url_field = 'webUrl', title_field = 'webTitle'):
+    """Prints sentences and corresponding article metadata for a given year.
+    
+    Args:
+        grouped_sentences: A pandas dataframe.
+        metadata_dict: A dict mapping article IDs to original article metadata.
+        sentence_record_dict: A dict mapping sentences to article IDs.
+    
+    Returns:
+        None.
+    """
+    for ix, row in year_sentences.iterrows():
+        sentence = row['sentence']
+        sent_id = sentence_record_dict[sentence]
+        web_url = metadata_dict[sent_id][url_field]
+        article_title = metadata_dict[sent_id][title_field]
+        print(article_title)
+        print(sentence, end = "\n\n")
+        print(web_url, end = "\n\n")
+        print('----------')
