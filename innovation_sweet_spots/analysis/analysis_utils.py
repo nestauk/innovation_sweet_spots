@@ -126,6 +126,38 @@ def gtr_funding_per_year(
     return yearly_stats
 
 
+def gtr_get_all_timeseries(
+    gtr_docs: pd.DataFrame, min_year: int = None, max_year: int = None
+) -> pd.DataFrame:
+    """
+    Calculates all typical time series from a list of GtR projects and return
+    as one combined table
+
+    Args:
+        gtr_docs: A dataframe with columns for 'start', 'project_id' and 'amount'
+            (research funding) among other project data
+        min_year: Lower bound for years to keep
+        max_year: Higher bound for years to keep
+
+    Returns:
+        Dataframe with columns for 'year', 'no_of_projects', 'amount_total' and
+        'amount_median'
+    """
+    # Deduplicate projects. This is used to report the number of new projects
+    # started each year, accounting for cases where the same project has received
+    # additional funding in later years
+    gtr_docs_dedup = gtr_deduplicate_projects(gtr_docs)
+    # Number of new projects per year
+    time_series_projects = gtr_funding_per_year(gtr_docs_dedup, min_year, max_year)
+    time_series_projects = time_series_projects[["year", "no_of_projects"]]
+    # Amount of research funding per year (note: here we use the non-duplicated table,
+    # to account for additional funding for projects that might have started in earlier years
+    time_series_funding = gtr_funding_per_year(gtr_docs, min_year, max_year)
+    # Join up both tables
+    time_series_funding["no_of_projects"] = time_series_projects["no_of_projects"]
+    return time_series_funding
+
+
 ### Crunchbase specific utils
 
 
@@ -136,7 +168,7 @@ def cb_orgs_founded_per_year(
     Calculates the number of Crunchbase organisations founded in a given year
 
     Args:
-        gtr_docs: A dataframe with columns for 'id' and 'founded_on' among other data
+        cb_orgs: A dataframe with columns for 'id' and 'founded_on' among other data
         min_year: Lower bound for years to keep
         max_year: Higher bound for years to keep
 
@@ -166,7 +198,7 @@ def cb_investments_per_year(
     Aggregates the raised investment amount and number of deals across all orgs
 
     Args:
-        gtr_docs: A dataframe with columns for 'funding_round_id', 'raised_amount_usd'
+        cb_funding_rounds: A dataframe with columns for 'funding_round_id', 'raised_amount_usd'
             'raised_amount_gbp' and 'announced_on' among other data
         min_year: Lower bound for years to keep
         max_year: Higher bound for years to keep
@@ -196,6 +228,44 @@ def cb_investments_per_year(
     )
     yearly_stats = impute_empty_years(yearly_stats, min_year, max_year)
     return yearly_stats
+
+
+def cb_get_all_timeseries(
+    cb_orgs: pd.DataFrame,
+    cb_funding_rounds: pd.DataFrame,
+    min_year: int = None,
+    max_year: int = None,
+) -> pd.DataFrame:
+    """
+    Calculates all typical time series from a list of GtR projects and return
+    as one combined table
+
+    Args:
+        cb_orgs: A dataframe with columns for 'id' and 'founded_on' among other data
+        cb_funding_rounds: A dataframe with columns for 'funding_round_id', 'raised_amount_usd'
+            'raised_amount_gbp' and 'announced_on' among other data
+        min_year: Lower bound for years to keep
+        max_year: Higher bound for years to keep
+
+    Returns:
+        A dataframe with the following columns:
+            'year',
+            'no_of_rounds' - number of funding rounds (deals) in a given year
+            'raised_amount_usd_total' - total raised investment (USD) in a given year
+            'raised_amount_gbp_total' - total raised investment (GBP) in a given year
+            'no_of_orgs_founded' - number of new organisations founded in a given year
+    """
+    # Number of new companies per year
+    time_series_orgs_founded = cb_orgs_founded_per_year(cb_orgs, min_year, max_year)
+    # Amount of raised investment per year
+    time_series_investment = cb_investments_per_year(
+        cb_funding_rounds, min_year, max_year
+    )
+    # Join up both tables
+    time_series_investment["no_of_orgs_founded"] = time_series_orgs_founded[
+        "no_of_orgs_founded"
+    ]
+    return time_series_investment
 
 
 ### Time series trends
@@ -229,11 +299,19 @@ def moving_average(
         return pd.concat([timeseries_df[["year"]], df_ma], axis=1)
 
 
-def magnitude(df: pd.DataFrame, year_start: int, year_end: int) -> pd.DataFrame:
+def magnitude(time_series: pd.DataFrame, year_start: int, year_end: int) -> pd.Series:
     """
     Calculates signals' magnitude (i.e. mean across year_start and year_end)
+
+    Args:
+        time_series: A dataframe with a columns for 'year' and other data
+        year_start: First year of the trend window
+        year_end: Last year of the trend window
+
+    Returns:
+        Series with magnitude estimates for all data columns
     """
-    magnitude = df.set_index("year").loc[year_start:year_end, :].mean()
+    magnitude = time_series.set_index("year").loc[year_start:year_end, :].mean()
     return magnitude
 
 
@@ -243,11 +321,21 @@ def percentage_change(initial_value, new_value):
 
 
 def smoothed_growth(
-    df: pd.DataFrame, year_start: int, year_end: int, window: int = 3
-) -> pd.DataFrame:
-    """Calculates a growth estimate by using smoothed time series"""
+    time_series: pd.DataFrame, year_start: int, year_end: int, window: int = 3
+) -> pd.Series:
+    """Calculates a growth estimate by using smoothed (rolling mean) time series
+
+    Args:
+        time_series: A dataframe with a columns for 'year' and other data
+        year_start: First year of the trend window
+        year_end: Last year of the trend window
+        window: Moving average windows size (in years) for the smoothed growth estimate
+
+    Returns:
+        Series with smoothed growth estimates for all data columns
+    """
     # Smooth timeseries
-    ma_df = moving_average(df, window, replace_columns=True).set_index("year")
+    ma_df = moving_average(time_series, window, replace_columns=True).set_index("year")
     # Percentage change
     initial_value = ma_df.loc[year_start, :]
     new_value = ma_df.loc[year_end, :]
@@ -256,13 +344,24 @@ def smoothed_growth(
 
 
 def estimate_magnitude_growth(
-    df: pd.DataFrame, year_start: int, year_end: int, window: int = 3
+    time_series: pd.DataFrame, year_start: int, year_end: int, window: int = 3
 ) -> pd.DataFrame:
     """
     Calculates signals' magnitude, estimates their growth and returns a combined dataframe
+
+    Args:
+        time_series: A dataframe with a columns for 'year' and other data
+        year_start: First year of the trend window
+        year_end: Last year of the trend window
+        window: Moving average windows size (in years) for the smoothed growth estimate
+
+    Returns:
+        Dataframe with magnitude and growth trend estimates; magnitude is in
+        absolute units (e.g. GBP 1000s if analysing research funding) whereas
+        growth is expresed as a percentage
     """
-    magnitude_df = magnitude(df, year_start, year_end)
-    growth_df = smoothed_growth(df, year_start, year_end, window)
+    magnitude_df = magnitude(time_series, year_start, year_end)
+    growth_df = smoothed_growth(time_series, year_start, year_end, window)
     combined_df = (
         pd.DataFrame([magnitude_df, growth_df], index=["magnitude", "growth"])
         .reset_index()
