@@ -24,3 +24,5 @@ max_year: 2021
 # Trend estimation limits
 trend_min_year: 2016
 trend_max_year: 2020
+# Smoothing window length (years)
+window: 3

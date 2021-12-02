@@ -30,6 +30,7 @@ if __name__ == "__main__":
                 time_series,
                 year_start=PARAMS["trend_min_year"],
                 year_end=PARAMS["trend_max_year"],
+                window=PARAMS["window"],
             )
             investment_trends.to_csv(
                 EXPORT_DIR / OUTFILE_NAME.format(source, category), index=False
