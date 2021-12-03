@@ -5,7 +5,6 @@ Created on Fri Oct 15 15:04:48 2021
 
 @author: jdjumalieva
 """
-
 import os
 from collections import Counter, defaultdict
 import pandas as pd
