@@ -110,6 +110,9 @@ agg_pmi = cu.agg_combined_pmi_rank(pmi_inters_ranks)
 
 # %%
 # Preprocess for further analysis of changes over time.
+# This spreadsheet can be used to identify terms with the largest change in collocation metrics.
+# The spreadsheet shows for each term: year of first mention, total number of years with mentions, 
+# standard deviation of the rank and mean pmi
 agg_terms = cu.analyse_rank_pmi_over_time(agg_pmi)
 
 # %%
