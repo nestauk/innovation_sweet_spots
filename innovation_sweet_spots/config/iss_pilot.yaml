@@ -1,0 +1,28 @@
+# Categories
+technology_categories:
+  - "Micro CHP"
+  - "Heat storage"
+  - "Heat pumps"
+  - "Geothermal energy"
+  - "Solar thermal"
+  - "District heating"
+  - "Hydrogen heating"
+  - "Biomass heating"
+  - "Energy management"
+  - "Insulation & retrofit"
+  - "Low carbon heating"
+  - "EEM"
+  - "Solar"
+  - "Wind & offshore"
+  - "Hydrogen & fuel cells"
+  - "Batteries"
+  - "Bioenergy"
+  - "Carbon capture & storage"
+# Time series limits
+min_year: 2007
+max_year: 2021
+# Trend estimation limits
+trend_min_year: 2016
+trend_max_year: 2020
+# Smoothing window length (years)
+window: 3
