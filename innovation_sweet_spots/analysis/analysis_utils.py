@@ -2,12 +2,8 @@
 Utils for doing data analysis
 
 """
-from innovation_sweet_spots import logging
-
-from typing import Iterator
 import pandas as pd
 import numpy as np
-from datetime import datetime
 
 
 def impute_empty_years(
@@ -66,7 +62,7 @@ def gtr_deduplicate_projects(gtr_docs: pd.DataFrame) -> pd.DataFrame:
     )
     # Add the summed up amounts to the project and keep the earliest instance
     # of the duplicates
-    gtr_docs_deduplicated = (
+    return (
         gtr_docs.drop("amount", axis=1)
         .merge(gtr_docs_summed_amounts, on=["title", "description"], how="left")
         .sort_values("start")
@@ -74,7 +70,6 @@ def gtr_deduplicate_projects(gtr_docs: pd.DataFrame) -> pd.DataFrame:
         .reset_index(drop=True)
         # Restore previous column order
     )[gtr_docs.columns]
-    return gtr_docs_deduplicated
 
 
 def gtr_funding_per_year(
@@ -103,7 +98,7 @@ def gtr_funding_per_year(
     # Set min and max years for aggregation
     min_year, max_year = set_def_min_max_years(gtr_docs, min_year, max_year)
     # Group by year
-    yearly_stats = (
+    return (
         gtr_docs.groupby("year")
         .agg(
             # Number of new projects in a given year
@@ -117,13 +112,14 @@ def gtr_funding_per_year(
         # Limit results between min and max years
         .query(f"year>={min_year}")
         .query(f"year<={max_year}")
+        # Convert to thousands
+        .assign(
+            amount_total=lambda x: x.amount_total / 1000,
+            amount_median=lambda x: x.amount_median / 1000,
+        )
+        # Add zero values for years without data
+        .pipe(impute_empty_years, min_year=min_year, max_year=max_year)
     )
-    # Convert to thousands
-    yearly_stats.amount_total = yearly_stats.amount_total / 1000
-    yearly_stats.amount_median = yearly_stats.amount_median / 1000
-    # Add zero values for years without data
-    yearly_stats = impute_empty_years(yearly_stats, min_year, max_year)
-    return yearly_stats
 
 
 def gtr_get_all_timeseries(
@@ -148,8 +144,9 @@ def gtr_get_all_timeseries(
     # additional funding in later years
     gtr_docs_dedup = gtr_deduplicate_projects(gtr_docs)
     # Number of new projects per year
-    time_series_projects = gtr_funding_per_year(gtr_docs_dedup, min_year, max_year)
-    time_series_projects = time_series_projects[["year", "no_of_projects"]]
+    time_series_projects = gtr_funding_per_year(gtr_docs_dedup, min_year, max_year)[
+        ["year", "no_of_projects"]
+    ]
     # Amount of research funding per year (note: here we use the non-duplicated table,
     # to account for additional funding for projects that might have started in earlier years
     time_series_funding = gtr_funding_per_year(gtr_docs, min_year, max_year)
@@ -184,11 +181,12 @@ def cb_orgs_founded_per_year(
     # Set min and max years for aggregation
     min_year, max_year = set_def_min_max_years(cb_orgs, min_year, max_year)
     # Group by year
-    yearly_founded_orgs = (
-        cb_orgs.groupby("year").agg(no_of_orgs_founded=("id", "count")).reset_index()
+    return (
+        cb_orgs.groupby("year")
+        .agg(no_of_orgs_founded=("id", "count"))
+        .reset_index()
+        .pipe(impute_empty_years, min_year=min_year, max_year=max_year)
     )
-    yearly_founded_orgs = impute_empty_years(yearly_founded_orgs, min_year, max_year)
-    return yearly_founded_orgs
 
 
 def cb_investments_per_year(
@@ -215,7 +213,7 @@ def cb_investments_per_year(
     # Set min and max years for aggregation
     min_year, max_year = set_def_min_max_years(cb_funding_rounds, min_year, max_year)
     # Group by year
-    yearly_stats = (
+    return (
         cb_funding_rounds.groupby("year")
         .agg(
             no_of_rounds=("funding_round_id", "count"),
@@ -225,9 +223,8 @@ def cb_investments_per_year(
         .reset_index()
         .query(f"year>={min_year}")
         .query(f"year<={max_year}")
+        .pipe(impute_empty_years, min_year=min_year, max_year=max_year)
     )
-    yearly_stats = impute_empty_years(yearly_stats, min_year, max_year)
-    return yearly_stats
 
 
 def cb_get_all_timeseries(
@@ -337,10 +334,9 @@ def smoothed_growth(
     # Smooth timeseries
     ma_df = moving_average(time_series, window, replace_columns=True).set_index("year")
     # Percentage change
-    initial_value = ma_df.loc[year_start, :]
-    new_value = ma_df.loc[year_end, :]
-    growth = percentage_change(initial_value, new_value)
-    return growth
+    return percentage_change(
+        initial_value=ma_df.loc[year_start, :], new_value=ma_df.loc[year_end, :]
+    )
 
 
 def estimate_magnitude_growth(
