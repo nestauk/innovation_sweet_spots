@@ -1,12 +1,13 @@
 """
+innovation_sweet_spots.getters.gtr
+
 Module for easy access to downloaded GTR data
 
 """
 import pandas as pd
 from innovation_sweet_spots import logging
-from innovation_sweet_spots.getters.path_utils import GTR_PATH, OUTPUT_GTR_PATH
+from innovation_sweet_spots.getters.path_utils import GTR_PATH
 from typing import Iterable
-from ast import literal_eval
 
 
 def get_gtr_projects():
@@ -43,7 +44,7 @@ def pullout_gtr_links(tables: Iterable[str]):
     Pulls out all rows related to the links between projects and
     items in the specified tables, and saves them in a csv file.
     """
-    # Get all of the links and query the table of interest
+    # Get all the links and query the table of interest
     link_table = get_link_table()
     for table in tables:
         specific_link_table = link_table.query(f"table_name=='{table}'")
@@ -54,9 +55,3 @@ def pullout_gtr_links(tables: Iterable[str]):
         logging.info(
             f"Links between GTR projects and items in {table} saved in {fpath}"
         )
-
-
-def get_cleaned_project_texts():
-    df = pd.read_csv(f"{OUTPUT_GTR_PATH}/gtr_project_clean_text.csv")
-    df["project_text"] = df["project_text"].apply(lambda x: literal_eval(x))
-    return df

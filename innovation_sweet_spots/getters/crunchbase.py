@@ -1,9 +1,10 @@
 """
+innovation_sweet_spots.getters.crunchbase
+
 Module for easy access to downloaded CB data
 
 """
 import pandas as pd
-import sys
 from innovation_sweet_spots.getters.path_utils import CB_PATH, OUTPUT_CB_PATH
 
 
@@ -12,10 +13,7 @@ def get_crunchbase_category_groups():
 
 
 def get_crunchbase_orgs():
-    return pd.read_csv(f"{CB_PATH}/crunchbase_organisations.csv").drop_duplicates()
-
-
-def get_crunchbase_orgs_full():
+    """Loads and deduplicates Crunchbase organisations table"""
     return pd.read_csv(f"{CB_PATH}/crunchbase_organizations.csv").drop_duplicates()
 
 
@@ -33,7 +31,3 @@ def get_crunchbase_investments():
 
 def get_crunchbase_investors():
     return pd.read_csv(f"{CB_PATH}/crunchbase_investors.csv")
-
-
-def get_cleaned_green_crunchbase_texts():
-    return pd.read_csv(f"{OUTPUT_CB_PATH}/cb_green_org_clean_text.csv")
