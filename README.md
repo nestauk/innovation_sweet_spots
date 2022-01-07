@@ -2,15 +2,27 @@
 
 ## Setup
 
-- Meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter), in brief:
-  - Install: `git-crypt`
-  - Have a Nesta AWS account configured with `awscli`
-- Run `make install` to configure the development environment:
-  - Setup the conda environment
-  - Configure pre-commit
-  - Configure metaflow to use AWS
+Check that you meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter). In brief, you should:
+
+- Install `git-crypt`
+- Have a Nesta AWS account configured with `awscli`
+
+In terminal, run `make install` to configure the development environment. This will do the following:
+
+- Setup the conda environment with the name `innovation_sweet_spots`
+- Configure pre-commit (for example, running a code formatter before each commit)
+- Configure metaflow to use AWS
+
+You should then activate the newly created conda environment and install the repository package:
+
+```shell
+$ conda activate innovation_sweet_spots
+$ pip install -e .
+```
 
 ### Data access
+
+**NB: This is subject to refactoring in the near future!**
 
 To download input data from Nesta database, you will first need to decrypt the config files (if you don't have the key, reach out to Karlis)
 
