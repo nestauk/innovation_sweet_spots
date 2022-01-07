@@ -9,34 +9,56 @@ from innovation_sweet_spots import logging
 from innovation_sweet_spots.getters.path_utils import GTR_PATH
 from typing import Iterable
 
+# Path to the tables linking projects to other data
+GTR_LINKS_PATH = GTR_PATH / "links"
+
 
 def get_gtr_projects():
+    """Main GTR projects table"""
     return pd.read_csv(f"{GTR_PATH}/gtr_projects.csv")
 
 
 def get_gtr_funds():
+    """Links between project ids and funding ids"""
     return pd.read_csv(f"{GTR_PATH}/gtr_funds.csv")
 
 
+def get_gtr_funds_api():
+    """Links between project ids and funding ids, retreived using API calls"""
+    return pd.read_csv(f"{GTR_PATH}/gtr_funds_api.csv")
+
+
 def get_gtr_topics():
+    """GTR project research topics"""
     return pd.read_csv(f"{GTR_PATH}/gtr_topics.csv")
 
 
 def get_gtr_organisations():
+    """GTR research organisations"""
     return pd.read_csv(f"{GTR_PATH}/gtr_organisations.csv")
 
 
 def get_link_table(table: str = None):
     if table is None:
+        # Get the full links table
         # NB: Large table with 34M+ rows
         return pd.read_csv(f"{GTR_PATH}/gtr_link_table.csv")
     else:
+        # Get the specific links defined by table variable
         fpath = get_path_to_specific_link_table(table)
-        return pd.read_csv(fpath)
+        try:
+            return pd.read_csv(fpath)
+        except FileNotFoundError:
+            # Generate the table if it doesn't exist
+            logging.info(
+                f"Link table {fpath} not found. Creating the table now (might take a while)"
+            )
+            pullout_gtr_links(tables=[table])
+            return pd.read_csv(fpath)
 
 
 def get_path_to_specific_link_table(table: str):
-    return GTR_PATH / f"links/link_{table}.csv"
+    return GTR_LINKS_PATH / f"link_{table}.csv"
 
 
 def pullout_gtr_links(tables: Iterable[str]):

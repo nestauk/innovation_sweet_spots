@@ -5,7 +5,7 @@ Module for easy access to downloaded CB data
 
 """
 import pandas as pd
-from innovation_sweet_spots.getters.path_utils import CB_PATH, OUTPUT_CB_PATH
+from innovation_sweet_spots.getters.path_utils import CB_PATH
 
 
 def get_crunchbase_category_groups():
