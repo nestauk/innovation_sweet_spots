@@ -148,7 +148,10 @@ with open(os.path.join(DISC_OUTPUTS_DIR, 'combined_sentences_hp.pkl'), "wb") as 
 mentions_df.to_csv(os.path.join(DISC_OUTPUTS_DIR, 'mentions_df_hp.csv'))
 
 # %% [markdown]
-# ## Appendix. Quick exploration of co-locations
+# ## Appendix
+
+# %% [markdown]
+# ### Quick exploration of co-locations
 
 # %%
 flat_sentences = pd.concat([combined_term_sentences[y] for y in combined_term_sentences])
@@ -161,4 +164,18 @@ dpu.collocation_summary(grouped_sentences)
 # %%
 dpu.view_collocations(grouped_sentences, metadata_dict, sentence_record_dict)
 
+# %% [markdown]
+# ### Quick search across the corpus
+
 # %%
+sentence_collection_df = pd.DataFrame(sentence_records)
+sentence_collection_df.columns = ['sentence', 'id', 'year']
+#sentences_by_year = {y: v for y, v in sentence_collection_df.groupby('year')}
+
+# %%
+# Retrieve sentences with a given term
+grouped_sentences = dpu.check_mentions(sentence_collection_df, 'retrofit')
+dpu.mentions_summary(grouped_sentences)
+
+# %%
+dpu.view_mentions(grouped_sentences, metadata_dict, sentence_record_dict)
