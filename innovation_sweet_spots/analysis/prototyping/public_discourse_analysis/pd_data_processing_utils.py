@@ -301,6 +301,3 @@ def view_mentions(grouped_sentences, metadata_dict, sentence_record_dict,
     if output_to_file:
         results_df = pd.DataFrame.from_records(results)
         results_df.to_csv(output_path / "sentences_w_mentions.csv", index = False)
-            
-
-    
