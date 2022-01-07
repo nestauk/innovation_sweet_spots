@@ -234,7 +234,7 @@ def view_collocations_given_year(year_sentences, metadata_dict, sentence_record_
     """Prints sentences and corresponding article metadata for a given year.
     
     Args:
-        grouped_sentences: A pandas dataframe.
+        year_sentences: A pandas dataframe.
         metadata_dict: A dict mapping article IDs to original article metadata.
         sentence_record_dict: A dict mapping sentences to article IDs.
     
