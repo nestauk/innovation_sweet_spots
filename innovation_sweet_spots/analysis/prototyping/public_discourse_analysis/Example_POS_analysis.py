@@ -94,6 +94,11 @@ term_phrases = pos.noun_chunks_w_term(noun_chunks_all_years, search_terms) # inv
 #term_phrases['2020']
 
 # %%
+# Define time period to investigate
+# For heat pumps, using 3 year periods results in 5 periods: 
+#['2007, 2008, 2009', '2010, 2011, 2012', '2013, 2014, 2015', '2016, 2017, 2018', '2019, 2020, 2021']
+time_period = '2019, 2020, 2021'
+
 # Noun phrases that describe heat pumps.
 # In the example below these are aggregated over a 3 year time period
 # NB: patterns are defined separately and read in as a json file
@@ -247,5 +252,4 @@ with open(os.path.join(DISC_OUTPUTS_DIR, 'subj_hp.pkl'), "wb") as outfile:
 
 with open(os.path.join(DISC_OUTPUTS_DIR, 'obj_hp.pkl'), "wb") as outfile:
         pickle.dump(object_phrase_dict, outfile)
-
 # %%

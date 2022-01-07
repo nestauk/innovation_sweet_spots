@@ -254,5 +254,3 @@ def save_phrases(phrase_objects):
     result_df = pd.DataFrame.from_records(results)
     result_df.columns = ["year", "phrase", "number_of_mentions"]
     return result_df
-            
-            
