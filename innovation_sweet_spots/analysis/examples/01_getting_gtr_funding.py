@@ -21,6 +21,8 @@
 # %%
 from innovation_sweet_spots.getters import gtr
 from innovation_sweet_spots.analysis.wrangling_utils import GtrWrangler
+import pandas as pd
+from innovation_sweet_spots import PROJECT_DIR
 
 # Initiate an instance of GtrWrangler and get the data
 wrangler = GtrWrangler()
@@ -47,6 +49,17 @@ df_proj_with_funds = wrangler.get_funding_data(df_proj)
 # %%
 # NB: The project 'start' and funding start 'fund_start' dates are most of the time identical, but that's not always the case
 df_proj_with_funds
+
+# %% [markdown]
+# ## Pilot project data
+
+# %%
+df_proj = pd.read_csv(
+    PROJECT_DIR / "outputs/finals/pilot_outputs/ISS_pilot_GtR_projects.csv"
+)
+
+# %%
+wrangler.get_start_end_dates(df_proj)
 
 # %% [markdown]
 # ## Underlying data tables

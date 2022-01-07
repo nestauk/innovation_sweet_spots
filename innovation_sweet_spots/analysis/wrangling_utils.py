@@ -59,7 +59,7 @@ class GtrWrangler:
     def get_project_funds_api(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """Adds funding data to the projects (data that has been retrieved directly via API)"""
         return gtr_projects.merge(
-            self.link_gtr_funds_api, on="project_id", how="left", validate="one_to_one"
+            self.link_gtr_funds_api, on="project_id", how="left", validate="many_to_one"
         )
 
     def get_start_end_dates(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
@@ -93,8 +93,8 @@ class GtrWrangler:
         )
         # Add project start and end dates to the input data frame
         return gtr_projects.merge(
-            earliest_start_data, on="project_id", how="left", validate="one_to_one"
-        ).merge(latest_end_data, on="project_id", how="left", validate="one_to_one")
+            earliest_start_data, on="project_id", how="left", validate="many_to_one"
+        ).merge(latest_end_data, on="project_id", how="left", validate="many_to_one")
 
     def get_funding_data(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """Adds reliable funding amount data, and funding start and end dates to the projects."""
