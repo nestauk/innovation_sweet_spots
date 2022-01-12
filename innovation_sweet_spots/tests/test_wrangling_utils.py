@@ -1,4 +1,3 @@
-import pytest
 from innovation_sweet_spots.analysis.wrangling_utils import *
 import pandas as pd
 
@@ -96,8 +95,6 @@ def test_get_start_end_dates():
             "fund_end": ["2023-07-01 01:00:00", "2024-07-01 01:00:00"],
         }
     ).astype({"fund_start": "datetime64[ns]", "fund_end": "datetime64[ns]"})
-    print(output_df)
-    print(expected_df)
     assert output_df.equals(expected_df)
 
 

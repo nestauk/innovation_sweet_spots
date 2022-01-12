@@ -1,7 +1,7 @@
 """
 innovation_sweet_spots.getters.gtr
 
-Module for easy access to downloaded GTR data
+Module for easy access to downloaded GtR data
 
 """
 import pandas as pd
@@ -13,36 +13,49 @@ from typing import Iterable
 GTR_LINKS_PATH = GTR_PATH / "links"
 
 
-def get_gtr_projects():
-    """Main GTR projects table"""
-    return pd.read_csv(f"{GTR_PATH}/gtr_projects.csv")
+def get_gtr_projects() -> pd.DataFrame:
+    """Main GtR projects table"""
+    return pd.read_csv(GTR_PATH / "gtr_projects.csv")
 
 
-def get_gtr_funds():
+def get_gtr_funds() -> pd.DataFrame:
     """Links between project ids and funding ids"""
-    return pd.read_csv(f"{GTR_PATH}/gtr_funds.csv")
+    return pd.read_csv(GTR_PATH / "gtr_funds.csv")
 
 
-def get_gtr_funds_api():
+def get_gtr_funds_api() -> pd.DataFrame:
     """Links between project ids and funding ids, retreived using API calls"""
-    return pd.read_csv(f"{GTR_PATH}/gtr_funds_api.csv")
+    return pd.read_csv(GTR_PATH / "gtr_funds_api.csv")
 
 
-def get_gtr_topics():
-    """GTR project research topics"""
-    return pd.read_csv(f"{GTR_PATH}/gtr_topics.csv")
+def get_gtr_topics() -> pd.DataFrame:
+    """GtR project research topics"""
+    return pd.read_csv(GTR_PATH / "gtr_topics.csv")
 
 
-def get_gtr_organisations():
-    """GTR research organisations"""
-    return pd.read_csv(f"{GTR_PATH}/gtr_organisations.csv")
+def get_gtr_organisations() -> pd.DataFrame:
+    """GtR research organisations"""
+    return pd.read_csv(GTR_PATH / "gtr_organisations.csv")
 
 
-def get_link_table(table: str = None):
+def get_link_table(table: str = None) -> pd.DataFrame:
+    """
+    Returns table specifying links between projects and other data
+
+    Args:
+        table: String specifying the link table to fetch;
+            if table=None, this will fetch the full links table
+            (NB: Large table with 34M+ rows)
+            Useful values for 'table' include:
+              - gtr_funds (returns links between projects and funding data)
+              - gtr_organisations (projects and organisations)
+              - gtr_persons (projects and persons)
+              - gtr_topic (projects and research topics/labels)
+
+    """
     if table is None:
         # Get the full links table
-        # NB: Large table with 34M+ rows
-        return pd.read_csv(f"{GTR_PATH}/gtr_link_table.csv")
+        return pd.read_csv(GTR_PATH / "gtr_link_table.csv")
     else:
         # Get the specific links defined by table variable
         fpath = get_path_to_specific_link_table(table)
@@ -58,6 +71,7 @@ def get_link_table(table: str = None):
 
 
 def get_path_to_specific_link_table(table: str):
+    """Default path to the pulled out links tables"""
     return GTR_LINKS_PATH / f"link_{table}.csv"
 
 
