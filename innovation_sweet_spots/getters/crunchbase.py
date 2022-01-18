@@ -14,8 +14,13 @@ def get_crunchbase_category_groups():
 
 
 def get_crunchbase_orgs():
-    """Loads and deduplicates the main Crunchbase organisations table"""
-    return pd.read_csv(CB_PATH / "crunchbase_organizations.csv").drop_duplicates()
+    """
+    Loads and deduplicates the main Crunchbase organisations table;
+    dtype = object, to avoid warnings about mixed data types
+    """
+    return pd.read_csv(
+        CB_PATH / "crunchbase_organizations.csv", dtype=object
+    ).drop_duplicates()
 
 
 def get_crunchbase_organizations_categories():
