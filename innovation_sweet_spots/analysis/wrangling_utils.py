@@ -202,10 +202,10 @@ class CrunchbaseWrangler:
                 raised_amount=lambda x: x["raised_amount"] / 1000,
                 raised_amount_usd=lambda x: x["raised_amount_usd"] / 1000,
                 # Convert date strings to datetimes
-                announced_on_datetime=lambda x: pd.to_datetime(x["announced_on"]),
+                announced_on_date=lambda x: pd.to_datetime(x["announced_on"]),
             )
             # Get years from dates
-            .assign(year=lambda x: get_years(x["announced_on_datetime"]))
+            .assign(year=lambda x: get_years(x["announced_on_date"]))
             # Convert USD currency to GBP
             .pipe(self.convert_deal_currency_to_gbp)
         )
@@ -213,7 +213,7 @@ class CrunchbaseWrangler:
     @staticmethod
     def convert_deal_currency_to_gbp(
         funding: pd.DataFrame,
-        date_column: str = "announced_on_datetime",
+        date_column: str = "announced_on_date",
         amount_column: str = "raised_amount",
         usd_amount_column: str = "raised_amount_usd",
         converted_column: str = "raised_amount_gbp",
