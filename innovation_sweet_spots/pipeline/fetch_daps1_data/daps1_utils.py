@@ -28,25 +28,19 @@ def get_engine(config_path, database="production", **engine_kwargs):
     return create_engine(url, **engine_kwargs)
 
 
-def fetch_daps_table(table_name: str, fields: str = "all") -> pd.DataFrame:
+def fetch_daps_table(table_name: str, columns: list = None) -> pd.DataFrame:
     """Fetch DAPS tables if we don't have them already
     Args:
         table_name: name
         path: path for the table
-        fields: fields to fetch. If a list, fetches those
+        columns: columns to fetch. If a list, fetches those
     Returns:
         table
     """
     logging.info(f"Fetching {table_name}")
     engine = get_engine(MYSQL_CONFIG)
     con = engine.connect().execution_options(stream_results=True)
-
-    if fields == "all":
-        chunks = pd.read_sql_table(table_name, con, chunksize=1000)
-    else:
-        chunks = pd.read_sql_table(table_name, con, columns=fields, chunksize=1000)
-
-    return chunks
+    return pd.read_sql_table(table_name, con, columns=columns, chunksize=1000)
 
 
 def stream_df_to_csv(

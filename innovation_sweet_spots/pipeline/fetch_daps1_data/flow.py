@@ -13,7 +13,7 @@ LIBRARIES = {"pymysql": "0.9.3", "sqlalchemy": "1.3.4", "pandas": ">1"}
 
 
 @conda_base(python="3.7", libraries=LIBRARIES)
-class CreatechNestaGetter(FlowSpec):
+class NestaGetter(FlowSpec):
 
     db_config_path = Parameter("db-config-path", type=str, default=os.environ[ENV_VAR])
 
@@ -26,7 +26,7 @@ class CreatechNestaGetter(FlowSpec):
         """Fetch Organisation (GtR & crunchbase) names."""
         from daps1_utils import get_engine
         from gtr_utils import get_names as get_gtr_names
-        from cb_utils import get_uk_names as get_cb_names
+        from cb_utils import get_cb_names
 
         if self.db_config_path is None:
             raise ValueError(
@@ -72,4 +72,4 @@ class CreatechNestaGetter(FlowSpec):
 
 
 if __name__ == "__main__":
-    CreatechNestaGetter()
+    NestaGetter()

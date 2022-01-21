@@ -1,6 +1,4 @@
 # Fetch GtR tables
-# TODO: Add organisations and funding tables
-import logging
 from pathlib import Path
 from typing import Dict, Iterator
 
@@ -13,8 +11,17 @@ from daps1_utils import (
     stream_df_to_csv,
 )
 
-logger = logging.getLogger(__name__)
 GTR_PATH = Path(__file__).parents[3] / "inputs/data/gtr"
+
+GTR_TABLES = [
+    "gtr_funds",
+    "gtr_topic",
+    "gtr_organisations",
+    "gtr_organisations_locations",
+    "gtr_participant",
+    "gtr_persons",
+    "gtr_link_table",
+]  # NB: Projects table is processed differently
 
 
 def projects_funded_from_2006() -> Iterator[pd.DataFrame]:
@@ -53,18 +60,15 @@ def projects_funded_from_2006() -> Iterator[pd.DataFrame]:
     return pd.read_sql_query(query, con, chunksize=1000)
 
 
+def fetch_save_table(name: str):
+    link = fetch_daps_table(name)
+    stream_df_to_csv(link, f"{GTR_PATH}/{name}.csv", index=False)
+
+
 def fetch_save_gtr_tables():
-
-    funders = fetch_daps_table("gtr_funds")
-    stream_df_to_csv(funders, path_or_buf=f"{GTR_PATH}/gtr_funds.csv", index=False)
-
-    topics = fetch_daps_table("gtr_topic")
-    stream_df_to_csv(topics, f"{GTR_PATH}/gtr_topics.csv", index=False)
-
-    link = fetch_daps_table("gtr_link_table")
-    stream_df_to_csv(link, f"{GTR_PATH}/gtr_link_table.csv", index=False)
-
-    logging.info("Filtering projects...")
+    for table in GTR_TABLES:
+        fetch_save_table(table)
+    # NB: Projects table is processed differently
     projects_filtered = projects_funded_from_2006()
     stream_df_to_csv(projects_filtered, f"{GTR_PATH}/gtr_projects.csv", index=False)
 
