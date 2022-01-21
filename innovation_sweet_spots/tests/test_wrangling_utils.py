@@ -158,3 +158,19 @@ def test_convert_deal_currency_to_gbp():
     output_df = CrunchbaseWrangler.convert_deal_currency_to_gbp(mock_input_df)
     output_df["raised_amount_gbp"] = output_df["raised_amount_gbp"].round(1)
     assert output_df.equals(expected_df)
+
+
+### Testing other functions
+
+
+def test_split_comma_seperated_string():
+    assert split_comma_seperated_string("A, B,c") == ["A", "B", "c"]
+    assert split_comma_seperated_string("a,,b") == ["a", "", "b"]
+
+
+def test_is_string_in_list():
+    list_of_strings = ["a", "b"]
+    assert is_string_in_list(list_of_strings, list_to_check=["a", "c"]) is True
+    assert is_string_in_list(list_of_strings, list_to_check=["a", "b"]) is True
+    assert is_string_in_list(list_of_strings, list_to_check=["b", "c"]) is True
+    assert is_string_in_list(list_of_strings, list_to_check=["c", "d"]) is False
