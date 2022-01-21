@@ -6,8 +6,11 @@ fetched using the `nestauk/data_getters` internal library.
 import os
 
 from metaflow import conda_base, FlowSpec, Parameter, step
+from pathlib import Path
 
-ENV_VAR = "MYSQL_CONFIG"
+MYSQL_CONFIG = (
+    Path(__file__).parents[3] / "innovation_sweet_spots/config/mysqldb_team.config"
+)
 
 LIBRARIES = {"pymysql": "0.9.3", "sqlalchemy": "1.3.4", "pandas": ">1"}
 
@@ -15,7 +18,7 @@ LIBRARIES = {"pymysql": "0.9.3", "sqlalchemy": "1.3.4", "pandas": ">1"}
 @conda_base(python="3.7", libraries=LIBRARIES)
 class NestaGetter(FlowSpec):
 
-    db_config_path = Parameter("db-config-path", type=str, default=os.environ[ENV_VAR])
+    db_config_path = Parameter("db-config-path", type=str, default=MYSQL_CONFIG)
 
     @step
     def start(self):
@@ -25,13 +28,13 @@ class NestaGetter(FlowSpec):
     def fetch_names(self):
         """Fetch Organisation (GtR & crunchbase) names."""
         from daps1_utils import get_engine
-        from gtr_utils import get_names as get_gtr_names
+        from gtr_utils import get_gtr_names
         from cb_utils import get_cb_names
 
         if self.db_config_path is None:
             raise ValueError(
                 f"`db_config_path` was not set. Pass in a config path as a "
-                f"flow argument or set {ENV_VAR} env variable."
+                f"flow argument or set MYSQL_CONFIG env variable."
             )
 
         engine = get_engine(self.db_config_path)

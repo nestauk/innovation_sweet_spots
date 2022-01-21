@@ -1,6 +1,7 @@
 # Fetch GtR tables
 from pathlib import Path
 from typing import Dict, Iterator
+import logging
 
 import pandas as pd
 
@@ -21,7 +22,10 @@ GTR_TABLES = [
     "gtr_participant",
     "gtr_persons",
     "gtr_link_table",
+    "gtr_projects",
 ]  # NB: Projects table is processed differently
+
+logger = logging.getLogger(__name__)
 
 
 def projects_funded_from_2006() -> Iterator[pd.DataFrame]:
@@ -61,19 +65,25 @@ def projects_funded_from_2006() -> Iterator[pd.DataFrame]:
 
 
 def fetch_save_table(name: str):
+    """Fetch and save a GtR table"""
+    logger.info(f"Downloading {name}")
     link = fetch_daps_table(name)
     stream_df_to_csv(link, f"{GTR_PATH}/{name}.csv", index=False)
 
 
 def fetch_save_gtr_tables():
+    """Fetch and save all GtR data"""
     for table in GTR_TABLES:
         fetch_save_table(table)
-    # NB: Projects table is processed differently
-    projects_filtered = projects_funded_from_2006()
-    stream_df_to_csv(projects_filtered, f"{GTR_PATH}/gtr_projects.csv", index=False)
 
 
-def get_names(con) -> Dict[str, str]:
+#     NB: Projects table is processed differently
+#     logger.info("Downloading gtr_projects")
+#     projects_filtered = projects_funded_from_2006()
+#     stream_df_to_csv(projects_filtered, f"{GTR_PATH}/gtr_projects.csv", index=False)
+
+
+def get_gtr_names(con) -> Dict[str, str]:
     """Fetch non-null `{id: name}` pairs from gtr_organisations."""
 
     return (

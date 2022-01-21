@@ -3,6 +3,7 @@ import logging
 import os
 from configparser import ConfigParser
 from typing import Any, Dict, Iterator
+from pathlib import Path
 
 import pandas as pd
 from sqlalchemy import create_engine
@@ -10,7 +11,9 @@ from sqlalchemy.engine.url import URL
 
 # from pandas._typing import FilePathOrBuffer  # Not available in pandas < 1
 
-MYSQL_CONFIG = os.environ["MYSQL_CONFIG"]
+MYSQL_CONFIG = (
+    Path(__file__).parents[3] / "innovation_sweet_spots/config/mysqldb_team.config"
+)
 
 
 def get_engine(config_path, database="production", **engine_kwargs):

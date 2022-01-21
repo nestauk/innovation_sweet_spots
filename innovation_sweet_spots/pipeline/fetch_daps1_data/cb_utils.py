@@ -2,10 +2,13 @@ import logging
 from pathlib import Path
 from typing import Dict
 import pandas as pd
+import logging
 
 from daps1_utils import fetch_daps_table, save_daps_table
 
-CB_PATH = Path(__file__).parents[3] / "inputs/data/crunchbase"
+logger = logging.getLogger(__name__)
+
+CB_PATH = Path(__file__).parents[3] / "inputs/data/cb"
 
 CB_TABLES = [
     "crunchbase_organizations",
@@ -24,6 +27,7 @@ CB_TABLES = [
 
 def fetch_save_table(name: str):
     """Fetch and save a Crunchbase table"""
+    logger.info(f"Downloading {name}")
     df = pd.concat(fetch_daps_table(name))
     save_daps_table(df, name, CB_PATH)
 

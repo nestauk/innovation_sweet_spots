@@ -22,20 +22,37 @@ $ pip install -e .
 
 ### Data access
 
-**NB: This is subject to refactoring in the near future!**
+To uncover research, investment and public discourse trends, we are using the following data:
 
-To download input data from Nesta database, you will first need to decrypt the config files (if you don't have the key, reach out to Karlis)
+- **[Gateway to Research (GtR)](https://gtr.ukri.org/)**: Research projects funded by UKRI
+- **[Crunchbase](https://crunchbase.com/)**: Global company directory
+- **[The Guardian news](https://open-platform.theguardian.com/)**: to the best of our knowledge, the only major UK newspaper to make its text freely available for research.
+- **[Hansard](https://zenodo.org/record/4066772#.YXCN1kbYrlw)**: Records of parliamentary debates
+
+All these datasets except Crunchbase are freely available. Note, however, that this project accesses some of these large datasets (namely GtR and Crunchbase) via our internal Nesta database.
+
+#### Research project and company data
+
+To download GtR and Crunchbase datasets from Nesta database, you will first need to decrypt the config files (if you don't have the key, reach out to Karlis). Note that you need to be connected via Nesta's VPN.
 
 ```
 $ git stash
 $ git-crypt unlock /path/to/key
 ```
 
-The most recent version of the input data can then be fetched by running
+The most recent version of the Gateway to Research (GtR) and Crunchbase datasets can then be fetched by running:
 
 ```shell
-python innovation_sweet_spots/getters/inputs.py
+$ python innovation_sweet_spots/pipeline/fetch_daps1_data/flow.py --no-pylint --environment=conda run
 ```
+
+#### The Guardian news
+
+Coming soon...
+
+#### Hansard
+
+Coming soon...
 
 ## Contributor guidelines
 
