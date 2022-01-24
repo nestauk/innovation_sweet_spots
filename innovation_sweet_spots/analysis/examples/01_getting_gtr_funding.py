@@ -4,6 +4,7 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -35,6 +36,13 @@ wrangler = GtrWrangler()
 # %%
 # Import projects table
 gtr_projects = gtr.get_gtr_projects()
+
+# %%
+gtr_projects.info()
+
+# %%
+# Check the earliest and latest project start dates
+gtr_projects.sort_values("start").iloc[[0, -1]][["title", "start"]]
 
 # %%
 # Choose a smaller set of projects
