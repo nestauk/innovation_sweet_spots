@@ -33,14 +33,14 @@ All these datasets except Crunchbase are freely available. Note, however, that t
 
 #### Research project and company data
 
-To download GtR and Crunchbase datasets from Nesta database, you will first need to decrypt the config files (if you don't have the key, reach out to Karlis). Note that you need to be connected via Nesta's VPN.
+To download GtR and Crunchbase datasets from Nesta database, you will first need to decrypt the config files (if you don't have the key, reach out to Karlis).
 
-```
+```shell
 $ git stash
 $ git-crypt unlock /path/to/key
 ```
 
-The most recent version of the Gateway to Research (GtR) and Crunchbase datasets can then be fetched by running:
+The most recent version of the Gateway to Research (GtR) and Crunchbase datasets can then be fetched by running the command below. Note that you need to be connected via Nesta's VPN when accessing the database.
 
 ```shell
 $ python innovation_sweet_spots/pipeline/fetch_daps1_data/flow.py --no-pylint --environment=conda run
