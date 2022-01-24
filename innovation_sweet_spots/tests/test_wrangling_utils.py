@@ -158,7 +158,7 @@ def test_convert_deal_currency_to_gbp():
     output_df = CrunchbaseWrangler.convert_deal_currency_to_gbp(mock_input_df)
     output_df["raised_amount_gbp"] = output_df["raised_amount_gbp"].round(1)
     assert output_df.equals(expected_df)
-
+    
 
 ### Testing other functions
 
