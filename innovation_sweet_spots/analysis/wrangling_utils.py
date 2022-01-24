@@ -276,7 +276,7 @@ class CrunchbaseWrangler:
 
         Args:
             Dataframe with organisations specified by 'org_id' and 'name', and
-            all their funding rounds (deals). Some of the important columns include:
+            all their funding rounds (deals).
 
         Returns:
             Dataframe with extra columns specifying investment round details:
