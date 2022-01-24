@@ -269,6 +269,62 @@ class CrunchbaseWrangler:
             # If nothing to convert, copy the nulls and return
             df[converted_column] = df[amount_column].copy()
         return df
+      
+    def get_funding_round_investors(self, funding_rounds: pd.DataFrame) -> pd.DataFrame:
+        """
+        Gets the investors involved in the specified funding rounds
+
+        Args:
+            Dataframe with organisations specified by 'org_id' and 'name', and
+            all their funding rounds (deals).
+
+        Returns:
+            Dataframe with extra columns specifying investment round details:
+                'funding_round_name': Name of the funding round
+                'investor_name': Name of the investor organisation
+                'investor_id' Crunchbase organisation identifier
+                'investor_type': Specifies if investor is a person or an organisation
+                'is_lead_investor': Specifies whether the organisation is leading the round (value is 1 in that case)
+
+        """
+        return funding_rounds.merge(
+            (
+                self.cb_investments[
+                    [
+                        "funding_round_id",
+                        "funding_round_name",
+                        "investor_name",
+                        "id",
+                        "investor_type",
+                        "is_lead_investor",
+                    ]
+                ].rename(columns={"id": "investor_id"})
+            ),
+            on="funding_round_id",
+            how="left",
+        ).assign(
+            raised_amount=lambda x: x.raised_amount.fillna(0),
+            raised_amount_usd=lambda x: x.raised_amount_usd.fillna(0),
+        )
+
+    def get_organisation_investors(
+        self, cb_organisations: pd.DataFrame
+    ) -> pd.DataFrame:
+        """
+        Gets the investors and corresponding funding rounds for the specified organisations
+
+        Args:
+            cb_organisations: Data frame that must have a columns with crunchbase
+                organisation ids and names
+
+        Returns:
+             Dataframe with extra columns specifying investors and the corresponding investment rounds
+             (see docs for get_funding_rounds and get_funding_round_investors for more information)
+
+        """
+        return pipe(
+            cb_organisations, self.get_funding_rounds, self.get_funding_round_investors
+        )
 
 
 def get_years(dates: Iterator[datetime.date]) -> Iterator:
