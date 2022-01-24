@@ -269,7 +269,7 @@ class CrunchbaseWrangler:
             # If nothing to convert, copy the nulls and return
             df[converted_column] = df[amount_column].copy()
         return df
-
+      
     def get_funding_round_investors(self, funding_rounds: pd.DataFrame) -> pd.DataFrame:
         """
         Gets the investors involved in the specified funding rounds
