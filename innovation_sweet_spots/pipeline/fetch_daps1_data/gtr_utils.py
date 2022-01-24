@@ -22,8 +22,7 @@ GTR_TABLES = [
     "gtr_participant",
     "gtr_persons",
     "gtr_link_table",
-    "gtr_projects",
-]  # NB: Projects table is processed differently
+]  # NB: Projects table (gtr_projects) is processed differently; see below
 
 logger = logging.getLogger(__name__)
 
@@ -75,12 +74,10 @@ def fetch_save_gtr_tables():
     """Fetch and save all GtR data"""
     for table in GTR_TABLES:
         fetch_save_table(table)
-
-
-#     NB: Projects table is processed differently
-#     logger.info("Downloading gtr_projects")
-#     projects_filtered = projects_funded_from_2006()
-#     stream_df_to_csv(projects_filtered, f"{GTR_PATH}/gtr_projects.csv", index=False)
+    # NB: Projects table is processed differently
+    logger.info("Downloading gtr_projects")
+    projects_filtered = projects_funded_from_2006()
+    stream_df_to_csv(projects_filtered, f"{GTR_PATH}/gtr_projects.csv", index=False)
 
 
 def get_gtr_names(con) -> Dict[str, str]:
