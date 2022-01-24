@@ -30,12 +30,12 @@ def get_gtr_funds_api() -> pd.DataFrame:
 
 def get_gtr_topics() -> pd.DataFrame:
     """GtR project research topics"""
-    return pd.read_csv(GTR_PATH / "gtr_topics.csv")
+    return pd.read_csv(GTR_PATH / "gtr_topic.csv")
 
 
 def get_gtr_organisations() -> pd.DataFrame:
     """GtR research organisations"""
-    return pd.read_csv(GTR_PATH / "gtr_organisations.csv")
+    return pd.read_csv(GTR_PATH / "gtr_organizations.csv")
 
 
 def get_link_table(table: str = None) -> pd.DataFrame:
