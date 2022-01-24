@@ -9,4 +9,5 @@ tqdm
 filelock
 typer
 sh
+CurrencyConverter
 #data_getters @ git+https://github.com/nestauk/data_getters.git

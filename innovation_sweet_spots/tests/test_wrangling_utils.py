@@ -1,12 +1,15 @@
 from innovation_sweet_spots.analysis.wrangling_utils import *
 import pandas as pd
+from datetime import date
 
-# Mock random ids
+## Testing GtrWrangler ##
+
+# Mock GtR project data
 MOCK_PROJECT_IDS = ["proj_1", "proj_2"]
 MOCK_PROJECT_ABSTRACTS = ["abstract", "different abstract"]
 MOCK_PROJECT_START = ["2020-01-01 01:00:00", "2022-01-01 01:00:00"]
 MOCK_FUND_IDS = ["fund_1", "fund_2", "fund_3", "fund_4"]
-# Mock GtR project data
+# Mock GtR project dataframe
 MOCK_GTR_PROJECTS = pd.DataFrame(
     {
         "project_id": MOCK_PROJECT_IDS,
@@ -14,7 +17,7 @@ MOCK_GTR_PROJECTS = pd.DataFrame(
         "start": MOCK_PROJECT_START,
     }
 )
-# Mock links table between projects and funds
+# Mock links table between GtR projects and funds
 MOCK_LINK_GTR_FUNDS = pd.DataFrame(
     {
         "project_id": MOCK_PROJECT_IDS + MOCK_PROJECT_IDS,
@@ -23,7 +26,7 @@ MOCK_LINK_GTR_FUNDS = pd.DataFrame(
         "table_name": ["gtr_funds", "gtr_funds", "gtr_funds", "gtr_funds"],
     }
 )
-# Mock fund table
+# Mock GtR fund table
 MOCK_GTR_FUNDS = pd.DataFrame(
     {
         "id": MOCK_FUND_IDS,
@@ -49,7 +52,7 @@ MOCK_GTR_FUNDS = pd.DataFrame(
         "currencyCode": ["GBP", "GBP", "GBP", "GBP"],
     }
 )
-# Mock alternative fund table (retrieved directly via API)
+# Mock alternative GtR fund table (retrieved directly via API)
 MOCK_GTR_FUNDS_API = pd.DataFrame(
     {
         "project_id": MOCK_PROJECT_IDS,
@@ -135,4 +138,23 @@ def test_get_project_funds():
         # Note the sort order by projects
         .sort_values(["project_id", "id"]).reset_index(drop=True)
     )
+    assert output_df.equals(expected_df)
+
+
+### Testing CrunchbaseWrangler ###
+
+
+def test_convert_deal_currency_to_gbp():
+    mock_input_df = pd.DataFrame(
+        {
+            "announced_on_date": [date(2001, 1, 21)],
+            "raised_amount": [1000],
+            "raised_amount_currency_code": ["USD"],
+            "raised_amount_usd": [1000],
+        }
+    )
+    expected_df = mock_input_df.copy()
+    expected_df["raised_amount_gbp"] = [684.8]
+    output_df = CrunchbaseWrangler.convert_deal_currency_to_gbp(mock_input_df)
+    output_df["raised_amount_gbp"] = output_df["raised_amount_gbp"].round(1)
     assert output_df.equals(expected_df)
