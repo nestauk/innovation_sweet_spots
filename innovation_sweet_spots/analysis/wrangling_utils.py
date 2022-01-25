@@ -247,6 +247,7 @@ class CrunchbaseWrangler:
 
     @property
     def industry_to_group(self):
+        """Dictionary that maps narrow Crunchbase industries (categories) to broader groups"""
         if self._industry_to_group is None:
             self._industry_to_group = dict(
                 zip(
@@ -258,6 +259,7 @@ class CrunchbaseWrangler:
 
     @property
     def group_to_industries(self):
+        """Dictionary that maps from broader industry group to a set of narrower industries (categories)"""
         if self._group_to_industries is None:
             df = (
                 self.cb_category_groups.explode("industry_groups")
@@ -536,6 +538,7 @@ def get_years(dates: Iterator[datetime.date]) -> Iterator:
 
 
 def split_comma_seperated_string(text: str) -> Iterator[str]:
+    """Splits a string where commas are; for example: 'a, b' -> ['a', 'b']"""
     return [s.strip() for s in text.split(",")] if type(text) is str else []
 
 
