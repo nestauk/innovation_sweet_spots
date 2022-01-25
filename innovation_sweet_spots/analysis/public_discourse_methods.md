@@ -197,7 +197,7 @@ arguments in favour or against a particular tech. Examples include `innovation i
 
 The process is outlined in Figure 5.
 
-![part_of_speech_analysis](pd_pos_analysis.png)
+![part_of_speech_analysis](/outputs/figures/pd_pos_analysis.png)
 
 We defined and matched the phrases of interest using spacy `Matcher` method. Given that
 both Guardian and Hansard datasets span multiple years, we first matched phrases in
