@@ -142,6 +142,8 @@ class CrunchbaseWrangler:
         self._cb_investors = None
         self._cb_category_groups = None
         self._cb_organisation_categories = None
+        self._cb_people = None
+        self._cb_degrees = None
         # Organisation categories (industries)
         self._industries = None
         self._industry_groups = None
@@ -180,6 +182,20 @@ class CrunchbaseWrangler:
         if self._cb_investors is None:
             self._cb_investors = cb.get_crunchbase_investors()
         return self._cb_investors
+
+    @property
+    def cb_people(self):
+        """Table with investors"""
+        if self._cb_people is None:
+            self._cb_people = cb.get_crunchbase_people()
+        return self._cb_people
+
+    @property
+    def cb_degrees(self):
+        """Table with investors"""
+        if self._cb_degrees is None:
+            self._cb_degrees = cb.get_crunchbase_degrees()
+        return self._cb_degrees
 
     @property
     def cb_category_groups(self):
@@ -529,6 +545,93 @@ class CrunchbaseWrangler:
             .merge(
                 company_industries, on=["id", "name"], how="left", validate="one_to_one"
             )
+        )
+
+    def get_company_persons(self, cb_organisations: pd.DataFrame) -> pd.DataFrame:
+        """
+        Adds people associated with the specified companies.
+
+        Args:
+            cb_organisations: Data frame that must have columns with crunchbase
+                organisation ids and name
+
+        Returns:
+            Dataframe with organisation ids, names and their person data
+        """
+        return (
+            cb_organisations[["id", "name"]]
+            .merge(
+                self.cb_people,
+                left_on="id",
+                right_on="featured_job_organization_id",
+                how="inner",
+            )
+            .rename(
+                columns={
+                    "id_x": "id",
+                    "id_y": "person_id",
+                    "name_x": "name",
+                    "name_y": "person_name",
+                }
+            )
+        )
+
+    def get_person_degrees(self, cb_persons: pd.DataFrame) -> pd.DataFrame:
+        """
+        Adds the university degrees for the specified persons.
+
+        Args:
+            cb_persons: Data frame that must have a column 'person id' with
+                crunchbase person ids
+
+        Returns:
+            Dataframe with person degree data
+        """
+        return (
+            cb_persons[["person_id", "person_name"]]
+            .merge(
+                self.cb_degrees,
+                on="person_id",
+                how="left",
+            )
+            .drop("person_name_y", axis=1)
+            .rename(
+                columns={
+                    "name_x": "name",
+                    "name_y": "degree_name",
+                    "person_name_x": "person_name",
+                }
+            )
+        )
+
+    def get_company_education_data(
+        self,
+        cb_organisations: pd.DataFrame,
+        columns=["institution_name", "degree_type", "subject", "completed_on"],
+    ) -> pd.DataFrame:
+        """
+        Gets the employee education data for the specified companies.
+        By default, it will fetch the names of institutions, degrees and completion date.
+
+        Args:
+            cb_organisations: Data frame that must have columns with crunchbase
+                organisation ids and name
+
+        Returns:
+            Dataframe with organisation id, name and education data of their employees
+        """
+        # Look up persons
+        persons = self.get_company_persons(cb_organisations)
+        return (
+            # Get peoples degrees
+            persons.merge(
+                self.get_person_degrees(persons)[["person_id"] + columns],
+                on="person_id",
+                how="left"
+                # Clean up columns
+            )[["id", "name"] + columns]
+            # Remove rows corresponding to persons with no education data
+            .dropna(subset=columns, how="all")
         )
 
 
