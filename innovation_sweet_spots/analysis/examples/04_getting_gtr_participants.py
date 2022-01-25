@@ -42,8 +42,7 @@ gtr_projects = gtr.get_gtr_projects().head(3)
 GtR.get_organisations_and_locations(gtr_projects)
 
 # %% [markdown]
-# ### Finding participants
-#
-# Coming soon...
+# ## Finding participants
 
 # %%
+GtR.get_persons(gtr_projects)
