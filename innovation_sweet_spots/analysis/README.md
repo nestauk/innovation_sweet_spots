@@ -32,4 +32,4 @@ Add data on organisations that participate in the projects and the organisation 
 GtR.get_organisations_and_locations(gtr_projects)
 ```
 
-Add people data and something else...
+Adding people data bla
