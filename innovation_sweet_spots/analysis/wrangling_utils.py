@@ -20,6 +20,9 @@ class GtrWrangler:
         self._link_gtr_funds_api = None
         self._project_to_funds = None
         self._gtr_funds = None
+        # Research topics
+        self._link_gtr_topics = None
+        self._gtr_topics = None
 
     def get_project_funds(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """
@@ -106,6 +109,26 @@ class GtrWrangler:
         """Adds reliable funding amount data, and funding start and end dates to the projects."""
         return pipe(gtr_projects, self.get_project_funds_api, self.get_start_end_dates)
 
+    def get_research_topics(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
+        """
+         Add research topics to projects. Note that about half of the projects are 'Unclassified'
+
+         Args:
+             gtr_projects: Data frame that must have a column "project_id"
+
+         Returns:
+             Same input data frame with the following extra columns:
+                 - topic: 750+ different project categories
+                 - topic_type: One of the following: 'researchActivity', 'researchTopic', 'researchSubject',
+        'healthCategory', 'rcukProgramme'
+        """
+        return (
+            gtr_projects.merge(self.link_gtr_topics, on="project_id", how="left")
+            .merge(self.gtr_topics, on="id", how="left")
+            .drop(["rel", "table_name", "id"], axis=1)
+            .rename(columns={"text": "topic"})
+        )
+
     @property
     def gtr_funds(self):
         """GtR funding table"""
@@ -126,6 +149,20 @@ class GtrWrangler:
         if self._link_gtr_funds_api is None:
             self._link_gtr_funds_api = gtr.get_gtr_funds_api()
         return self._link_gtr_funds_api
+
+    @property
+    def link_gtr_topics(self):
+        """Links between project ids and research topic ids"""
+        if self._link_gtr_funds is None:
+            self._link_gtr_funds = gtr.get_link_table("gtr_topic")
+        return self._link_gtr_funds
+
+    @property
+    def gtr_topics(self):
+        """GtR research topics"""
+        if self._gtr_topics is None:
+            self._gtr_topics = gtr.get_gtr_topics()
+        return self._gtr_topics
 
 
 class CrunchbaseWrangler:
