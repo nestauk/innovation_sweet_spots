@@ -7,7 +7,6 @@ from typing import Iterator
 import itertools
 import innovation_sweet_spots.getters.gtr as gtr
 import innovation_sweet_spots.getters.crunchbase as cb
-from functools import lru_cache
 
 
 class GtrWrangler:
