@@ -149,7 +149,6 @@ class CrunchbaseWrangler:
         self._group_to_industries = None
 
     @property
-    @lru_cache(1)
     def cb_organisations(self):
         """Full table of companies (this might take a minute to load in)"""
         if self._cb_organisations is None:
