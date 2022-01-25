@@ -113,7 +113,7 @@ outputs/figures/*
 /outputs/*
 /outputs/
 !/outputs/figures/*.md
-!/outputs/figures/public_discourse/*.png
+!/outputs/figures/*.png
 
 # Mac OS-specific storage files
 .DS_Store
