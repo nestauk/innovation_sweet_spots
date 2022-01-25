@@ -110,6 +110,7 @@ target/
 /outputs/models/*
 !/outputs/models/*.md
 /outputs/evaluations/*
+!/outputs/figures/
 /outputs/figures/*
 !/outputs/figures/*.md
 !/outputs/figures/*.png
