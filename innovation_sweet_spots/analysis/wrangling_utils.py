@@ -15,10 +15,15 @@ class GtrWrangler:
     """
 
     def __init__(self):
+        # Funding
         self._link_gtr_funds = None
         self._link_gtr_funds_api = None
         self._project_to_funds = None
         self._gtr_funds = None
+        # Organisations
+        self._gtr_organisations = None
+        self._gtr_organisations_locations = None
+        self._link_gtr_organisations = None
 
     def get_project_funds(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """
@@ -37,7 +42,6 @@ class GtrWrangler:
 
         Args:
             gtr_projects: Data frame that must have a column "project_id"
-            keep_only_dates: Keeps only the beginning and end dates
 
         Returns:
             Same input data frame with the following extra columns:
@@ -105,6 +109,73 @@ class GtrWrangler:
         """Adds reliable funding amount data, and funding start and end dates to the projects."""
         return pipe(gtr_projects, self.get_project_funds_api, self.get_start_end_dates)
 
+    def get_project_organisations(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
+        """
+        Adds participating organisations to the projects.
+
+        Args:
+            gtr_projects: Data frame that must have a column "project_id"
+
+        Returns:
+            Same input data frame with the following extra columns:
+                - id: Organisation id
+                - organisation_relation: Indicates different types of participation
+                - organisation_name: Name of the organisation
+
+        """
+        return (
+            # Add organisation ids to the projects table
+            gtr_projects.merge(self.link_gtr_organisations, on="project_id", how="left")
+            # Add organisation data (NB: Ignoring addresses column)
+            .merge(self.gtr_organisations[["id", "name"]], on="id", how="left")
+            .drop(["table_name"], axis=1)
+            .rename(
+                columns={"name": "organisation_name", "rel": "organisation_relation"}
+            )
+        )
+
+    def get_organisation_locations(
+        self, gtr_organisations: pd.DataFrame
+    ) -> pd.DataFrame:
+        """
+        Adds latitude, longitude, countries and addresses of participating organisations
+
+        Args:
+            gtr_organisations: Data frame that must have an organisation "id" column
+
+        Returns:
+            Same input data frame with the following extra columns:
+                - address
+                - country_name
+                - country_alpha_2: 2-letter country code
+                - continent
+                - latitude
+                - longitude
+            Also available, but not returned:
+                - country_alpha_3: 3-letter country code
+                - country_numeric: Presumably ISO 3166 country code
+        """
+        return (
+            # Add addresses
+            gtr_organisations.merge(
+                self.gtr_organisations[["id", "addresses"]], on="id", how="left"
+            )
+            # Add country and lat/long
+            .merge(self.gtr_organisations_locations, on="id", how="left").drop(
+                ["country_alpha_3", "country_numeric"], axis=1
+            )
+        )
+
+    def get_organisations_and_locations(
+        self, gtr_projects: pd.DataFrame
+    ) -> pd.DataFrame:
+        """Adds organisations and their location data"""
+        return pipe(
+            gtr_projects,
+            self.get_project_organisations,
+            self.get_organisation_locations,
+        )
+
     @property
     def gtr_funds(self):
         """GtR funding table"""
@@ -125,6 +196,27 @@ class GtrWrangler:
         if self._link_gtr_funds_api is None:
             self._link_gtr_funds_api = gtr.get_gtr_funds_api()
         return self._link_gtr_funds_api
+
+    @property
+    def gtr_organisations(self):
+        """Organisations participating in research projects"""
+        if self._gtr_organisations is None:
+            self._gtr_organisations = gtr.get_gtr_organisations()
+        return self._gtr_organisations
+
+    @property
+    def gtr_organisations_locations(self):
+        """Organisation locations"""
+        if self._gtr_organisations_locations is None:
+            self._gtr_organisations_locations = gtr.get_gtr_organisations_locations()
+        return self._gtr_organisations_locations
+
+    @property
+    def link_gtr_organisations(self):
+        """Links between project ids and organisation ids"""
+        if self._link_gtr_organisations is None:
+            self._link_gtr_organisations = gtr.get_link_table("gtr_organisations")
+        return self._link_gtr_organisations
 
 
 class CrunchbaseWrangler:
@@ -269,7 +361,7 @@ class CrunchbaseWrangler:
             # If nothing to convert, copy the nulls and return
             df[converted_column] = df[amount_column].copy()
         return df
-      
+
     def get_funding_round_investors(self, funding_rounds: pd.DataFrame) -> pd.DataFrame:
         """
         Gets the investors involved in the specified funding rounds
