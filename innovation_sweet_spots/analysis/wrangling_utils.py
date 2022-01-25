@@ -4,6 +4,7 @@ from toolz import pipe
 from currency_converter import CurrencyConverter
 from datetime import datetime
 from typing import Iterator
+import itertools
 import innovation_sweet_spots.getters.gtr as gtr
 import innovation_sweet_spots.getters.crunchbase as cb
 
@@ -134,9 +135,25 @@ class CrunchbaseWrangler:
     """
 
     def __init__(self):
+        # Tables from the database
+        self._cb_organisations = None
         self._cb_funding_rounds = None
         self._cb_investments = None
         self._cb_investors = None
+        self._cb_category_groups = None
+        self._cb_organisation_categories = None
+        # Organisation categories (industries)
+        self._industries = None
+        self._industry_groups = None
+        self._industry_to_group = None
+        self._group_to_industries = None
+
+    @property
+    def cb_organisations(self):
+        """Full table of companies (this might take a minute to load in)"""
+        if self._cb_organisations is None:
+            self._cb_organisations = cb.get_crunchbase_orgs()
+        return self._cb_organisations
 
     @property
     def cb_funding_rounds(self):
@@ -163,6 +180,97 @@ class CrunchbaseWrangler:
         if self._cb_investors is None:
             self._cb_investors = cb.get_crunchbase_investors()
         return self._cb_investors
+
+    @property
+    def cb_category_groups(self):
+        """Table of company categories (also called 'industries') and their broader 'category groups'"""
+        if self._cb_category_groups is None:
+            self._cb_category_groups = (
+                # Load the dataframe
+                cb.get_crunchbase_category_groups()
+                # Convert to lower case
+                .assign(
+                    name=lambda x: x.name.str.lower(),
+                    category_groups_list=lambda x: x.category_groups_list.str.lower(),
+                )
+                # Convert comma seperated category groups into a list
+                .assign(
+                    category_groups=lambda x: x.category_groups_list.apply(
+                        split_comma_seperated_string
+                    )
+                )
+                # Harmonise the naming of categories/industries column
+                .rename(
+                    columns={
+                        "name": "industry",
+                        "category_groups_list": "industry_groups_list",
+                        "category_groups": "industry_groups",
+                    }
+                )
+            )
+        return self._cb_category_groups
+
+    @property
+    def cb_organisation_categories(self):
+        """Table of companies and their corresponing categories (industries)"""
+        if self._cb_organisation_categories is None:
+            self._cb_organisation_categories = (
+                cb.get_crunchbase_organizations_categories()
+                # Harmonise the naming of categories/industries column
+                .rename(columns={"category_name": "industry"})
+            )
+        return self._cb_organisation_categories
+
+    @property
+    def industries(self):
+        """A list of the 700+ categories (industries)"""
+        if self._industries is None:
+            self._industries = (
+                self.cb_category_groups["industry"].sort_values().to_list()
+            )
+        return self._industries
+
+    @property
+    def industry_groups(self):
+        """A list of the broader industry (category) groups"""
+        if self._industry_groups is None:
+            self._industry_groups = sorted(
+                list(
+                    set(
+                        itertools.chain(
+                            *self.cb_category_groups["industry_groups"].to_list()
+                        )
+                    )
+                )
+            )
+        return self._industry_groups
+
+    @property
+    def industry_to_group(self):
+        """Dictionary that maps narrow Crunchbase industries (categories) to broader groups"""
+        if self._industry_to_group is None:
+            self._industry_to_group = dict(
+                zip(
+                    self.cb_category_groups.industry,
+                    self.cb_category_groups.industry_groups.to_list(),
+                )
+            )
+        return self._industry_to_group
+
+    @property
+    def group_to_industries(self):
+        """Dictionary that maps from broader industry group to a set of narrower industries (categories)"""
+        if self._group_to_industries is None:
+            df = (
+                self.cb_category_groups.explode("industry_groups")
+                .groupby("industry_groups")
+                .agg(industry=("industry", lambda x: x.tolist()))
+                .reset_index()
+            )
+            self._group_to_industries = dict(
+                zip(df.industry_groups, df.industry.to_list())
+            )
+        return self._group_to_industries
 
     def get_funding_rounds(
         self, cb_organisations: pd.DataFrame, org_id_column: str = "id"
@@ -269,7 +377,7 @@ class CrunchbaseWrangler:
             # If nothing to convert, copy the nulls and return
             df[converted_column] = df[amount_column].copy()
         return df
-      
+
     def get_funding_round_investors(self, funding_rounds: pd.DataFrame) -> pd.DataFrame:
         """
         Gets the investors involved in the specified funding rounds
@@ -326,7 +434,114 @@ class CrunchbaseWrangler:
             cb_organisations, self.get_funding_rounds, self.get_funding_round_investors
         )
 
+    def get_companies_in_industries(
+        self, industries_names: Iterator[str]
+    ) -> pd.DataFrame:
+        """
+        Get companies belonging to the specified industries
+        NB: Might take a minute when running for the first time, as it needs
+        to load in the full table of companies
+
+        Args:
+            industries_names: A list of industry names; see all industries in CrunchbaseWrangler().industries
+
+        Returns:
+            A dataframe with organisation data
+        """
+        # Find ids of companies in the specified industries
+        company_ids = self.cb_organisation_categories[
+            self.cb_organisation_categories.industry.isin(industries_names)
+        ].organization_id
+        # Return data for organisatons that are in the specified industries
+        return self.cb_organisations[self.cb_organisations.id.isin(company_ids)]
+
+    def get_company_industries(
+        self, cb_organisations: pd.DataFrame, return_lists: bool = False
+    ) -> pd.DataFrame:
+        """
+        Get industries of the specified companies. Note that a company can be in more
+        than one industry.
+
+        Args:
+            cb_organisations: Data frame that must have a columns with crunchbase
+                organisation ids and name
+            return_lists: If True, will return a row per company, and all industries
+                for each company collected in a list
+
+        Returns:
+            Dataframe with organisation ids, names and their industries
+        """
+
+        company_industries = (
+            cb_organisations[["id", "name"]]
+            .merge(
+                self.cb_organisation_categories[["organization_id", "industry"]],
+                left_on="id",
+                right_on="organization_id",
+                how="left",
+                validate="one_to_many",
+            )
+            .drop("organization_id", axis=1)
+        )
+        if return_lists:
+            return (
+                company_industries.groupby(["id"])
+                .agg(industry=("industry", lambda x: x.tolist()))
+                .merge(
+                    cb_organisations[["id", "name"]],
+                    on="id",
+                    how="left",
+                    validate="one_to_one",
+                )
+            )[["id", "name", "industry"]]
+        else:
+            return company_industries
+
+    def select_companies_by_industries(
+        self, cb_organisations: pd.DataFrame, filtering_industries: Iterator[str]
+    ) -> pd.DataFrame:
+        """
+        From an initial set of companies, select a subset that belogs to any of the specified filtering_industries
+
+
+        Args:
+            cb_organisations: Data frame that must have a columns with crunchbase
+                organisation ids and name
+            filtering_industries: A list of industry names
+
+        Returns:
+            Dataframe with organisation data and their industries
+
+        """
+        # Get industries for each company
+        company_industries = self.get_company_industries(
+            cb_organisations, return_lists=True
+        )
+        # Check if the industry lists contain the specified filtering industries
+        is_in_filtering_industries = company_industries["industry"].apply(
+            lambda x: is_string_in_list(filtering_industries, x)
+        )
+        # Get ids of the companies to keep
+        filtered_ids = company_industries[is_in_filtering_industries].id.to_list()
+        return (
+            cb_organisations[cb_organisations.id.isin(filtered_ids)]
+            # Add industries list
+            .merge(
+                company_industries, on=["id", "name"], how="left", validate="one_to_one"
+            )
+        )
+
 
 def get_years(dates: Iterator[datetime.date]) -> Iterator:
     """Converts a list of datetimes to years"""
     return [x.year for x in dates]
+
+
+def split_comma_seperated_string(text: str) -> Iterator[str]:
+    """Splits a string where commas are; for example: 'a, b' -> ['a', 'b']"""
+    return [s.strip() for s in text.split(",")] if type(text) is str else []
+
+
+def is_string_in_list(list_of_strings: Iterator[str], list_to_check: Iterator[str]):
+    """Checks if any of the provided strings in list_of_strings are in the specified list_to_check"""
+    return True in [s in list_to_check for s in list_of_strings]
