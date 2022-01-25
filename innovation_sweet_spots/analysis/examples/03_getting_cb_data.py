@@ -115,14 +115,6 @@ filtered_companies[["name", "country"]]
 # ## Find persons working in specific companies
 
 # %%
-import importlib
-from innovation_sweet_spots.getters import crunchbase as cb
-import innovation_sweet_spots.analysis.wrangling_utils as wu
-
-importlib.reload(wu)
-CB = wu.CrunchbaseWrangler()
-
-# %%
 # Get a sample of Crunchbase organisations
 cb_orgs = cb.get_crunchbase_orgs(100)
 
