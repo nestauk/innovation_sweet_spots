@@ -117,9 +117,7 @@ agg_terms = cu.analyse_rank_pmi_over_time(agg_pmi)
 
 # %%
 # Save to disc.
-with open (DISC_OUTPUTS_DIR / 'pmi_inters_rank_hp.json', "wb") as outfile:
+with open (DISC_OUTPUTS_DIR / 'pmi_inters_rank_hp.pkl', "wb") as outfile:
     pickle.dump(pmi_inters_ranks, outfile)
 agg_pmi.to_csv(DISC_OUTPUTS_DIR / 'agg_terms_long_hp.csv', index = False)
 agg_terms.to_csv(DISC_OUTPUTS_DIR / 'agg_terms_stats_hp.csv', index = False)
-
-# %%
