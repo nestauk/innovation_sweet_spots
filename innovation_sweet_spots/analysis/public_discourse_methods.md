@@ -19,7 +19,7 @@ about the key findings and recommendations in the [**Innovation Sweet Spots**](h
 In the following sections we describe how the articles were collected and preprocessed.
 We then show how we applied NLP techniques to analyse the sentences and phrases that
 mention the terms that we are interested in. Figure 1 shows the key stages of the analysis.
-![key_stages](https://github.com/nestauk/innovation_sweet_spots/blob/82_public_discourse_docs/outputs/figures/pd_key_stages.png)
+![key_stages](pd_key_stages.png)
 
 
 ## Data collection
@@ -27,7 +27,7 @@ A dataset of over 2 million Guardian articles is publicly accessible via the Gua
 API. We extracted a subset of relevant articles using a set of pre-defined search terms and
 the API's in-built search functionality (Figure 2).
 
-![data_collection_steps](https://github.com/nestauk/innovation_sweet_spots/blob/82_public_discourse_docs/outputs/figures/pd_data_collection.png)
+![data_collection_steps](pd_data_collection.png)
 
 In addition to article text we also extracted information related to
 the article title, publication date, web url, contributors and keywords. Retaining
@@ -64,7 +64,7 @@ are defined in `pd_data_collection_utils.py` with corresponding tests in `test_d
 ## Data preprocessing
 To prepare the article text for subsequent analysis, we performed several operations (see Figure 3).
 
-![data_preprocessing_steps](https://github.com/nestauk/innovation_sweet_spots/blob/82_public_discourse_docs/outputs/figures/pd_data_preprocessing.png)
+![data_preprocessing_steps](pd_data_preprocessing.png)
 
 `Example_data_preprocessing.py` notebook illustrates the steps described above.
 The notebook generates several outputs that we describe below. The utility functions used in the notebook
@@ -197,7 +197,7 @@ arguments in favour or against a particular tech. Examples include `innovation i
 
 The process is outlined in Figure 5.
 
-![part_of_speech_analysis](https://github.com/nestauk/innovation_sweet_spots/blob/82_public_discourse_docs/outputs/figures/pd_pos_analysis.png)
+![part_of_speech_analysis](pd_pos_analysis.png)
 
 We defined and matched the phrases of interest using spacy `Matcher` method. Given that
 both Guardian and Hansard datasets span multiple years, we first matched phrases in
