@@ -164,7 +164,7 @@ emergence of novel contexts in which technology is used.
 
 The process we used to analyse collocations for `heat pumps` and `hydrogen` is shown in Figure 4.
 
-![analysis_of_collocations](innovation_sweet_spots/outputs/figures/pd_collocations.png)
+![analysis_of_collocations](pd_collocations.png)
 
 The relevant code is in `Example_collocations.py` and corresponding utilities in `pd_collocation_utils.py`.
 At the moment, indicators for collocations and calculations of variation over time are outputted
