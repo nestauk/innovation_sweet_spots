@@ -27,7 +27,7 @@ A dataset of over 2 million Guardian articles is publicly accessible via the Gua
 API. We extracted a subset of relevant articles using a set of pre-defined search terms and
 the API's in-built search functionality (Figure 2).
 
-![data_collection_steps](outputs/figures/pd_data_collection.png)
+![data_collection_steps](/outputs/figures/pd_data_collection.png)
 
 In addition to article text we also extracted information related to
 the article title, publication date, web url, contributors and keywords. Retaining
