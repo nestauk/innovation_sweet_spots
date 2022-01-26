@@ -24,6 +24,9 @@ class GtrWrangler:
         self._gtr_organisations = None
         self._gtr_organisations_locations = None
         self._link_gtr_organisations = None
+        # People
+        self._gtr_persons = None
+        self._link_gtr_persons = None
 
     def get_project_funds(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """
@@ -176,6 +179,31 @@ class GtrWrangler:
             self.get_organisation_locations,
         )
 
+    def get_persons(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
+        """
+        Adds participating persons to the projects.
+
+        Args:
+            gtr_projects: Data frame that must have a column "project_id"
+
+        Returns:
+            Same input data frame with the following extra columns:
+                - id: Person id
+                - person_relation: Indicates different types of participation
+                - firstName
+                - otherNames
+                - surname
+
+        """
+        return (
+            # Add person ids to the projects table
+            gtr_projects.merge(self.link_gtr_persons, on="project_id", how="left")
+            # Add person data
+            .merge(self.gtr_persons, on="id", how="left")
+            .drop(["table_name"], axis=1)
+            .rename(columns={"rel": "person_relation"})
+        )
+
     @property
     def gtr_funds(self):
         """GtR funding table"""
@@ -217,6 +245,20 @@ class GtrWrangler:
         if self._link_gtr_organisations is None:
             self._link_gtr_organisations = gtr.get_link_table("gtr_organisations")
         return self._link_gtr_organisations
+
+    @property
+    def gtr_persons(self):
+        """Links between project ids and organisation ids"""
+        if self._gtr_persons is None:
+            self._gtr_persons = gtr.get_gtr_persons()
+        return self._gtr_persons
+
+    @property
+    def link_gtr_persons(self):
+        """Links between project ids and organisation ids"""
+        if self._link_gtr_persons is None:
+            self._link_gtr_persons = gtr.get_link_table("gtr_persons")
+        return self._link_gtr_persons
 
 
 class CrunchbaseWrangler:

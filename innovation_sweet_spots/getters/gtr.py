@@ -39,8 +39,13 @@ def get_gtr_organisations() -> pd.DataFrame:
 
 
 def get_gtr_organisations_locations() -> pd.DataFrame:
-    """GtR research organisations"""
+    """GtR research organisation locations"""
     return pd.read_csv(GTR_PATH / "gtr_organisations_locations.csv")
+
+
+def get_gtr_persons() -> pd.DataFrame:
+    """GtR research participants"""
+    return pd.read_csv(GTR_PATH / "gtr_persons.csv")
 
 
 def get_link_table(table: str = None) -> pd.DataFrame:

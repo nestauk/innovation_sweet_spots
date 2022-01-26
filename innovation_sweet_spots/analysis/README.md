@@ -28,8 +28,11 @@ GtR.get_funding_data(gtr_projects)
 Add data on organisations that participate in the projects and the organisation locations
 
 ```python
-
 GtR.get_organisations_and_locations(gtr_projects)
 ```
 
-Add people data and something else...
+Adding information about the people participating in the projects
+
+```python
+GtR.get_persons(gtr_projects)
+```
