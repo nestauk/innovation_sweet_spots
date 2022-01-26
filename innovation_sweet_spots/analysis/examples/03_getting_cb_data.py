@@ -26,7 +26,7 @@
 # Prerequisite: Fetching CB data by running `make fetch-daps1` from the main repo directory
 
 # %%
-from innovation_sweet_spots.getters import crunchbase
+from innovation_sweet_spots.getters import crunchbase as cb
 import altair as alt
 import itertools
 
@@ -111,4 +111,28 @@ filtered_companies = CB.select_companies_by_industries(companies, filtering_indu
 # %%
 filtered_companies[["name", "country"]]
 
+# %% [markdown]
+# ## Find persons working in specific companies
+
 # %%
+# Get a sample of Crunchbase organisations
+cb_orgs = cb.get_crunchbase_orgs(100)
+
+# Find people associate with these organisations
+cb_org_persons = CB.get_company_persons(cb_orgs)
+
+# %%
+cb_org_persons[["name", "person_name", "linkedin_url"]]
+
+# %% [markdown]
+# ### Fetching person university degrees
+
+# %%
+CB.get_person_degrees(cb_org_persons).head(3)
+
+# %% [markdown]
+# ### Fetching company education data
+
+# %%
+df = CB.get_company_education_data(cb_orgs)
+df
