@@ -21,7 +21,7 @@ gtr_projects = gtr.get_gtr_projects().head(3)
 GtR = GtrWrangler()
 ```
 
-#### Funding
+#### Funding
 Apply `get_funding_data()` on a list of projects, to get the awarded funding amounts and the start and end dates of the funding (the first run might take longer as it needs to load in funding data).
 
 ```python
@@ -42,7 +42,7 @@ To view all existing research topic labels, you can check `GtR.gtr_topics`. You 
 GtR.get_projects_in_research_topics(research_topics=['International Business', 'Classical Literature'])
 ```
 
-#### Organisations
+#### Organisations
 Use `get_organisations_and_locations()` to get organisations that participate in the projects and the organisations' locations.
 
 ```python
@@ -65,6 +65,8 @@ GtR.get_persons(gtr_projects)
 
 Note that that people can have different types of roles in a project - this is specified by the `person_relation` variable, and the explanations of the different possible roles is provided in the [GtR API documentation](https://gtr.ukri.org/resources/GtR-2-API-v1.7.5.pdf) (see page 9).
 
+***
+
 ### Company data
 
 ```python
@@ -75,8 +77,7 @@ from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 CB = CrunchbaseWrangler()
 ```
 
-#### Industries
-
+#### Industries
 Crunchbase organises their companies by industries and industry groups. To see all industries you can run
 
 ```python
@@ -97,7 +98,7 @@ CB.get_company_industries(cb_orgs)
 
 See the notebooks in the `examples` folder for more examples of selecting companies by industries or industry groups.
 
-#### Investments
+#### Investments
 
 To find companies' funding rounds (ie, investment deals) use `get_funding_rounds()`:
 
@@ -111,7 +112,7 @@ To list the investors who have invested in a specific set of companies, use `get
 CB.get_organisation_investors(cb_orgs)
 ```
 
-#### People
+#### People
 
 Use `get_company_persons()` to find people associated with specific companies:
 
