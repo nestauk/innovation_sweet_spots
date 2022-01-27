@@ -1,12 +1,14 @@
 # Analysis modules
 
-See examples below on using the analysis modules (going forward, this should be transformed into a proper documentation)
+See quick examples below on using the analysis modules (going forward, this should be transformed into a more proper documentation).
+
+To try out these functionalities more interactively, check the jupyter notebooks in `examples` folder (Note: you will need to convert them from .py to .ipynb files using [jupytext](https://github.com/mwouts/jupytext)).
 
 ## Data wrangling
 
-Module `wrangling_utils` helps fetching and linking data related to research projects and businesses.
+Module `wrangling_utils` helps fetching data related to research projects and businesses.
 
-### Research projects
+### Research project data
 
 ```python
 from innovation_sweet_spots.getters import gtr
@@ -19,20 +21,102 @@ gtr_projects = gtr.get_gtr_projects().head(3)
 GtR = GtrWrangler()
 ```
 
-Adding data on funding amounts and the start and end dates of funding (the first run might take longer as it needs to load in funding data)
+#### Funding
+Apply `get_funding_data()` on a list of projects, to get the awarded funding amounts and the start and end dates of the funding (the first run might take longer as it needs to load in funding data).
 
 ```python
 GtR.get_funding_data(gtr_projects)
 ```
 
-Add data on organisations that participate in the projects and the organisation locations
+#### Research topics
+
+Use `get_research_topics()` to find the research topics assigned to the projects in the GtR database. Note, however, that many projects (approximately half) are `Unclassified`.
+
+```python
+GtR.get_research_topics(gtr_projects)
+```
+
+To view all existing research topic labels, you can check `GtR.gtr_topics`. You can also retrieve projects belonging to specific GtR research topics by running `get_projects_in_research_topics()`. For example:
+
+```python
+GtR.get_projects_in_research_topics(research_topics=['International Business', 'Classical Literature'])
+```
+
+#### Organisations
+Use `get_organisations_and_locations()` to get organisations that participate in the projects and the organisations' locations.
 
 ```python
 GtR.get_organisations_and_locations(gtr_projects)
 ```
 
-Adding information about the people participating in the projects
+Note that that organisations can have different types of roles in a project - this is specified by the `organisation_relation` variable, and the explanations of the different possible roles is provided in the [GtR API documentation](https://gtr.ukri.org/resources/GtR-2-API-v1.7.5.pdf) (see page 9).
+
+Location data is available at the level of continent, country, address as well as latitude and longitude.
+
+Presently, it is not possible to automatically distinguish different types of organisations (eg, public sector, private sector, non-profits etc.) but we are planning to look into this. Also, we are planning to match the organisations in GtR dataset with organisation data in Crunchbase.
+
+#### People
+
+Use `get_persons()` to get information about the people participating in the projects.
 
 ```python
 GtR.get_persons(gtr_projects)
 ```
+
+Note that that people can have different types of roles in a project - this is specified by the `person_relation` variable, and the explanations of the different possible roles is provided in the [GtR API documentation](https://gtr.ukri.org/resources/GtR-2-API-v1.7.5.pdf) (see page 9).
+
+### Company data
+
+```python
+from innovation_sweet_spots.getters import crunchbase as cb
+from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
+
+# Initiate a data wrangler instance
+CB = CrunchbaseWrangler()
+```
+
+#### Industries
+
+Crunchbase organises their companies by industries and industry groups. To see all industries you can run
+
+```python
+CB.industries
+```
+
+To find companies in specific Crunchbase industries, use `get_companies_in_industries()`. Note: this might take a minute when running for the first time. For example:
+
+```python
+cb_orgs = CB.get_companies_in_industries(industries_names=["parenting"])
+```
+
+A company can be in several industries (eg, "parenting" and "social media"). To check all industries these companies are in, you can run `get_company_industries()`.
+
+```python
+CB.get_company_industries(cb_orgs)
+```
+
+See the notebooks in the `examples` folder for more examples of selecting companies by industries or industry groups.
+
+#### Investments
+
+To find companies' funding rounds (ie, investment deals) use `get_funding_rounds()`:
+
+```python
+CB.get_funding_rounds(cb_orgs)
+```
+
+To list the investors who have invested in a specific set of companies, use `get_organisation_investors()`
+
+```python
+CB.get_organisation_investors(cb_orgs)
+```
+
+#### People
+
+Use `get_company_persons()` to find people associated with specific companies:
+
+```python
+cb_org_persons = CB.get_company_persons(cb_orgs)
+```
+
+See also notebooks in `examples` for further examples how to get the university education data on Crunchbase.
