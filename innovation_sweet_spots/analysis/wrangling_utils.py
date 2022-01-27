@@ -16,6 +16,7 @@ class GtrWrangler:
     """
 
     def __init__(self):
+        self._gtr_projects = None
         # Funding
         self._link_gtr_funds = None
         self._link_gtr_funds_api = None
@@ -210,7 +211,7 @@ class GtrWrangler:
 
     def get_research_topics(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """
-         Add research topics to projects. Note that about half of the projects are 'Unclassified'
+         Add GtR research topics to projects. Note that about half of the projects are 'Unclassified'
 
          Args:
              gtr_projects: Data frame that must have a column "project_id"
@@ -225,8 +226,30 @@ class GtrWrangler:
             gtr_projects.merge(self.link_gtr_topics, on="project_id", how="left")
             .merge(self.gtr_topics, on="id", how="left")
             .drop(["rel", "table_name", "id"], axis=1)
-            .rename(columns={"text": "topic"})
         )
+
+    def get_projects_in_research_topics(
+        self, research_topics: Iterator[str]
+    ) -> pd.DataFrame:
+        """
+        Get projects with the specified GtR research topics
+
+        Args:
+            research_topics: A list of research topics; see all topics in GtrWrangler().gtr_topics
+
+        Returns:
+            A dataframe with project data
+        """
+        return self.get_research_topics(self.gtr_projects).query(
+            "topic in @research_topics"
+        )
+
+    @property
+    def gtr_projects(self):
+        """GtR projects table"""
+        if self._gtr_projects is None:
+            self._gtr_projects = gtr.get_gtr_projects()
+        return self._gtr_projects
 
     @property
     def gtr_funds(self):
@@ -287,15 +310,15 @@ class GtrWrangler:
     @property
     def link_gtr_topics(self):
         """Links between project ids and research topic ids"""
-        if self._link_gtr_funds is None:
-            self._link_gtr_funds = gtr.get_link_table("gtr_topic")
-        return self._link_gtr_funds
+        if self._link_gtr_topics is None:
+            self._link_gtr_topics = gtr.get_link_table("gtr_topic")
+        return self._link_gtr_topics
 
     @property
     def gtr_topics(self):
         """GtR research topics"""
         if self._gtr_topics is None:
-            self._gtr_topics = gtr.get_gtr_topics()
+            self._gtr_topics = gtr.get_gtr_topics().rename(columns={"text": "topic"})
         return self._gtr_topics
 
 
@@ -332,9 +355,7 @@ class CrunchbaseWrangler:
     def cb_funding_rounds(self):
         """Table with investment rounds (all the deals for all companies)"""
         if self._cb_funding_rounds is None:
-            self._cb_funding_rounds = cb.get_crunchbase_funding_rounds().drop(
-                "index", axis=1
-            )
+            self._cb_funding_rounds = cb.get_crunchbase_funding_rounds()
         return self._cb_funding_rounds
 
     @property
