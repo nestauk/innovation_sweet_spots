@@ -206,6 +206,7 @@ class GtrWrangler:
             .merge(self.gtr_persons, on="id", how="left")
             .drop(["table_name"], axis=1)
             .rename(columns={"rel": "person_relation"})
+        )
 
     def get_research_topics(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """
