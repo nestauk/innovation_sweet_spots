@@ -112,9 +112,13 @@ class GtrWrangler:
             .drop_duplicates("project_id", keep="last")[["project_id", "fund_end"]]
         )
         # Add project start and end dates to the input data frame
-        return gtr_projects.merge(
-            earliest_start_data, on="project_id", how="left", validate="many_to_one"
-        ).merge(latest_end_data, on="project_id", how="left", validate="many_to_one")
+        return (
+            gtr_projects.merge(
+                earliest_start_data, on="project_id", how="left", validate="many_to_one"
+            )
+            .merge(latest_end_data, on="project_id", how="left", validate="many_to_one")
+            .astype({"fund_start": "datetime64[ns]", "fund_end": "datetime64[ns]"})
+        )
 
     def get_funding_data(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """Adds reliable funding amount data, and funding start and end dates to the projects."""
