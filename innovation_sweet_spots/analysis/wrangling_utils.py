@@ -75,8 +75,12 @@ class GtrWrangler:
     def get_project_funds_api(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """Adds funding data to the projects (data that has been retrieved directly via API)"""
         return gtr_projects.merge(
-            self.link_gtr_funds_api, on="project_id", how="left", validate="many_to_one"
-        )
+            self.link_gtr_funds_api,
+            on="project_id",
+            how="left",
+            validate="many_to_one",
+            suffixes=("", "_drop"),
+        ).filter(regex="^(?!.*_drop)")
 
     def get_start_end_dates(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """
