@@ -364,3 +364,25 @@ def estimate_magnitude_growth(
         .rename(columns={"index": "trend"})
     )
     return combined_df
+
+
+def filter_years(
+    df: pd.DataFrame, date_col: str, keep_year_col: bool, min_year: int, max_year: int
+) -> pd.DataFrame:
+    """
+    Filter dataframe to contain rows within a range of years
+
+    Args:
+        df: Dataframe to filter
+        date_col: Column containing dates to filter on
+        keep_year_col: Keep year column that is generated
+        min_year: Lower bound for years to keep
+        max_year: Upper bound for years to keep
+
+    Returns:
+        Dataframe containing only rows within min_year and max_year bounds
+    """
+    filtered_df = df.assign(year=lambda x: pd.to_datetime(x[date_col]).dt.year).query(
+        f"{min_year}<=year<={max_year}"
+    )
+    return filtered_df if keep_year_col else filtered_df.drop(columns=["year"])
