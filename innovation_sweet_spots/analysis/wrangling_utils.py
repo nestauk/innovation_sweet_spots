@@ -124,6 +124,56 @@ class GtrWrangler:
         """Adds reliable funding amount data, and funding start and end dates to the projects."""
         return pipe(gtr_projects, self.get_project_funds_api, self.get_start_end_dates)
 
+    def split_funding_data(
+        self, gtr_projects: pd.DataFrame, time_period: str
+    ) -> pd.DataFrame:
+        """
+        Splits GtR funding evenly over the duration of the projects
+
+        Args:
+            gtr_projects: Dataframe that must have columns for 'fund_start'
+                and 'fund_end'
+            time_period: Time period to split the funding data across,
+                must be one of 'year', 'month', 'quarter'
+
+        Returns:
+            Same input dataframe but with additional rows for
+            the time periods that the funding has been split across
+        """
+        # Check time period is valid
+        valid_time_periods = ["year", "month", "quarter"]
+        if time_period not in valid_time_periods:
+            raise ValueError(
+                f"gtr_funding_evenly_split: time_period must be one of {valid_time_periods}."
+            )
+
+        # Add split info
+        frequency = time_period[0].capitalize()
+        gtr_projects["date_range"] = gtr_projects.apply(
+            lambda x: pd.period_range(
+                start=x.fund_start, end=x.fund_end, freq=frequency
+            ).to_timestamp(),
+            axis=1,
+        )
+        gtr_projects["amount_per_period"] = gtr_projects.amount / gtr_projects.apply(
+            lambda x: len(x.date_range), axis=1
+        )
+
+        # Create funding data split
+        funding_data_split = []
+        exclude_cols = ["amount_per_period", "date_range", "fund_start", "fund_end"]
+        for _, row in gtr_projects.iterrows():
+            fd_split = {
+                col: row[col]
+                for col in [
+                    col for col in gtr_projects.columns if col not in exclude_cols
+                ]
+            }
+            fd_split["amount"] = row["amount_per_period"]
+            fd_split["start"] = row["date_range"]
+            funding_data_split.append(pd.DataFrame(data=fd_split))
+        return pd.concat(funding_data_split).reset_index(drop=True)
+
     def get_project_organisations(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """
         Adds participating organisations to the projects.
