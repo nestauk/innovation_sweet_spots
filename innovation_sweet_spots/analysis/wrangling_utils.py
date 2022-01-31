@@ -64,7 +64,9 @@ class GtrWrangler:
             gtr_projects.merge(self.link_gtr_funds, on="project_id", how="left")
             # Add funding amounts and dates to the table
             .merge(self.gtr_funds, on="id", how="left")
-            .query("category=='INCOME_ACTUAL'")
+            .query(
+                "category==['INCOME_ACTUAL', 'EXPENDITURE_ACTUAL', 'EXPENDITURE_PROJECTED']"
+            )
             .drop(["rel", "table_name"], axis=1)
             .rename(
                 columns={"start_x": "start", "start_y": "fund_start", "end": "fund_end"}
