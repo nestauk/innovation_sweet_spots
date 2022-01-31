@@ -4,6 +4,7 @@ Utils for doing data analysis
 """
 import pandas as pd
 import numpy as np
+from typing import Tuple
 
 
 def impute_empty_years(
@@ -29,7 +30,9 @@ def impute_empty_years(
     )
 
 
-def set_def_min_max_years(df: pd.DataFrame, min_year: int, max_year: int) -> (int, int):
+def set_def_min_max_years(
+    df: pd.DataFrame, min_year: int, max_year: int
+) -> Tuple[int, int]:
     """Set the default values for min and max years"""
     if min_year is None:
         min_year = df.year.min()
