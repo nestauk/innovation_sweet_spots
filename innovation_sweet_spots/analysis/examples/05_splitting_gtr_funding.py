@@ -21,6 +21,12 @@
 from innovation_sweet_spots.getters import gtr
 from innovation_sweet_spots.analysis.wrangling_utils import GtrWrangler
 import innovation_sweet_spots.analysis.analysis_utils as au
+from innovation_sweet_spots.utils.io import import_config
+import pandas as pd
+from innovation_sweet_spots import PROJECT_DIR
+
+# %% [markdown]
+# ### See how to split data across the duration of the project
 
 # %%
 # Initiate an instance of GtrWrangler
@@ -53,3 +59,26 @@ funding_data_split = gtr_wrangler.split_funding_data(
     funding_data_sample, time_period="month"
 )
 funding_data_split
+
+# %% [markdown]
+# ### Check no data is lost when being split
+# You will have needed to have run `innovation_sweet_spots/pipeline/pilot/timeseries_gtr.py` with `SPLIT = True` and `SPLIT = False` for these next checks to work.
+
+# %%
+PARAMS = import_config("iss_pilot.yaml")
+categories = PARAMS["technology_categories"]
+TIME_SERIES = PROJECT_DIR / "outputs/finals/pilot_outputs/time_series/"
+
+# %%
+# Print sums for each category for not split and split time series
+for category in categories:
+    print(category)
+    print(
+        pd.read_csv(TIME_SERIES / f"Time_series_GtR_{category}.csv").amount_total.sum()
+    )
+    print(
+        pd.read_csv(
+            TIME_SERIES / f"Time_series_GtR_split_{category}.csv"
+        ).amount_total.sum()
+    )
+    print("*" * 10)
