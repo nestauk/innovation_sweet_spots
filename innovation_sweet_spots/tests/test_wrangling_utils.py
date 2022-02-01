@@ -1,6 +1,7 @@
 from innovation_sweet_spots.analysis.wrangling_utils import *
 import pandas as pd
 from datetime import date
+import pytest
 
 ## Testing GtrWrangler ##
 
@@ -60,6 +61,51 @@ MOCK_GTR_FUNDS_API = pd.DataFrame(
         "currencyCode": ["GBP", "GBP"],
     }
 )
+
+
+def create_mock_expected_split_data(
+    frequency: str,
+    amount_1: float,
+    amount_2: float,
+    start_1: str = "2020/1/1",
+    start_2: str = "2021/1/1",
+    end_1: str = "2023/7/1",
+    end_2: str = "2024/7/1",
+) -> pd.DataFrame:
+    """Generate mock dataframe of expected split data
+
+    Args:
+        frequency: Time periods frequency ('Y', 'Q' or 'M')
+        amount_1: Split amount for the first project
+        amount_2: Split amount for the second project
+        start_1: Start date for the first project. Defaults to "2020/1/1".
+        start_2: Start date for the second project. Defaults to "2021/1/1".
+        end_1: End date for the first project. Defaults to "2023/7/1".
+        end_2: End date for the second project. Defaults to "2024/7/1".
+
+    Returns:
+        Mock dataframe of expected split data
+    """
+    exp_periods_1 = pd.period_range(
+        start=start_1, end=end_1, freq=frequency
+    ).to_timestamp()
+    exp_periods_2 = pd.period_range(
+        start=start_2, end=end_2, freq=frequency
+    ).to_timestamp()
+    exp_periods_combined = exp_periods_1.append(exp_periods_2)
+    exp_n_periods_1 = len(exp_periods_1)
+    exp_n_periods_2 = len(exp_periods_2)
+    return pd.DataFrame(
+        {
+            "project_id": [MOCK_PROJECT_IDS[0]] * exp_n_periods_1
+            + [MOCK_PROJECT_IDS[1]] * exp_n_periods_2,
+            "abstractText": [MOCK_PROJECT_ABSTRACTS[0]] * exp_n_periods_1
+            + [MOCK_PROJECT_ABSTRACTS[1]] * exp_n_periods_2,
+            "start": exp_periods_combined,
+            "amount": [amount_1] * exp_n_periods_1 + [amount_2] * exp_n_periods_2,
+            "currencyCode": ["GBP"] * len(exp_periods_combined),
+        }
+    ).astype({"amount": float})
 
 
 def prepare_GtrWrangler():
@@ -158,6 +204,34 @@ def test_convert_deal_currency_to_gbp():
     output_df = CrunchbaseWrangler.convert_deal_currency_to_gbp(mock_input_df)
     output_df["raised_amount_gbp"] = output_df["raised_amount_gbp"].round(1)
     assert output_df.equals(expected_df)
+
+
+def test_split_funding_data_output():
+    wrangler = prepare_GtrWrangler()
+    gtr_projects = wrangler.get_funding_data(MOCK_GTR_PROJECTS)
+    expected_split_by_year = create_mock_expected_split_data("Y", 250, 500)
+    expected_split_by_month = create_mock_expected_split_data(
+        "M", 23.2558139534883, 46.5116279069767
+    )
+    expected_split_by_quarter = create_mock_expected_split_data(
+        "Q", 66.6666666666666, 133.333333333333
+    )
+    pd.testing.assert_frame_equal(
+        wrangler.split_funding_data(gtr_projects, "year"), expected_split_by_year
+    )
+    pd.testing.assert_frame_equal(
+        wrangler.split_funding_data(gtr_projects, "month"), expected_split_by_month
+    )
+    pd.testing.assert_frame_equal(
+        wrangler.split_funding_data(gtr_projects, "quarter"), expected_split_by_quarter
+    )
+
+
+def test_split_funding_data_invalid_time_period():
+    wrangler = prepare_GtrWrangler()
+    gtr_projects = wrangler.get_funding_data(MOCK_GTR_PROJECTS)
+    with pytest.raises(ValueError):
+        wrangler.split_funding_data(gtr_projects=gtr_projects, time_period="day")
 
 
 ### Testing other functions
