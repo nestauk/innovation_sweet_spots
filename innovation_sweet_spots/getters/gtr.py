@@ -6,7 +6,7 @@ Module for easy access to downloaded GtR data
 """
 import pandas as pd
 from innovation_sweet_spots import logging
-from innovation_sweet_spots.getters.path_utils import GTR_PATH
+from innovation_sweet_spots.getters.path_utils import GTR_PATH, PILOT_OUTPUTS
 from typing import Iterable
 
 # Path to the tables linking projects to other data
@@ -101,3 +101,10 @@ def pullout_gtr_links(tables: Iterable[str]):
         logging.info(
             f"Links between GTR projects and items in {table} saved in {fpath}"
         )
+
+
+def get_pilot_GtR_projects() -> pd.DataFrame:
+    """
+    Pilot GtR projects
+    """
+    return pd.read_csv(PILOT_OUTPUTS / "ISS_pilot_GtR_projects.csv")
