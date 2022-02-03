@@ -1,5 +1,13 @@
 """
+innovation_sweet_spots.analysis.query_terms
+
+Module for searching texts using search terms (keywords and key phrases)
 """
+from innovation_sweet_spots import logging
+import numpy as np
+import pandas as pd
+from typing import Iterator
+from numpy.typing import ArrayLike
 
 
 def token_list_to_string(token_list: Iterator[str]) -> str:
@@ -98,3 +106,12 @@ def find_documents_with_set_of_terms(
     # Save the summary output list
     terms_matches["has_any_terms"] = bool_list
     return terms_matches
+
+
+# class QueryTerms:
+#     """
+#     This class helps to fetch
+#     """
+
+#     def __init__(self):
+#         pass
