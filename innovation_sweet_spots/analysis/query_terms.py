@@ -6,15 +6,32 @@ Module for searching texts using search terms (keywords and key phrases)
 from innovation_sweet_spots import logging
 import numpy as np
 import pandas as pd
-from typing import Iterator
+from typing import Iterator, Dict, Union
 from numpy.typing import ArrayLike
 
 
-def token_list_to_string(token_list: Iterator[str]) -> str:
-    """Converts a list of tokens to a string"""
-    s_list = [s for s_list in [tok.split("_") for tok in token_list] for s in s_list]
-    # Return a string padded with spaces
-    return f" {' '.join(s_list)} "
+def token_list_to_string(
+    token_list: Iterator[str], within_token_separator: str = "_", padding: str = " "
+) -> str:
+    """
+    Converts a list of tokens to a string. For example: ['best', 'heat_pump'] -> ' best heat pump '
+
+    Args:
+        token_list: List of tokens
+        within_token_separator: Symbol used to indicate spaces within tokens that are phrases
+            (eg, in 'heat_pump'); only relevant if the tokens are bigrams, trigrams etc.
+
+    Returns:
+        String of words, where tokens have been separated by spaces and within token separators are
+        also converted to spaces. The string is also padded with spaces to facilitate simple search term querying.
+    """
+    s_list = [
+        s
+        for s_list in [tok.split(within_token_separator) for tok in token_list]
+        for s in s_list
+    ]
+    # Return a padded string
+    return f"{padding}{' '.join(s_list)}{padding}"
 
 
 def is_search_term_present(
@@ -73,7 +90,7 @@ def find_documents_with_terms(
 
 def find_documents_with_set_of_terms(
     set_of_terms: Iterator[Iterator[str]],
-    corpus: Iterator[str],
+    text_corpus: Iterator[str],
     verbose: bool = False,
 ) -> ArrayLike:
     """
@@ -85,19 +102,19 @@ def find_documents_with_set_of_terms(
 
     Args:
         terms: A list of a list of string terms
-        corpus: A list of string documents
+        text_corpus: A list of string documents
 
     Returns:
         A dictionary with terms as keys, and array of booleans as values where True elements
-            indicate presence of the provided terms in the corresponding corpus' documents.
+            indicate presence of the provided terms in the corresponding text_corpus's documents.
             The key "any_terms" indicates documents with any of the provided terms.
     """
     # Initiate a list with all elements equal to False
-    bool_list = np.array([False] * len(corpus), dtype=bool)
+    bool_list = np.array([False] * len(text_corpus), dtype=bool)
     terms_matches = dict()
     for terms in set_of_terms:
         # Check if terms are in the documents, and store output list in the dictionary
-        matches = find_documents_with_terms(terms, corpus)
+        matches = find_documents_with_terms(terms, text_corpus)
         if verbose:
             logging.info(f"Found {matches.sum()} documents with search terms {terms}")
         # Contribute to the summary output list
@@ -108,10 +125,56 @@ def find_documents_with_set_of_terms(
     return terms_matches
 
 
-# class QueryTerms:
-#     """
-#     This class helps to fetch
-#     """
+class QueryTerms:
+    """
+    This class helps to find documents in a corpus of text 'documents'
+    that contain search terms. Note that the documents should be preprocessed.
+    """
 
-#     def __init__(self):
-#         pass
+    def __init__(
+        self, corpus: Dict[str, Union[Iterator[str], str]], verbose: bool = True
+    ):
+        """
+        Args:
+            corpus: Should be a dictionary following the format {document_id: document}
+                The document data type might be a string or a list of tokens
+        """
+        # Check the document type (assuming that all documents have the same type):
+        if type(next(iter(corpus.values()))) is list:
+            # If the document type is list, convert the list of tokens into a single string
+            self.text_corpus = [token_list_to_string(s) for s in corpus.values()]
+        else:
+            self.text_corpus = list(corpus.values())
+        self.document_ids = list(corpus.keys())
+        self.verbose = verbose
+
+    def find_matches(
+        self, search_queries: Iterator[Iterator[str]], return_only_matches: bool = False
+    ) -> pd.DataFrame:
+        """
+        Finds documents containing the provided set of search queries. Each search
+        query must be specified as a list of strings, where all strings need to be
+        present in the document.
+
+        For example, if search_queries = [['heat', 'hydrogen'], ['heat pump']], then
+        the method will return True for all documents in the corpus that have either
+        both the strings 'heat' AND 'hydrogen', OR that have the string 'heat pump'
+
+        Args:
+            search_terms: A list of a search queries, where a query is a list of strings
+            return_only_matches: If True, will only return the documents that are matches
+
+        Returns:
+            A dataframe with the following columns:
+                - a column for document identifiers
+                - a boolean column for each of the search queries, where True indicates a match
+                - a column 'has_any_terms' which indicates if any search queries where matched
+        """
+        matches = find_documents_with_set_of_terms(
+            search_queries, self.text_corpus, verbose=self.verbose
+        )
+        matches["id"] = list(self.document_ids)
+        if return_only_matches is True:
+            return pd.DataFrame(matches).query("has_any_terms==True")
+        else:
+            return pd.DataFrame(matches)

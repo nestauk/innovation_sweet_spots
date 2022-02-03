@@ -15,42 +15,26 @@
 #     name: python3
 # ---
 
-# %%
-from innovation_sweet_spots import PROJECT_DIR
-from innovation_sweet_spots.utils.io import load_pickle
-from innovation_sweet_spots.analysis.query_terms import (
-    find_documents_with_set_of_terms,
-    token_list_to_string,
-)
-import pandas as pd
-
-# %%
-DIR = PROJECT_DIR / "outputs/finals/pilot_outputs/tokenised_data/"
-CORPUS_FILEPATH = DIR / "gtr_docs_tokenised_full.p"
-SEARCH_TERMS = [["heat pump"], ["hydrogen", "heat"]]
-
-# %%
-# Load the tokenised corpus file (a dict id: tokenised text)
-tokenised_corpus = load_pickle(CORPUS_FILEPATH)
-
-# %%
-# Prepare text corpus (takes about 15 sec for all projects)
-text_corpus = [token_list_to_string(s) for s in tokenised_corpus.values()]
-
-# %%
-# Find matches and prepare output
-matches = find_documents_with_set_of_terms(SEARCH_TERMS, text_corpus, verbose=True)
-matches["id"] = list(tokenised_corpus.keys())
-df = pd.DataFrame(matches)
+# %% [markdown]
+# # Selecting GtR projects by keywords and key phrases
 
 # %%
 import innovation_sweet_spots.analysis.wrangling_utils as wu
-import importlib
+from innovation_sweet_spots.getters.preprocessed import get_tokenised_gtr_corpus
+from innovation_sweet_spots.analysis.query_terms import QueryTerms
+import pandas as pd
 
-importlib.reload(wu)
 GTR = wu.GtrWrangler()
 
 # %%
-GTR.add_project_data(df.query("has_any_terms==True"), id_column="id", columns=["title"])
+Query = QueryTerms(corpus=get_tokenised_gtr_corpus())
 
 # %%
+SEARCH_TERMS = [["heat pump"], ["hydrogen", "heat"]]
+
+# %%
+query_df = Query.find_matches(SEARCH_TERMS, return_only_matches=True)
+query_df
+
+# %%
+GTR.add_project_data(query_df, id_column="id", columns=["title"])
