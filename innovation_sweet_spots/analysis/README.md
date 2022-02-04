@@ -135,6 +135,12 @@ See also notebooks in `examples` for further examples how to get the university 
 
 ## Querying data<a name="querying"></a>
 
+NB: For the next examples to work, you will need to fetch the preprocessed data and models. Run the following from the terminal:
+
+```
+aws s3 sync s3://innovation-sweet-spots-lake/outputs/finals/pilot_outputs outputs/finals/pilot_outputs
+```
+
 ### Search terms<a name="query_terms"></a>
 
 `analysis.query_terms` module helps to do a simple search using key words and phrases.
