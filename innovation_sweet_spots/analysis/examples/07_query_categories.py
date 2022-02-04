@@ -20,21 +20,19 @@
 # # Selecting projects and companies by keywords and key phrases
 
 # %%
-import innovation_sweet_spots.analysis.wrangling_utils as wu
-import pandas as pd
-
-GTR = wu.GtrWrangler()
-CB = wu.CrunchbaseWrangler()
-
-# %%
-SEARCH_LABELS = [
-    ["label1"],
-]
+import innovation_sweet_spots.analysis.query_categories as qc
 
 # %% [markdown]
 # # Check research projects
 
 # %%
+CATEGORIES = ["Wind Power", "Energy - Marine & Hydropower"]
+
+# %%
+query_df = qc.query_gtr_categories(CATEGORIES, return_only_matches=True)
+
+# %%
+qc.GTR.add_project_data(query_df, "id", ["title"])
 
 # %% [markdown]
 # # Check companies
