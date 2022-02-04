@@ -157,7 +157,7 @@ Query = QueryTerms(corpus=get_pilot_gtr_corpus())
 query_df = Query.find_matches(SEARCH_TERMS, return_only_matches=True)
 ```
 
-The returned dataframe contains a column for each search term, as well as a summary `has_any_terms` column, and the document ids. To view more data on the documents, you can use the `wrangler_utils` module.
+The returned dataframe contains a column for each search term, as well as a summary `has_any_terms` column, and the document ids. To view more data on the documents, you can use the `wrangling_utils` module.
 
 ```python
 from innovation_sweet_spots.analysis.wrangling_utils import GtrWrangler
