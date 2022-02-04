@@ -914,6 +914,34 @@ class CrunchbaseWrangler:
             .dropna(subset=columns, how="all")
         )
 
+    def add_company_data(
+        self,
+        dataframe: pd.DataFrame,
+        id_column: str = "id",
+        columns: Iterator[str] = None,
+    ) -> pd.DataFrame:
+        """Adds basic company data such as name and description to a dataframe with project ids
+
+        Args:
+            dataframe: Dataframe with project ids
+            id_column: Name of the project id column in the input dataframe
+            columns: Columns of project data to add; by default will add all project table columns
+
+        Returns:
+            Input dataframe with extra columns with project data
+        """
+        # By default, select all columns from the projects table
+        if columns is None:
+            columns = self.cb_organisations.columns
+        # Ensure that id is in the columns
+        columns = {"id"} | set(columns)
+        return dataframe.merge(
+            self.cb_organisations[columns],
+            left_on=id_column,
+            right_on="id",
+            how="left",
+        )
+
 
 def get_years(dates: Iterator[datetime.date]) -> Iterator:
     """Converts a list of datetimes to years"""
