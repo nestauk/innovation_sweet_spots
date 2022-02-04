@@ -28,9 +28,20 @@ def is_gtr_project_in_category(category: str, GtR: GtrWrangler = GTR) -> Iterato
         List of project ids that correspond to the GtR research topic category
     """
     # Find the id corresponding to the category
-    topic_id = GtR.gtr_topics.query("topic == @category").id.iloc[0]
-    # Find the project ids in the specified category
-    return GtR.link_gtr_topics.query("id == @topic_id").project_id.to_list()
+    topic_id_df = GtR.gtr_topics.query("topic == @category")
+    if len(topic_id_df) == 0:
+        logging.warning(
+            f"Research topic '{category}' does not exist in the GtR database!"
+        )
+        return []
+    else:
+        # Check that there is one unique GtR research topic id
+        assert (
+            len(topic_id_df) == 1
+        ), "There is more than one topic id with the same name: Something wrong with GtrWrangler.gtr_topics"
+        topic_id = topic_id_df.id.iloc[0]
+        # Find the project ids in the specified category
+        return GtR.link_gtr_topics.query("id == @topic_id").project_id.to_list()
 
 
 def query_gtr_categories(
@@ -40,7 +51,8 @@ def query_gtr_categories(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """
-    Indicates if a project is in a research topic category
+    Indicates if a project is the provided research topics.
+    The research topic categories must be present in GtR.gtr_topics
 
     Args:
         category: GtR research topic category

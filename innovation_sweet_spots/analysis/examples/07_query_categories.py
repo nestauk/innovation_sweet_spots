@@ -22,6 +22,9 @@
 # %%
 import innovation_sweet_spots.analysis.query_categories as qc
 
+# %%
+importlib.reload(qc)
+
 # %% [markdown]
 # # Check research projects
 
@@ -30,6 +33,9 @@ CATEGORIES = ["Wind Power", "Energy - Marine & Hydropower"]
 
 # %%
 query_df = qc.query_gtr_categories(CATEGORIES, return_only_matches=True)
+
+# %%
+query_df_wrong = qc.query_gtr_categories(["Wind"], return_only_matches=False)
 
 # %%
 qc.GTR.add_project_data(query_df, "id", ["title"])
