@@ -21,9 +21,6 @@
 
 # %%
 import innovation_sweet_spots.analysis.query_categories as qc
-import importlib
-
-importlib.reload(qc)
 
 # %%
 # Define research topics and industries of interest
