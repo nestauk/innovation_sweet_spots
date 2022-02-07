@@ -4,11 +4,19 @@ See quick examples below on using the analysis modules (going forward, this shou
 
 To try out these functionalities more interactively, check the jupyter notebooks in `examples` folder (Note: you will need to convert them from .py to .ipynb files using [jupytext](https://github.com/mwouts/jupytext)).
 
-## Data wrangling
+## Contents
+
+- [**Data wrangling**](#data_wrangling)
+  - [Research project data](#wrangling_research)
+  - [Company data](#wrangling_companies)
+- [**Querying data**](#querying)
+  - [Search terms](#query_terms)
+
+## Data wrangling<a name="data_wrangling"></a>
 
 Module `wrangling_utils` helps fetching data related to research projects and businesses.
 
-### Research project data
+### Research project data<a name="wrangling_research"></a>
 
 ```python
 from innovation_sweet_spots.getters import gtr
@@ -22,6 +30,7 @@ GtR = GtrWrangler()
 ```
 
 #### Funding
+
 Apply `get_funding_data()` on a list of projects, to get the awarded funding amounts and the start and end dates of the funding (the first run might take longer as it needs to load in funding data).
 
 ```python
@@ -43,6 +52,7 @@ GtR.get_projects_in_research_topics(research_topics=['International Business', '
 ```
 
 #### Organisations
+
 Use `get_organisations_and_locations()` to get organisations that participate in the projects and the organisations' locations.
 
 ```python
@@ -65,9 +75,9 @@ GtR.get_persons(gtr_projects)
 
 Note that that people can have different types of roles in a project - this is specified by the `person_relation` variable, and the explanations of the different possible roles is provided in the [GtR API documentation](https://gtr.ukri.org/resources/GtR-2-API-v1.7.5.pdf) (see page 9).
 
-***
+---
 
-### Company data
+### Company data<a name="wrangling_companies"></a>
 
 ```python
 from innovation_sweet_spots.getters import crunchbase as cb
@@ -78,6 +88,7 @@ CB = CrunchbaseWrangler()
 ```
 
 #### Industries
+
 Crunchbase organises their companies by industries and industry groups. To see all industries you can run
 
 ```python
@@ -121,3 +132,41 @@ cb_org_persons = CB.get_company_persons(cb_orgs)
 ```
 
 See also notebooks in `examples` for further examples how to get the university education data on Crunchbase.
+
+## Querying data<a name="querying"></a>
+
+NB: For the next examples to work, you will need to fetch the preprocessed data and models. Run the following from the terminal:
+
+```
+aws s3 sync s3://innovation-sweet-spots-lake/outputs/finals/pilot_outputs outputs/finals/pilot_outputs
+```
+
+### Search terms<a name="query_terms"></a>
+
+`analysis.query_terms` module helps to do a simple search using key words and phrases.
+
+To get started, you need to load a "corpus" with preprocessed documents, which is provided by the `getters.preprocessed` module. Presently, it's possible to load in the preprocessed documents used in the pilot project (NB: Pilot project focussed only on the UK).
+
+```python
+from innovation_sweet_spots.getters.preprocessed import (
+    get_pilot_gtr_corpus,
+    get_pilot_crunchbase_corpus,
+)
+from innovation_sweet_spots.analysis.query_terms import QueryTerms
+
+# Define search terms
+SEARCH_TERMS = [
+    ["heat pump"],
+]
+
+Query = QueryTerms(corpus=get_pilot_gtr_corpus())
+query_df = Query.find_matches(SEARCH_TERMS, return_only_matches=True)
+```
+
+The returned dataframe contains a column for each search term, as well as a summary `has_any_terms` column, and the document ids. To view more data on the documents, you can use the `wrangling_utils` module.
+
+```python
+from innovation_sweet_spots.analysis.wrangling_utils import GtrWrangler
+GTR = GtrWrangler()
+GTR.add_project_data(query_df, id_column="id", columns=["title", "start"])
+```

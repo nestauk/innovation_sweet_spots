@@ -304,6 +304,34 @@ class GtrWrangler:
             "topic in @research_topics"
         )
 
+    def add_project_data(
+        self,
+        dataframe: pd.DataFrame,
+        id_column: str = "project_id",
+        columns: Iterator[str] = None,
+    ) -> pd.DataFrame:
+        """Adds basic GtR project data such as titles and abstracts to a dataframe with project ids
+
+        Args:
+            dataframe: Dataframe with project ids
+            id_column: Name of the project id column in the input dataframe
+            columns: Columns of project data to add; by default will add all project table columns
+
+        Returns:
+            Input dataframe with extra columns with project data
+        """
+        # By default, select all columns from the projects table
+        if columns is None:
+            columns = self.gtr_projects.columns
+        # Ensure that project_id is in the columns
+        columns = {"project_id"} | set(columns)
+        return dataframe.merge(
+            self.gtr_projects[columns],
+            left_on=id_column,
+            right_on="project_id",
+            how="left",
+        )
+
     @property
     def gtr_projects(self):
         """GtR projects table"""
@@ -884,6 +912,34 @@ class CrunchbaseWrangler:
             )[["id", "name"] + columns]
             # Remove rows corresponding to persons with no education data
             .dropna(subset=columns, how="all")
+        )
+
+    def add_company_data(
+        self,
+        dataframe: pd.DataFrame,
+        id_column: str = "id",
+        columns: Iterator[str] = None,
+    ) -> pd.DataFrame:
+        """Adds basic company data such as name and description to a dataframe with project ids
+
+        Args:
+            dataframe: Dataframe with project ids
+            id_column: Name of the project id column in the input dataframe
+            columns: Columns of project data to add; by default will add all project table columns
+
+        Returns:
+            Input dataframe with extra columns with project data
+        """
+        # By default, select all columns from the projects table
+        if columns is None:
+            columns = self.cb_organisations.columns
+        # Ensure that id is in the columns
+        columns = {"id"} | set(columns)
+        return dataframe.merge(
+            self.cb_organisations[columns],
+            left_on=id_column,
+            right_on="id",
+            how="left",
         )
 
 
