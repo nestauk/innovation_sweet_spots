@@ -174,7 +174,7 @@ class QueryTerms:
             search_queries, self.text_corpus, verbose=self.verbose
         )
         matches["id"] = list(self.document_ids)
-        if return_only_matches is True:
+        if return_only_matches:
             return pd.DataFrame(matches).query("has_any_terms==True")
         else:
             return pd.DataFrame(matches)
