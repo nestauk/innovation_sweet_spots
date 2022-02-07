@@ -22,9 +22,6 @@
 # %%
 import innovation_sweet_spots.analysis.query_categories as qc
 
-# %%
-importlib.reload(qc)
-
 # %% [markdown]
 # # Check research projects
 
@@ -32,17 +29,30 @@ importlib.reload(qc)
 CATEGORIES = ["Wind Power", "Energy - Marine & Hydropower"]
 
 # %%
-query_df = qc.query_gtr_categories(CATEGORIES, return_only_matches=True)
-
-# %%
 query_df_wrong = qc.query_gtr_categories(["Wind"], return_only_matches=False)
 
 # %%
+query_df = qc.query_gtr_categories(CATEGORIES, return_only_matches=True)
+
+# %%
 qc.GTR.add_project_data(query_df, "id", ["title"])
+
+# %%
+import innovation_sweet_spots.analysis.wrangling_utils as wu
+
+# %%
+# importlib.reload(wu)
+
+# %%
+# wu.GtrWrangler().gtr_topics_list
 
 # %% [markdown]
 # # Check companies
 
 # %%
+CATEGORIES = ["biomass energy", "biofuel"]
+
+# %%
+qc.query_cb_categories(CATEGORIES)
 
 # %%

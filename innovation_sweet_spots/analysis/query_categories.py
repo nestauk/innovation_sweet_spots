@@ -15,6 +15,33 @@ from typing import Iterator
 GTR = GtrWrangler()
 CB = CrunchbaseWrangler()
 
+# To-do -- generalise/optimise the query_categories methods
+def query_cb_categories(
+    categories: Iterator[str],
+    CbWrangler: CrunchbaseWrangler = CB,
+    return_only_matches: bool = False,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """ """
+    # Initialise the output dataframe
+    matches = CbWrangler.cb_organisations[["id"]]
+    orgs_in_any_category = set()
+    for category in categories:
+        orgs_in_category = CbWrangler.get_companies_in_industries(
+            [category]
+        ).id.to_list()
+        if verbose:
+            logging.info(
+                f"Found {len(orgs_in_category)} organisations in the category '{category}'"
+            )
+        matches[category] = matches["id"].isin(orgs_in_category)
+        orgs_in_any_category = orgs_in_any_category | set(orgs_in_category)
+    matches["any_category"] = matches["id"].isin(orgs_in_any_category)
+    if return_only_matches:
+        return matches.query("any_category == True")
+    else:
+        return matches
+
 
 def is_gtr_project_in_category(category: str, GtR: GtrWrangler = GTR) -> Iterator[str]:
     """

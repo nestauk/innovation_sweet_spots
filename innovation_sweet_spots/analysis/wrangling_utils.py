@@ -409,6 +409,10 @@ class GtrWrangler:
             self._gtr_topics = gtr.get_gtr_topics().rename(columns={"text": "topic"})
         return self._gtr_topics
 
+    @property
+    def gtr_topics_list(self):
+        return sorted(self.gtr_topics.topic.to_list())
+
 
 class CrunchbaseWrangler:
     """
