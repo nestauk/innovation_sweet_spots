@@ -66,7 +66,6 @@ def get_items_in_categories(
         return matches.query("any_category == True").reset_index(drop=True)
     else:
         return matches
-    return matches
 
 
 def is_gtr_project_in_category(category: str, GtR: GtrWrangler = GTR) -> Iterator[str]:
