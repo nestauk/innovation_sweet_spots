@@ -78,7 +78,7 @@ def gtr_deduplicate_projects(gtr_docs: pd.DataFrame) -> pd.DataFrame:
 
 def gtr_funding_per_period(gtr_docs: pd.DataFrame, period: str) -> pd.DataFrame:
     """
-    Given a table with projects and their funding, return an aggregation by year
+    Given a table with projects and their funding, return an aggregation by period
 
     Args:
         gtr_docs: A dataframe with columns for 'start', 'project_id' and 'amount'
@@ -88,9 +88,9 @@ def gtr_funding_per_period(gtr_docs: pd.DataFrame, period: str) -> pd.DataFrame:
     Returns:
         A dataframe with the following columns:
             'period' - time period
-            'no_of_projects' - number of new projects in a given year,
-            'amount_total' - total amount of research funding in a given year,
-            'amount_median' - median project funding in a given year
+            'no_of_projects' - number of new projects in a given period,
+            'amount_total' - total amount of research funding in a given period,
+            'amount_median' - median project funding in a given period
 
     """
     # Convert project start dates to time period
