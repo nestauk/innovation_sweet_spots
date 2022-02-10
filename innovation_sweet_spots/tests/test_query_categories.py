@@ -13,19 +13,18 @@ def category_check_side_effect(*args, **kwargs):
         return ["id_2"]
 
 
-@mock.patch("innovation_sweet_spots.analysis.query_categories.initialise_gtr_id_table")
 @mock.patch(
-    "innovation_sweet_spots.analysis.query_categories.is_gtr_project_in_category"
+    "innovation_sweet_spots.analysis.query_categories.initialise_gtr_id_table",
+    return_value=pd.DataFrame({"id": ["id_1", "id_2", "id_3"]}),
+)
+@mock.patch(
+    "innovation_sweet_spots.analysis.query_categories.is_gtr_project_in_category",
+    return_value=[],
+    side_effect=category_check_side_effect,
 )
 def test_query_gtr_categories(
     mock_is_gtr_project_in_category, mock_initialise_gtr_id_table
 ):
-
-    mock_is_gtr_project_in_category.return_value = []
-    mock_is_gtr_project_in_category.side_effect = category_check_side_effect
-    mock_initialise_gtr_id_table.return_value = pd.DataFrame(
-        {"id": ["id_1", "id_2", "id_3"]}
-    )
 
     # Test with a single category
     output_df = query_gtr_categories(
