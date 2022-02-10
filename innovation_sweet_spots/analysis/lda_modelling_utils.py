@@ -181,6 +181,7 @@ def load_lda_model_data(model_name: str, folder: PathLike) -> dict:
             - topic_descriptions: A table with topic descriptions
     """
     model_dict = {
+        "model_name": model_name,
         "model": load_lda_model(model_name, folder),
         "document_ids": load_document_ids(model_name, folder),
         "topic_descriptions": load_topic_descriptions(model_name, folder),
@@ -193,6 +194,51 @@ def load_lda_model_data(model_name: str, folder: PathLike) -> dict:
         len(model_dict["topic_descriptions"]) == model_dict["model"].k
     ), "The number of topics in the model is different from the number of described topics"
     return model_dict
+
+
+def load_document_probabilities(
+    model_name: str, folder: PathLike, prefix: str = "doc_probs", suffix: str = ""
+):
+    """
+    Loads a numpy of the document probabilities for the specified topic model, together with
+    topic descriptions and the document ids covered by the document topic probability matrix
+
+    Typical use case would be when a model has been used to infer document topic probabilities
+    for a set of documents that were not used in training the model, and these probabilities
+    have been stored as a .npy file to save disk space.
+
+    NB: The .npy file should follow the format '{prefix}_{model_name}_{suffix}.npy'
+
+    Args:
+        model_name: String name of the model
+        folder: Location of the model files
+        prefix: Prefix of the filename of the document probability .npy file
+        suffix: Suffix of the filename of the document probability .npy file
+
+    Returns:
+        Dictionary with the following keys:
+            - doc_probs: A numpy array of shape (n_documents, n_topics)
+            - document_ids: A list of document ids
+            - topic_descriptions: A table with topic descriptions
+    """
+    # Figure out the file name
+    _suffix = f"_{suffix}" if suffix != "" else suffix
+    filename = f"{prefix}_{model_name}{_suffix}"
+    # Load in relevant data
+    doc_probs_dict = {
+        "model_name": model_name,
+        "doc_probs": np.load(folder / f"{filename}.npy"),
+        "document_ids": read_text_items(folder / f"{filename}_document_ids.txt"),
+        "topic_descriptions": load_topic_descriptions(model_name, folder),
+    }
+    # Data consistency checks
+    assert doc_probs_dict["doc_probs"].shape[0] == len(
+        doc_probs_dict["document_ids"]
+    ), "The number of documents of the probability matrix is different from the number of document identifiers"
+    assert doc_probs_dict["doc_probs"].shape[1] == len(
+        doc_probs_dict["topic_descriptions"]
+    ), "The number of topics of the probability matrix is different from the number of described topics"
+    return doc_probs_dict
 
 
 def get_document_topic_distributions(mdl: LDAModel):
@@ -216,15 +262,19 @@ def topic_name(topic_id: int) -> str:
 
 
 def create_document_topic_probability_table(
-    document_ids: Iterator[str], topic_model: LDAModel
+    document_ids: Iterator[str],
+    topic_model: LDAModel = None,
+    document_topic_probabilities: ArrayLike = None,
 ) -> pd.DataFrame:
     """
     Generates a data frame with a column for document identifiers, and a column
-    for each topic indicating each document's topic probabilities
+    for each topic indicating each document's topic probabilities. Document probabilities
+    can be sourced either from the topic model or a document probability matrix.
 
     Args:
-        document_ids:
-        topic_model:
+        document_ids: A list of document ids
+        topic_model: A tomotopy topic model
+        document_topic_probabilities: Array of topic probabilities with the shape (n_documents, n_topics)
 
     Returns:
         Data frame with columns:
@@ -232,12 +282,19 @@ def create_document_topic_probability_table(
             - 'topic_{topic_id}': probabilities of documents belonging to topic
                 specified by the topic_id number
     """
-    document_topic_probabilities = get_document_topic_distributions(topic_model)
+    if topic_model is not None:
+        document_topic_probabilities = get_document_topic_distributions(topic_model)
+    # Data consistency check
+    assert (
+        len(document_ids) == document_topic_probabilities.shape[0]
+    ), "Number of document identifiers does not match the number of documents of the probability matrix"
     return (
         pd.DataFrame(
             data=document_topic_probabilities,
             index=document_ids,
-            columns=[topic_name(i) for i in range(topic_model.k)],
+            columns=[
+                topic_name(i) for i in range(document_topic_probabilities.shape[1])
+            ],
         )
         .reset_index()
         .rename(columns={"index": "id"})
@@ -278,3 +335,40 @@ def make_pyLDAvis(topic_model: LDAModel, output_filepath: PathLike):
         ),
         str(output_filepath),
     )
+
+
+class QueryTopics:
+    """
+    This class helps to query documents based on their topic probabilities
+    """
+
+    def __init__(self, model_data: dict):
+        """
+        Args:
+            model_data is a dictionary following the format of the outputs
+            of either load_document_probabilities() or load_lda_model_data()
+        """
+        self.model_name = model_data["model_name"]
+        self.topic_descriptions = model_data["topic_descriptions"]
+        self.document_ids = model_data["document_ids"]
+        self.topic_model = model_data["model"] if "model" in model_data else None
+        self.doc_prob_table = create_document_topic_probability_table(
+            document_ids=self.document_ids,
+            topic_model=self.topic_model,
+            document_topic_probabilities=model_data["doc_probs"]
+            if "doc_probs" in model_data
+            else None,
+        )
+
+    def check_topics(self, topics: Iterator[int]):
+        """Return the topic probabilities and document ids of the specified topics"""
+        return query_topics(topics, self.doc_prob_table)
+
+    def sort_documents_by_topic(self, topic_id: int):
+        """
+        Sort documents according to their probability of belonging
+        to the specified topic id
+        """
+        return query_topics([topic_id], self.doc_prob_table).sort_values(
+            topic_name(topic_id), ascending=False
+        )

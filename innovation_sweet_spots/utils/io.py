@@ -38,7 +38,7 @@ def load_pickle(filepath: PathLike):
 def save_text_items(list_of_terms: Iterator[str], filepath: PathLike):
     """Writes a text file with comma-separated text terms"""
     with open(filepath, "w") as outfile:
-        outfile.write(", ".join(sorted(list_of_terms)))
+        outfile.write(", ".join(list_of_terms))
     logging.info(f"Saved {len(list_of_terms)} terms in {filepath}")
 
 

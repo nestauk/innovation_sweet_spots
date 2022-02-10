@@ -14,6 +14,6 @@ def get_pilot_lda_model(model_name: str):
     Loads model and data associated with pilot project's topic models
 
     Args:
-        model_name: Either 'full_corpus' or 'narrow_corpus'
+        model_name: Either 'broad_corpus' or 'narrow_corpus'
     """
     return load_lda_model_data(model_name, folder=PILOT_MODELS_DIR / "lda")
