@@ -11,10 +11,11 @@ import pandas as pd
 # Parameters (tech categories to process, time series limits)
 PARAMS = import_config("iss_pilot.yaml")
 SPLIT = True
+SPLIT_PERIOD = "year"
 
 # Output files
 EXPORT_DIR = PROJECT_DIR / "outputs/finals/pilot_outputs/time_series/"
-OUTFILE_NAME = "Time_series_GtR_split_{}.csv" if SPLIT else "Time_series_GtR_{}.csv"
+
 
 if __name__ == "__main__":
 
@@ -41,22 +42,23 @@ if __name__ == "__main__":
 
         if SPLIT:
             funding_data = gtr_wrangler.get_funding_data(category_gtr_docs)
-            funding_data_split = gtr_wrangler.split_funding_data(
-                funding_data, time_period="year"
+            funding_data_split = gtr_wrangler.split_funding_data(funding_data)
+            time_series_funding = au.gtr_get_all_timeseries_period(
+                funding_data_split, SPLIT_PERIOD
             )
-            time_series_funding = au.gtr_get_all_timeseries(funding_data_split)
+            time_series_funding["tech_category"] = category
         else:
-            # Calculate time series
-            time_series_funding = au.gtr_get_all_timeseries(
-                category_gtr_docs,
-                min_year=PARAMS["min_year"],
-                max_year=PARAMS["max_year"],
+            time_series_funding = au.gtr_get_all_timeseries_period(
+                category_gtr_docs, "year"
             )
 
         # Export
-        time_series_funding.to_csv(
-            EXPORT_DIR / OUTFILE_NAME.format(category), index=False
+        outfile_name = (
+            f"Time_series_GtR_split_{category}_split_{SPLIT_PERIOD}.csv"
+            if SPLIT
+            else f"Time_series_GtR_{category}.csv"
         )
+        time_series_funding.to_csv(EXPORT_DIR / outfile_name, index=False)
 
     logging.info(
         f"Generated and exported {len(categories)} time series in {EXPORT_DIR}"
