@@ -411,6 +411,7 @@ class GtrWrangler:
 
     @property
     def gtr_topics_list(self):
+        """Returns a sorted list of GtR research topics (categories)"""
         return sorted(self.gtr_topics.topic.to_list())
 
 
