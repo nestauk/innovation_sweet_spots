@@ -75,19 +75,18 @@ def test_query_gtr_categories(
     assert output_df.equals(expected_df)
 
 
-@mock.patch("innovation_sweet_spots.analysis.query_categories.initialise_cb_id_table")
 @mock.patch(
-    "innovation_sweet_spots.analysis.query_categories.is_cb_organisation_in_category"
+    "innovation_sweet_spots.analysis.query_categories.initialise_cb_id_table",
+    return_value = pd.DataFrame({"id": ["id_1", "id_2", "id_3"]}
+)
+@mock.patch(
+    "innovation_sweet_spots.analysis.query_categories.is_cb_organisation_in_category",
+    return_value = [],
+    side_effect = category_check_side_effect
 )
 def test_query_cb_categories(
     mock_is_cb_organisation_in_category, mock_initialise_cb_id_table
 ):
-
-    mock_is_cb_organisation_in_category.return_value = []
-    mock_is_cb_organisation_in_category.side_effect = category_check_side_effect
-    mock_initialise_cb_id_table.return_value = pd.DataFrame(
-        {"id": ["id_1", "id_2", "id_3"]}
-    )
 
     # Test with a single category
     output_df = query_cb_categories(
