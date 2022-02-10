@@ -11,6 +11,7 @@ To try out these functionalities more interactively, check the jupyter notebooks
   - [Company data](#wrangling_companies)
 - [**Querying data**](#querying)
   - [Search terms](#query_terms)
+  - [Data labels](#query_categories)
 
 ## Data wrangling<a name="data_wrangling"></a>
 
@@ -169,4 +170,28 @@ The returned dataframe contains a column for each search term, as well as a summ
 from innovation_sweet_spots.analysis.wrangling_utils import GtrWrangler
 GTR = GtrWrangler()
 GTR.add_project_data(query_df, id_column="id", columns=["title", "start"])
+```
+
+### Data labels<a name="query_categories"></a>
+
+Both GtR and Crunchbase can also be queried in terms of the labels (categories) that already exist within each dataset. For GtR these categories are called 'research topics' and for Crunchbase 'industries'.
+
+The output of the query will follow the same format as in the case of search terms: a dataframe with a column for the project or company `id` and a column for each query, where in this case the query is the specified label/category.
+
+For querying GtR projects, use `query_gtr_categories()`:
+
+```python
+from innovation_sweet_spots.analysis.query_categories import query_gtr_categories
+GTR_RESEARCH_TOPICS = ["Wind Power", "Energy - Marine & Hydropower"]
+
+query_gtr_categories(GTR_RESEARCH_TOPICS, return_only_matches=True)
+```
+
+For querying Crunchbase projects, use `query_cb_categories()`:
+
+```python
+from innovation_sweet_spots.analysis.query_categories import query_cb_categories
+CRUNCHBASE_INDUSTRIES = ["wind energy", "renewable energy"]
+
+query_cb_categories(CRUNCHBASE_INDUSTRIES, return_only_matches=True)
 ```
