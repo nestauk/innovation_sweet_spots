@@ -5,6 +5,7 @@ Utils for doing data analysis
 import pandas as pd
 import numpy as np
 from typing import Tuple
+from innovation_sweet_spots.analysis.wrangling_utils import check_valid
 
 
 def impute_empty_years(
@@ -75,58 +76,49 @@ def gtr_deduplicate_projects(gtr_docs: pd.DataFrame) -> pd.DataFrame:
     )[gtr_docs.columns]
 
 
-def gtr_funding_per_year(
-    gtr_docs: pd.DataFrame, min_year: int = None, max_year: int = None
-) -> pd.DataFrame:
+def gtr_funding_per_period(gtr_docs: pd.DataFrame, period: str) -> pd.DataFrame:
     """
     Given a table with projects and their funding, return an aggregation by year
 
     Args:
         gtr_docs: A dataframe with columns for 'start', 'project_id' and 'amount'
             (research funding) among other project data
-        min_year: Lower bound for years to keep
-        max_year: Higher bound for years to keep
+        period: Time period to group the data by, 'M', 'Q' or 'Y'
 
     Returns:
         A dataframe with the following columns:
-            'year',
+            'period' - time period
             'no_of_projects' - number of new projects in a given year,
             'amount_total' - total amount of research funding in a given year,
             'amount_median' - median project funding in a given year
 
     """
-    # Convert project start dates to years
-    gtr_docs = gtr_docs.copy()
-    gtr_docs["year"] = pd.to_datetime(gtr_docs.start).dt.year
-    # Set min and max years for aggregation
-    min_year, max_year = set_def_min_max_years(gtr_docs, min_year, max_year)
-    # Group by year
+    # Convert project start dates to time period
+    gtr_docs = (
+        gtr_docs.copy()
+        .astype({"start": "datetime64[ns]"})
+        .assign(time_period=lambda x: x.start.dt.strftime("%Y-%m-%d"))
+        .astype({"time_period": "datetime64[ns]"})
+    )
+    # Group by time period
     return (
-        gtr_docs.groupby("year")
+        gtr_docs.groupby(gtr_docs["time_period"].dt.to_period(period))
         .agg(
-            # Number of new projects in a given year
+            # Number of new projects in a given time period
             no_of_projects=("project_id", "count"),
-            # Total amount of research funding in a given year
+            # Total amount of research funding in a given time period
             amount_total=("amount", "sum"),
-            # Median project funding in a given year
-            amount_median=("amount", np.median),
         )
         .reset_index()
-        # Limit results between min and max years
-        .query(f"year>={min_year}")
-        .query(f"year<={max_year}")
         # Convert to thousands
         .assign(
             amount_total=lambda x: x.amount_total / 1000,
-            amount_median=lambda x: x.amount_median / 1000,
         )
-        # Add zero values for years without data
-        .pipe(impute_empty_years, min_year=min_year, max_year=max_year)
     )
 
 
-def gtr_get_all_timeseries(
-    gtr_docs: pd.DataFrame, min_year: int = None, max_year: int = None
+def gtr_get_all_timeseries_period(
+    gtr_docs: pd.DataFrame, period: str = "year"
 ) -> pd.DataFrame:
     """
     Calculates all typical time series from a list of GtR projects and return
@@ -135,24 +127,26 @@ def gtr_get_all_timeseries(
     Args:
         gtr_docs: A dataframe with columns for 'start', 'project_id' and 'amount'
             (research funding) among other project data
-        min_year: Lower bound for years to keep
-        max_year: Higher bound for years to keep
+        period: Time period to group the data by, 'month', 'quarter' or 'year'
 
     Returns:
-        Dataframe with columns for 'year', 'no_of_projects', 'amount_total' and
+        Dataframe with columns for 'time_period', 'no_of_projects', 'amount_total' and
         'amount_median'
     """
+    # Check and reformat period
+    check_valid(period, ["year", "month", "quarter"])
+    period = period[0].capitalize()
     # Deduplicate projects. This is used to report the number of new projects
-    # started each year, accounting for cases where the same project has received
-    # additional funding in later years
+    # started each period, accounting for cases where the same project has received
+    # additional funding in later periods
     gtr_docs_dedup = gtr_deduplicate_projects(gtr_docs)
-    # Number of new projects per year
-    time_series_projects = gtr_funding_per_year(gtr_docs_dedup, min_year, max_year)[
-        ["year", "no_of_projects"]
+    # Number of new projects per time period
+    time_series_projects = gtr_funding_per_period(gtr_docs_dedup, period)[
+        ["time_period", "no_of_projects"]
     ]
-    # Amount of research funding per year (note: here we use the non-duplicated table,
-    # to account for additional funding for projects that might have started in earlier years
-    time_series_funding = gtr_funding_per_year(gtr_docs, min_year, max_year)
+    # Amount of research funding per period (note: here we use the non-duplicated table,
+    # to account for additional funding for projects that might have started in earlier periods
+    time_series_funding = gtr_funding_per_period(gtr_docs, period)
     # Join up both tables
     time_series_funding["no_of_projects"] = time_series_projects["no_of_projects"]
     return time_series_funding

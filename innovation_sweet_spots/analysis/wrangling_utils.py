@@ -128,7 +128,7 @@ class GtrWrangler:
         return pipe(gtr_projects, self.get_project_funds_api, self.get_start_end_dates)
 
     def split_funding_data(
-        self, gtr_projects: pd.DataFrame, time_period: str
+        self, gtr_projects: pd.DataFrame, time_period: str = "month"
     ) -> pd.DataFrame:
         """
         Splits GtR funding evenly over the duration of the projects
@@ -137,18 +137,14 @@ class GtrWrangler:
             gtr_projects: Dataframe that must have columns for 'fund_start'
                 and 'fund_end'
             time_period: Time period to split the funding data across,
-                must be one of 'year', 'month', 'quarter'
+                must be one of 'year', 'month', 'quarter'. Defaults to 'month'.
 
         Returns:
             Same input dataframe but with additional rows for
             the time periods that the funding has been split across
         """
         # Check time period is valid
-        valid_time_periods = ["year", "month", "quarter"]
-        if time_period not in valid_time_periods:
-            raise ValueError(
-                f"gtr_funding_evenly_split: time_period must be one of {valid_time_periods}."
-            )
+        check_valid(time_period, ["year", "month", "quarter"])
 
         # Add split info
         frequency = time_period[0].capitalize()
@@ -956,3 +952,9 @@ def split_comma_seperated_string(text: str) -> Iterator[str]:
 def is_string_in_list(list_of_strings: Iterator[str], list_to_check: Iterator[str]):
     """Checks if any of the provided strings in list_of_strings are in the specified list_to_check"""
     return True in [s in list_to_check for s in list_of_strings]
+
+
+def check_valid(check_var, check_list):
+    """Raise ValueError is check_var not in check_list"""
+    if check_var not in check_list:
+        raise ValueError(f"{check_var} is not valid, it must be one of {check_list}.")
