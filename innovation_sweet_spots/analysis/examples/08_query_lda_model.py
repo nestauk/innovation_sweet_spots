@@ -4,7 +4,7 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
-#     formats: ipynb,py
+#     formats: ipynb,py:light
 #     text_representation:
 #       extension: .py
 #       format_name: light
@@ -43,4 +43,3 @@ lmu.make_pyLDAvis(model_data["model"], MODEL_DIR / f"{MODEL_NAME}_pyLDAvis.html"
 
 # +
 # coh.get_score()
-# -
