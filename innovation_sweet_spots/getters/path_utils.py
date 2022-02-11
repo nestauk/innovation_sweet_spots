@@ -19,3 +19,6 @@ OUTPUT_DATA_PATH = PROJECT_DIR / "outputs/data/"
 OUTPUT_GTR_PATH = OUTPUT_DATA_PATH / "gtr"
 OUTPUT_CB_PATH = OUTPUT_DATA_PATH / "cb"
 PILOT_OUTPUTS = PROJECT_DIR / "outputs/finals/pilot_outputs/"
+
+# Model paths
+PILOT_MODELS_DIR = PILOT_OUTPUTS / "models/"

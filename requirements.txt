@@ -10,4 +10,6 @@ filelock
 typer
 sh
 CurrencyConverter
+pyldavis
+tomotopy
 #data_getters @ git+https://github.com/nestauk/data_getters.git
