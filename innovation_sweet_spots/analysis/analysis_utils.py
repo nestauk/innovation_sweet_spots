@@ -1,45 +1,41 @@
 """
 Utils for doing data analysis
-
 """
 import pandas as pd
-import numpy as np
-from typing import Tuple
 from innovation_sweet_spots.analysis.wrangling_utils import check_valid
 
 
-def impute_empty_years(
-    yearly_stats: pd.DataFrame, min_year: int = None, max_year: int = None
+def impute_empty_periods(
+    df_time_period: pd.DataFrame,
+    time_period_col: str,
+    period: str,
+    min_year: int,
+    max_year: int,
 ) -> pd.DataFrame:
     """
-    Imputes zero values for years without data
+    Imputes zero values for time periods without data
 
     Args:
-        yearly_stats: A dataframe with a 'year' column and other columns with data
-        min_year: Lower bound for years to keep; can be smaller than yearly_stats.year.min()
-        max_year: Higher bound for years; can be larger than yearly_stats.year.min()
+        df_time_period: A dataframe with a column containing time period data
+        time_period_col: Column containing time period data
+        period: Time period that the data is grouped by, 'M', 'Q' or 'Y'
+        min_year: Earliest year to impute values for
+        max_year: Last year to impute values for
 
     Returns:
-        A data frame with imputed 0s for years with no data
+        A dataframe with imputed 0s for time periods with no data
     """
-    min_year, max_year = set_def_min_max_years(yearly_stats, min_year, max_year)
-    return (
-        pd.DataFrame(data={"year": range(min_year, max_year + 1)})
-        .merge(yearly_stats, how="left")
-        .fillna(0)
-        .astype(yearly_stats.dtypes)
+    full_period_range = (
+        pd.period_range(
+            f"01/01/{min_year}",
+            f"31/12/{max_year}",
+            freq=period,
+        )
+        .to_timestamp()
+        .to_frame(index=False, name=time_period_col)
+        .reset_index(drop=True)
     )
-
-
-def set_def_min_max_years(
-    df: pd.DataFrame, min_year: int, max_year: int
-) -> Tuple[int, int]:
-    """Set the default values for min and max years"""
-    if min_year is None:
-        min_year = df.year.min()
-    if max_year is None:
-        max_year = df.year.max()
-    return min_year, max_year
+    return full_period_range.merge(df_time_period, "left").fillna(0)
 
 
 ### GtR specific utils
@@ -154,39 +150,41 @@ def gtr_get_all_timeseries_period(
 ### Crunchbase specific utils
 
 
-def cb_orgs_founded_per_year(
-    cb_orgs: pd.DataFrame, min_year: int = None, max_year: int = None
+def cb_orgs_founded_per_period(
+    cb_orgs: pd.DataFrame, period: str, min_year: int, max_year: int
 ) -> pd.DataFrame:
     """
-    Calculates the number of Crunchbase organisations founded in a given year
+    Calculates the number of Crunchbase organisations founded per period
 
     Args:
         cb_orgs: A dataframe with columns for 'id' and 'founded_on' among other data
-        min_year: Lower bound for years to keep
-        max_year: Higher bound for years to keep
+        period: Time period the data is grouped by, 'M', 'Q' or 'Y'
+        min_year: Earliest year to impute values for
+        max_year: Last year to impute values for
 
     Returns:
         A dataframe with the following columns:
-            'year',
-            'no_of_orgs_founded' - number of new organisations founded in a given year
+            'time_period',
+            'no_of_orgs_founded' - number of new organisations founded in a given time period
     """
     # Remove orgs that don't have year when they were founded
-    cb_orgs = cb_orgs[-cb_orgs.founded_on.isnull()].copy()
-    # Convert dates to years
-    cb_orgs["year"] = pd.to_datetime(cb_orgs.founded_on).dt.year
-    # Set min and max years for aggregation
-    min_year, max_year = set_def_min_max_years(cb_orgs, min_year, max_year)
-    # Group by year
-    return (
-        cb_orgs.groupby("year")
-        .agg(no_of_orgs_founded=("id", "count"))
-        .reset_index()
-        .pipe(impute_empty_years, min_year=min_year, max_year=max_year)
+    cb_orgs = (
+        cb_orgs[-cb_orgs.founded_on.isnull()]
+        .copy()
+        .assign(time_period=lambda x: pd.to_datetime(x.founded_on))
+    )
+    # Group by time period
+    grouped = cb_orgs.groupby(cb_orgs["time_period"].dt.to_period(period)).agg(
+        no_of_orgs_founded=("id", "count")
+    )
+    grouped.index = grouped.index.astype("datetime64[ns]")
+    return impute_empty_periods(
+        grouped.reset_index(), "time_period", period, min_year, max_year
     )
 
 
-def cb_investments_per_year(
-    cb_funding_rounds: pd.DataFrame, min_year: int = None, max_year: int = None
+def cb_investments_per_period(
+    cb_funding_rounds: pd.DataFrame, period: str, min_year: int, max_year: int
 ) -> pd.DataFrame:
     """
     Aggregates the raised investment amount and number of deals across all orgs
@@ -194,65 +192,70 @@ def cb_investments_per_year(
     Args:
         cb_funding_rounds: A dataframe with columns for 'funding_round_id', 'raised_amount_usd'
             'raised_amount_gbp' and 'announced_on' among other data
-        min_year: Lower bound for years to keep
-        max_year: Higher bound for years to keep
+        period: Time period the data is grouped by, 'M', 'Q' or 'Y'
+        min_year: Earliest year to impute values for
+        max_year: Last year to impute values for
 
     Returns:
         A dataframe with the following columns:
-            'year',
+            'time_period',
             'no_of_rounds' - number of funding rounds (deals) in a given year
             'raised_amount_usd_total' - total raised investment (USD) in a given year
             'raised_amount_gbp_total' - total raised investment (GBP) in a given year
     """
-    # Convert dates to years
-    cb_funding_rounds["year"] = pd.to_datetime(cb_funding_rounds.announced_on).dt.year
-    # Set min and max years for aggregation
-    min_year, max_year = set_def_min_max_years(cb_funding_rounds, min_year, max_year)
-    # Group by year
-    return (
-        cb_funding_rounds.groupby("year")
-        .agg(
-            no_of_rounds=("funding_round_id", "count"),
-            raised_amount_usd_total=("raised_amount_usd", "sum"),
-            raised_amount_gbp_total=("raised_amount_gbp", "sum"),
-        )
-        .reset_index()
-        .query(f"year>={min_year}")
-        .query(f"year<={max_year}")
-        .pipe(impute_empty_years, min_year=min_year, max_year=max_year)
+    # Create time period column
+    cb_funding_rounds["time_period"] = pd.to_datetime(cb_funding_rounds.announced_on)
+    # Group by time period
+    grouped = cb_funding_rounds.groupby(
+        cb_funding_rounds["time_period"].dt.to_period(period)
+    ).agg(
+        no_of_rounds=("funding_round_id", "count"),
+        raised_amount_usd_total=("raised_amount_usd", "sum"),
+        raised_amount_gbp_total=("raised_amount_gbp", "sum"),
+    )
+    grouped.index = grouped.index.astype("datetime64[ns]")
+    return impute_empty_periods(
+        grouped.reset_index(), "time_period", period, min_year, max_year
     )
 
 
 def cb_get_all_timeseries(
     cb_orgs: pd.DataFrame,
     cb_funding_rounds: pd.DataFrame,
-    min_year: int = None,
-    max_year: int = None,
+    period: str,
+    min_year: int,
+    max_year: int,
 ) -> pd.DataFrame:
     """
-    Calculates all typical time series from a list of GtR projects and return
-    as one combined table
+    Combines crunchbase organisations and deals data to produce time series data
+    for funding rounds, orgs foundded and amount raised
 
     Args:
         cb_orgs: A dataframe with columns for 'id' and 'founded_on' among other data
         cb_funding_rounds: A dataframe with columns for 'funding_round_id', 'raised_amount_usd'
             'raised_amount_gbp' and 'announced_on' among other data
-        min_year: Lower bound for years to keep
-        max_year: Higher bound for years to keep
+        period: Time period to group the data by, 'month', 'quarter' or 'year'
+        min_year: Earliest year to impute values for
+        max_year: Last year to impute values for
 
     Returns:
         A dataframe with the following columns:
-            'year',
+            'time_period',
             'no_of_rounds' - number of funding rounds (deals) in a given year
             'raised_amount_usd_total' - total raised investment (USD) in a given year
             'raised_amount_gbp_total' - total raised investment (GBP) in a given year
             'no_of_orgs_founded' - number of new organisations founded in a given year
     """
+    # Check and reformat period
+    check_valid(period, ["year", "month", "quarter"])
+    period = period[0].capitalize()
     # Number of new companies per year
-    time_series_orgs_founded = cb_orgs_founded_per_year(cb_orgs, min_year, max_year)
+    time_series_orgs_founded = cb_orgs_founded_per_period(
+        cb_orgs, period, min_year, max_year
+    )
     # Amount of raised investment per year
-    time_series_investment = cb_investments_per_year(
-        cb_funding_rounds, min_year, max_year
+    time_series_investment = cb_investments_per_period(
+        cb_funding_rounds, period, min_year, max_year
     )
     # Join up both tables
     time_series_investment["no_of_orgs_founded"] = time_series_orgs_founded[
