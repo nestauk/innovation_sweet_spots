@@ -21,8 +21,21 @@ if __name__ == "__main__":
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
     # Load data
-    cb_orgs = pd.read_csv(DATA_DIR / ORGS_TABLE)
-    cb_deals = pd.read_csv(DATA_DIR / DEALS_TABLE)
+    cb_orgs = au.filter_years(
+        df=pd.read_csv(DATA_DIR / ORGS_TABLE),
+        date_col="founded_on",
+        keep_year_col=False,
+        min_year=PARAMS["min_year"],
+        max_year=PARAMS["max_year"],
+    )
+
+    cb_deals = au.filter_years(
+        df=pd.read_csv(DATA_DIR / DEALS_TABLE),
+        date_col="announced_on_date",
+        keep_year_col=False,
+        min_year=PARAMS["min_year"],
+        max_year=PARAMS["max_year"],
+    )
 
     # Technology categories to process
     categories = PARAMS["technology_categories"]
