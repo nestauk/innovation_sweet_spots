@@ -96,7 +96,6 @@ def gtr_funding_per_period(gtr_docs: pd.DataFrame, period: str) -> pd.DataFrame:
     # Convert project start dates to time period
     gtr_docs = (
         gtr_docs.copy()
-        .astype({"start": "datetime64[ns]"})
         .assign(time_period=lambda x: x.start.dt.strftime("%Y-%m-%d"))
         .astype({"time_period": "datetime64[ns]"})
     )
