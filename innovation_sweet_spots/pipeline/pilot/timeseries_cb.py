@@ -10,11 +10,12 @@ import pandas as pd
 DATA_DIR = PROJECT_DIR / "outputs/finals/pilot_outputs/"
 ORGS_TABLE = "ISS_pilot_Crunchbase_companies.csv"
 DEALS_TABLE = "ISS_pilot_Crunchbase_deals.csv"
-# Output files
-EXPORT_DIR = DATA_DIR / "time_series/"
-OUTFILE_NAME = "Time_series_Crunchbase_{}.csv"
 # Parameters (tech categories to process, time series limits)
 PARAMS = import_config("iss_pilot.yaml")
+PERIOD = "quarter"
+# Output files
+EXPORT_DIR = DATA_DIR / "time_series" / PERIOD
+OUTFILE_NAME = "Time_series_Crunchbase_{}_{}.csv"
 
 if __name__ == "__main__":
 
@@ -49,13 +50,14 @@ if __name__ == "__main__":
         time_series_investment = au.cb_get_all_timeseries(
             category_cb_orgs,
             category_deals,
+            period=PERIOD,
             min_year=PARAMS["min_year"],
             max_year=PARAMS["max_year"],
         )
 
         # Export
         time_series_investment.to_csv(
-            EXPORT_DIR / OUTFILE_NAME.format(category), index=False
+            EXPORT_DIR / OUTFILE_NAME.format(category, PERIOD), index=False
         )
 
     logging.info(
