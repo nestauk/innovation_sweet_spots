@@ -12,9 +12,9 @@ ORGS_TABLE = "ISS_pilot_Crunchbase_companies.csv"
 DEALS_TABLE = "ISS_pilot_Crunchbase_deals.csv"
 # Parameters (tech categories to process, time series limits)
 PARAMS = import_config("iss_pilot.yaml")
-PERIOD = "quarter"
+PERIOD = "year"
 # Output files
-EXPORT_DIR = DATA_DIR / "time_series" / PERIOD
+EXPORT_DIR = DATA_DIR / "time_series/cb" / PERIOD
 OUTFILE_NAME = "Time_series_Crunchbase_{}_{}.csv"
 
 if __name__ == "__main__":
@@ -54,6 +54,7 @@ if __name__ == "__main__":
             min_year=PARAMS["min_year"],
             max_year=PARAMS["max_year"],
         )
+        time_series_investment["tech_category"] = category
 
         # Export
         time_series_investment.to_csv(
