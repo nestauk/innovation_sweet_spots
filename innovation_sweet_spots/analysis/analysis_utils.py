@@ -25,6 +25,7 @@ def impute_empty_periods(
     Returns:
         A dataframe with imputed 0s for time periods with no data
     """
+    max_year = max(df_time_period[time_period_col].max().year, max_year)
     full_period_range = (
         pd.period_range(
             f"01/01/{min_year}",
@@ -72,7 +73,9 @@ def gtr_deduplicate_projects(gtr_docs: pd.DataFrame) -> pd.DataFrame:
     )[gtr_docs.columns]
 
 
-def gtr_funding_per_period(gtr_docs: pd.DataFrame, period: str) -> pd.DataFrame:
+def gtr_funding_per_period(
+    gtr_docs: pd.DataFrame, period: str, min_year: int, max_year: int
+) -> pd.DataFrame:
     """
     Given a table with projects and their funding, return an aggregation by period
 
@@ -80,6 +83,8 @@ def gtr_funding_per_period(gtr_docs: pd.DataFrame, period: str) -> pd.DataFrame:
         gtr_docs: A dataframe with columns for 'start', 'project_id' and 'amount'
             (research funding) among other project data
         period: Time period to group the data by, 'M', 'Q' or 'Y'
+        min_year: Earliest year to impute values for
+        max_year: Last year to impute values for
 
     Returns:
         A dataframe with the following columns:
@@ -92,28 +97,31 @@ def gtr_funding_per_period(gtr_docs: pd.DataFrame, period: str) -> pd.DataFrame:
     # Convert project start dates to time period
     gtr_docs = (
         gtr_docs.copy()
+        .astype({"start": "datetime64[ns]"})
         .assign(time_period=lambda x: x.start.dt.strftime("%Y-%m-%d"))
         .astype({"time_period": "datetime64[ns]"})
     )
     # Group by time period
-    return (
-        gtr_docs.groupby(gtr_docs["time_period"].dt.to_period(period))
-        .agg(
-            # Number of new projects in a given time period
-            no_of_projects=("project_id", "count"),
-            # Total amount of research funding in a given time period
-            amount_total=("amount", "sum"),
-        )
-        .reset_index()
-        # Convert to thousands
-        .assign(
+    grouped = gtr_docs.groupby(gtr_docs["time_period"].dt.to_period(period)).agg(
+        # Number of new projects in a given time period
+        no_of_projects=("project_id", "count"),
+        # Total amount of research funding in a given time period
+        amount_total=("amount", "sum"),
+    )
+    grouped.index = grouped.index.astype("datetime64[ns]")
+    return impute_empty_periods(
+        grouped.reset_index().assign(
             amount_total=lambda x: x.amount_total / 1000,
-        )
+        ),
+        "time_period",
+        period,
+        min_year,
+        max_year,
     )
 
 
 def gtr_get_all_timeseries_period(
-    gtr_docs: pd.DataFrame, period: str = "year"
+    gtr_docs: pd.DataFrame, period: str, min_year: int, max_year: int
 ) -> pd.DataFrame:
     """
     Calculates all typical time series from a list of GtR projects and return
@@ -136,12 +144,12 @@ def gtr_get_all_timeseries_period(
     # additional funding in later periods
     gtr_docs_dedup = gtr_deduplicate_projects(gtr_docs)
     # Number of new projects per time period
-    time_series_projects = gtr_funding_per_period(gtr_docs_dedup, period)[
-        ["time_period", "no_of_projects"]
-    ]
+    time_series_projects = gtr_funding_per_period(
+        gtr_docs_dedup, period, min_year, max_year
+    )[["time_period", "no_of_projects"]]
     # Amount of research funding per period (note: here we use the non-duplicated table,
     # to account for additional funding for projects that might have started in earlier periods
-    time_series_funding = gtr_funding_per_period(gtr_docs, period)
+    time_series_funding = gtr_funding_per_period(gtr_docs, period, min_year, max_year)
     # Join up both tables
     time_series_funding["no_of_projects"] = time_series_projects["no_of_projects"]
     return time_series_funding
