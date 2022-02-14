@@ -2,6 +2,7 @@
 Utils for doing data analysis
 """
 import pandas as pd
+import numpy as np
 from innovation_sweet_spots.analysis.wrangling_utils import check_valid
 
 
@@ -25,7 +26,8 @@ def impute_empty_periods(
     Returns:
         A dataframe with imputed 0s for time periods with no data
     """
-    max_year = max(df_time_period[time_period_col].max().year, max_year)
+    max_year_data = np.nan_to_num(df_time_period[time_period_col].max().year)
+    max_year = max(max_year_data, max_year)
     full_period_range = (
         pd.period_range(
             f"01/01/{min_year}",
