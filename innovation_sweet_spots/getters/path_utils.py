@@ -13,6 +13,7 @@ GTR_PATH = INPUTS_PATH / "gtr"
 CB_PATH = INPUTS_PATH / "cb"
 HANSARD_PATH = INPUTS_PATH / "hansard"
 GUARDIAN_PATH = INPUTS_PATH / "guardian"
+DEALROOM_PATH = INPUTS_PATH / "dealroom"
 
 # Output paths
 OUTPUT_DATA_PATH = PROJECT_DIR / "outputs/data/"
