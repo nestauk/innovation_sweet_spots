@@ -78,7 +78,18 @@ def get_filenames_in_folder(folder: PathLike, extension: str = None) -> Iterator
 def combine_tables_from_folder(
     folder: PathLike, deduplicate_by: Iterator[str] = None
 ) -> pd.DataFrame:
-    """Finds all csv files in a given folder, loads and combines them into one dataframe and deduplicates rows"""
+    """
+    Finds all csv files in a given folder, loads and combines them
+    into one dataframe and deduplicates rows. NB: It is assumed that
+    all tables have the same column names
+
+    Args:
+        folder: Location of the csv files
+        deduplicate_by: List of column names to use for deduplication
+
+    Returns:
+        Dataframe with the combined table
+    """
     csv_files = get_filenames_in_folder(folder, "csv")
     return pd.concat(
         [pd.read_csv(str(folder / file)) for file in csv_files]
