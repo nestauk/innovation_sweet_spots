@@ -7,6 +7,8 @@ from typing import TypeVar, Iterator
 import pathlib
 import pickle
 import json
+import os
+import pandas as pd
 
 PathLike = TypeVar("PathLike", str, pathlib.Path, None)
 
@@ -61,3 +63,34 @@ def load_json(filepath: PathLike):
     """Loads a json file as a dictionary"""
     with open(filepath, "r") as infile:
         return json.load(infile)
+
+
+def get_filenames_in_folder(folder: PathLike, extension: str = None) -> Iterator[str]:
+    """Get names of all files in the folder and filter by their extension"""
+    return [
+        file
+        for file in os.listdir(folder)
+        if os.path.isfile(os.path.join(folder, file))
+        and ((extension is None) or file.endswith(f".{extension}"))
+    ]
+
+
+def combine_tables_from_folder(
+    folder: PathLike, deduplicate_by: Iterator[str] = None
+) -> pd.DataFrame:
+    """
+    Finds all csv files in a given folder, loads and combines them
+    into one dataframe and deduplicates rows. NB: It is assumed that
+    all tables have the same column names
+
+    Args:
+        folder: Location of the csv files
+        deduplicate_by: List of column names to use for deduplication
+
+    Returns:
+        Dataframe with the combined table
+    """
+    csv_files = get_filenames_in_folder(folder, "csv")
+    return pd.concat(
+        [pd.read_csv(str(folder / file)) for file in csv_files]
+    ).drop_duplicates(deduplicate_by)
