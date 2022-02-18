@@ -92,9 +92,7 @@ def gtr_funding_per_period(
         A dataframe with the following columns:
             'period' - time period
             'no_of_projects' - number of new projects in a given period,
-            'amount_total' - total amount of research funding in a given period,
-            'amount_median' - median project funding in a given period
-
+            'amount_total' - total amount of research funding in a given period
     """
     # Convert project start dates to time period
     gtr_docs = (
@@ -112,8 +110,52 @@ def gtr_funding_per_period(
     )
     grouped.index = grouped.index.astype("datetime64[ns]")
     return impute_empty_periods(
+        grouped.reset_index().assign(amount_total=lambda x: x.amount_total / 1000),
+        "time_period",
+        period,
+        min_year,
+        max_year,
+    )
+
+
+def gtr_funding_median_per_period(
+    gtr_docs: pd.DataFrame, period: str, min_year: int, max_year: int
+) -> pd.DataFrame:
+    """
+    Given a table with projects and their funding, return median funding by period
+
+    Args:
+        gtr_docs: A dataframe with columns for 'start', 'project_id' and 'amount'
+            (research funding) among other project data
+        period: Time period to group the data by, 'month', 'quarter' or 'year'
+        min_year: Earliest year to impute values for
+        max_year: Last year to impute values for
+
+    Returns:
+        A dataframe with the following columns:
+            'period' - time period
+            'amount_median' - median amount of research funding in a given period
+    """
+    # Check and reformat period
+    check_valid(period, ["year", "month", "quarter"])
+    period = period[0].capitalize()
+    # Convert project start dates to time period
+    gtr_docs = (
+        gtr_docs.copy()
+        .astype({"start": "datetime64[ns]"})
+        .assign(time_period=lambda x: x.start.dt.strftime("%Y-%m-%d"))
+        .astype({"time_period": "datetime64[ns]"})
+    )
+
+    # Group by time period
+    grouped = gtr_docs.groupby(gtr_docs["time_period"].dt.to_period(period)).agg(
+        # Median project funding in a given period
+        amount_median=("amount", np.median),
+    )
+    grouped.index = grouped.index.astype("datetime64[ns]")
+    return impute_empty_periods(
         grouped.reset_index().assign(
-            amount_total=lambda x: x.amount_total / 1000,
+            amount_median=lambda x: x.amount_median / 1000,
         ),
         "time_period",
         period,

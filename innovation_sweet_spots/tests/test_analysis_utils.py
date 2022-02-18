@@ -86,6 +86,76 @@ def test_gtr_funding_per_period():
     assert_frame_equal(aggregated_df, aggregated_data)
 
 
+def test_gtr_funding_median_per_period():
+    # Test yearly median
+    mock_input_data = {
+        "start": [
+            "2001-02-01",
+            "2001-10-01",
+            "2001-10-10",
+            "2002-12-05",
+            "2002-12-12",
+            "2002-04-01",
+        ],
+        "project_id": ["a", "b", "c", "d", "e", "f"],
+        "amount": [1000, 2000, 3000, 10000, 5000, 12000],
+    }
+    mock_df = pd.DataFrame(mock_input_data)
+    aggregated_df = gtr_funding_median_per_period(
+        mock_df, period="year", min_year=2001, max_year=2002
+    )
+    aggregated_data = pd.DataFrame(
+        {
+            "time_period": ["2001-01-01", "2002-01-01"],
+            "amount_median": [2.0, 10.0],
+        }
+    ).astype({"time_period": "datetime64[ns]"})
+    assert_frame_equal(aggregated_df, aggregated_data)
+
+    # Test quarterly median
+    mock_input_data = {
+        "start": [
+            "2005-02-01",
+            "2005-10-01",
+            "2005-10-10",
+            "2006-04-01",
+            "2006-12-05",
+            "2006-12-12",
+        ],
+        "project_id": ["a", "b", "c", "d", "e", "f"],
+        "amount": [1000, 2000, 3000, 10000, 5000, 12000],
+    }
+    mock_df = pd.DataFrame(mock_input_data)
+    aggregated_df = gtr_funding_median_per_period(
+        mock_df, period="quarter", min_year=2005, max_year=2005
+    )
+    aggregated_data = pd.DataFrame(
+        {
+            "time_period": [
+                "2005-01-01",
+                "2005-04-01",
+                "2005-07-01",
+                "2005-10-01",
+                "2006-01-01",
+                "2006-04-01",
+                "2006-07-01",
+                "2006-10-01",
+            ],
+            "amount_median": [
+                1.0,
+                0.0,
+                0.0,
+                2.5,
+                0.0,
+                10.0,
+                0.0,
+                8.5,
+            ],
+        }
+    ).astype({"time_period": "datetime64[ns]"})
+    assert_frame_equal(aggregated_df, aggregated_data)
+
+
 def test_gtr_get_all_timeseries_period():
     mock_df = pd.DataFrame(
         {
