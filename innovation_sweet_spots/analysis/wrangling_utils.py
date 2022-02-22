@@ -590,7 +590,7 @@ class CrunchbaseWrangler:
                 'announced_on': date of the round
                 'investment_type': the type of round (seed, series etc.)
                 'post_money_valuation_usd': valuation of the company
-                'raised_amount_usd': amount of money raised in the deal
+                'raised_amount_usd': amount of money raised in the deal (in thousands)
 
         """
         return (

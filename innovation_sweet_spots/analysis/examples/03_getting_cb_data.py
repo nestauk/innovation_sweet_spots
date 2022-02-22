@@ -11,7 +11,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -32,6 +32,7 @@ import itertools
 
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 import innovation_sweet_spots.analysis.analysis_utils as au
+import innovation_sweet_spots.utils.plotting_utils as pu
 
 CB = CrunchbaseWrangler()
 
@@ -110,6 +111,34 @@ filtered_companies = CB.select_companies_by_industries(companies, filtering_indu
 
 # %%
 filtered_companies[["name", "country"]]
+
+# %% [markdown]
+# ## Characterise investment into these companies
+
+# %%
+import importlib
+
+importlib.reload(au)
+
+
+# %% [markdown]
+# ### Companies attracting most funding
+
+# %%
+au.sort_companies_by_funding(filtered_companies)[
+    ["name", "country", "homepage_url", "total_funding_usd"]
+].head(10)
+
+
+# %%
+funding_rounds = CB.get_funding_rounds(filtered_companies)
+funding_rounds.head(5)
+
+# %%
+importlib.reload(pu)
+yearly_funding = au.cb_investments_per_year(funding_rounds)
+pu.time_series(yearly_funding, x_column="year", y_column="raised_amount_gbp_total")
+
 
 # %% [markdown]
 # ## Find persons working in specific companies
