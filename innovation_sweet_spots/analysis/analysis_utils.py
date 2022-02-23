@@ -1,5 +1,7 @@
 """
-Utils for doing data analysis
+innovation_sweet_spots.analysis.analysis_utils
+
+Utils for doing analysis of Crunchbase and GtR data
 """
 from innovation_sweet_spots import logging
 import pandas as pd
@@ -345,7 +347,6 @@ def sort_companies_by_funding(
         logging.info(
             f"{percent_with_funding:.0f}% of organisations have funding information."
         )
-    #         logging.info('oops')
     return df
 
 
