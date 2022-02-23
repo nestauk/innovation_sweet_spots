@@ -60,7 +60,6 @@ class AltairSaver:
         path: os.PathLike = FIGURE_PATH,
         filetypes: Iterator[list] = DEFAULT_FILETYPES,
     ):
-        disable_wdm_logger()
         self.driver = google_chrome_driver_setup()
         self.path = path
         self.filetypes = filetypes
