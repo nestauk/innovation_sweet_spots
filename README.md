@@ -1,28 +1,64 @@
 # Innovation Sweet Spots
 
+**_Open-source code for data-driven horizon scanning_**
+
+## Welcome!
+
+Innovation Sweet Spots is an experimental, data-driven horizon scanning projects, led by Nesta's [Discovery Hub](https://www.nesta.org.uk/project/discovery-hub/). Read more about our motivation on [Medium](https://medium.com/@nesta_uk/in-search-of-innovation-sweet-spots-can-data-science-help-us-see-through-tech-hype-1f140f50c18b), and check out our [first report on green technologies](https://www.nesta.org.uk/data-visualisation-and-interactive/innovation-sweet-spots/).
+
+We are building upon Nesta's [Data Analytics Practice](https://www.nesta.org.uk/project/data-analytics/) expertise and previous work on [innovation mapping](https://www.nesta.org.uk/feature/innovation-methods/innovation-mapping/), leveraging data science and machine-learning methods to track the trajectory of innovations and technologies for social good.
+
+By combining insights across several large [datasets](#datasets) that are commonly only analysed in isolation, we paint a multi-dimensional picture of the innovations indicating the resources they are attracting and how they are perceived.
+
+_NB: The codebase is still under development, with several parts of the analyses being presently refactored into modules._
+
 ## Setup
 
 Check that you meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter). In brief, you should:
 
-- Install `git-crypt`
-- Have a Nesta AWS account configured with `awscli`
+- Install the following components:
+  - [gh](https://formulae.brew.sh/formula/gh), GitHub command line tool
+  - [direnv](https://formulae.brew.sh/formula/direnv#default), for using environment variables
+  - [git-crypt](https://github.com/AGWA/git-crypt/blob/master/INSTALL.md#installing-on-mac-os-x), tool for encryption of sensitive files
+- Have a Nesta AWS account, and install and configure your [AWS Command Line Interface](https://docs.aws.amazon.com/polly/latest/dg/setup-aws-cli.html)
 
-In terminal, run `make install` to configure the development environment. This will do the following:
+After installing the packages above, run the following command to configure the development environment:
+
+```
+make install
+```
+
+This will do the following:
 
 - Setup the conda environment with the name `innovation_sweet_spots`
-- Configure pre-commit (for example, running a code formatter before each commit)
-- Configure metaflow to use AWS
+- Configure pre-commit actions (for example, running a code formatter before each commit)
+- Configure metaflow
 
-You should then activate the newly created conda environment and install the repository package:
+The expected command line output is the following:
+
+```
+conda env create -q -n innovation_sweet_spots -f environment.yaml
+Collecting package metadata (repodata.json): ...working... done
+Solving environment: ...working... done
+Preparing transaction: ...working... done
+Verifying transaction: ...working... done
+Executing transaction: ...working... done
+/Library/Developer/CommandLineTools/usr/bin/make -s pip-install
+source bin/conda_activate.sh && conda_activate &&  pre-commit install --install-hooks
+pre-commit installed at .git/hooks/pre-commit
+source bin/conda_activate.sh && conda_activate &&  /bin/bash ./bin/install_metaflow_aws.sh
+INSTALL COMPLETE
+```
+
+You should then activate the newly created conda environment, and you're good to go!
 
 ```shell
 $ conda activate innovation_sweet_spots
-$ pip install -e .
 ```
 
-### Data access
+### Datasets
 
-To uncover research, investment and public discourse trends, we are using the following data:
+To uncover research, investment and public discourse trends, we are presently using the following data:
 
 - **[Gateway to Research (GtR)](https://gtr.ukri.org/)**: Research projects funded by UKRI
 - **[Crunchbase](https://crunchbase.com/)**: Global company directory
@@ -30,6 +66,8 @@ To uncover research, investment and public discourse trends, we are using the fo
 - **[Hansard](https://zenodo.org/record/4066772#.YXCN1kbYrlw)**: Records of parliamentary debates
 
 All these datasets except Crunchbase are freely available. Note, however, that this project accesses some of these large datasets (namely GtR and Crunchbase) via our internal Nesta database.
+
+In the future, we might add other datasets to our approach.
 
 #### Research project and company data
 
