@@ -1,6 +1,9 @@
 """
-Utils for doing data analysis
+innovation_sweet_spots.analysis.analysis_utils
+
+Utils for doing analysis of Crunchbase and GtR data
 """
+from innovation_sweet_spots import logging
 import pandas as pd
 import numpy as np
 from innovation_sweet_spots.analysis.wrangling_utils import check_valid
@@ -314,6 +317,37 @@ def cb_get_all_timeseries(
         "no_of_orgs_founded"
     ]
     return time_series_investment
+
+
+def sort_companies_by_funding(
+    cb_orgs: pd.DataFrame,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """
+    Args:
+        cb_orgs: A dataframe with a column for 'total_funding_usd' among other data
+        verbose: If True, will print what percentage of organisations that have funding info
+
+    Returns:
+        A dataframe with organisations sorted by the total funding amount
+    """
+    df = (
+        cb_orgs
+        # Add zeros for companies without funding info
+        .fillna({"total_funding_usd": 0})
+        # Covert all funding values to float
+        .assign(
+            total_funding_usd=lambda x: x.total_funding_usd.astype(float)
+        ).sort_values("total_funding_usd", ascending=False)
+    )
+    if verbose:
+        percent_with_funding = (
+            len(cb_orgs.dropna(subset=["total_funding_usd"])) / len(cb_orgs) * 100
+        )
+        logging.info(
+            f"{percent_with_funding:.0f}% of organisations have funding information."
+        )
+    return df
 
 
 ### Time series trends

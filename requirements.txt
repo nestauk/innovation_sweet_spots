@@ -12,4 +12,7 @@ sh
 CurrencyConverter
 pyldavis
 tomotopy
+altair-saver
+selenium
+webdriver-manager
 #data_getters @ git+https://github.com/nestauk/data_getters.git
