@@ -46,7 +46,7 @@ DISC_OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 nlp = spacy.load("en_core_web_sm")
 
 # %%
-search_terms = ['heat pump', 'heat pumps']
+search_terms = ["heat pump", "heat pumps"]
 
 # %% [markdown]
 # ## 2. Detect collocations
@@ -54,15 +54,15 @@ search_terms = ['heat pump', 'heat pumps']
 # %%
 # Read in outputs.
 
-#article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hydrogen.csv'))
+# article_text = pd.read_csv(os.path.join(DISC_OUTPUTS_DIR, 'article_text_hydrogen.csv'))
 
-with open(DISC_OUTPUTS_DIR / 'sentence_records_hp.pkl', "rb") as infile:
-        sentence_records = pickle.load(infile)
+with open(DISC_OUTPUTS_DIR / "sentence_records_hp.pkl", "rb") as infile:
+    sentence_records = pickle.load(infile)
 
 # %%
 sentence_collection_df = pd.DataFrame(sentence_records)
-sentence_collection_df.columns = ['sentence', 'id', 'year']
-sentences_by_year = {y: v for y, v in sentence_collection_df.groupby('year')}
+sentence_collection_df.columns = ["sentence", "id", "year"]
+sentences_by_year = {y: v for y, v in sentence_collection_df.groupby("year")}
 
 # %%
 related_terms = defaultdict(dict)
@@ -71,11 +71,9 @@ normalised_ranks = defaultdict(dict)
 for year, sentences in sentences_by_year.items():
     for term in search_terms:
         print(year, term)
-        key_terms, normalised_rank = cu.get_key_terms(term, 
-                                                      sentences['sentence'], 
-                                                      nlp,
-                                                      mentions_threshold = 1, 
-                                                      token_range = (1,3))
+        key_terms, normalised_rank = cu.get_key_terms(
+            term, sentences["sentence"], nlp, mentions_threshold=1, token_range=(1, 3)
+        )
 
         related_terms[year][term] = list(key_terms.items())
         normalised_ranks[year][term] = list(normalised_rank.items())
@@ -84,7 +82,7 @@ for year, sentences in sentences_by_year.items():
 # ## 3. Aggregate for a set of terms
 
 # %%
-combined_pmi= cu.combine_pmi(related_terms, search_terms)
+combined_pmi = cu.combine_pmi(related_terms, search_terms)
 combined_ranks = cu.combine_ranks(normalised_ranks, search_terms)
 
 # %%
@@ -99,10 +97,14 @@ pmi_inters_ranks = defaultdict(dict)
 for year in combined_ranks:
     for term in combined_ranks[year]:
         if term[0] in combined_pmi_dict[year]:
-            pmi_inters_ranks[year][term[0]] = (term[1], combined_ranks[year][term], combined_pmi_dict[year][term[0]])
+            pmi_inters_ranks[year][term[0]] = (
+                term[1],
+                combined_ranks[year][term],
+                combined_pmi_dict[year][term[0]],
+            )
 
 # %%
-pmi_inters_ranks['2020']
+pmi_inters_ranks["2020"]
 
 # %%
 # Aggregate into one long dataframe.
@@ -111,15 +113,15 @@ agg_pmi = cu.agg_combined_pmi_rank(pmi_inters_ranks)
 # %%
 # Preprocess for further analysis of changes over time.
 # This spreadsheet can be used to identify terms with the largest change in collocation metrics.
-# The spreadsheet shows for each term: year of first mention, total number of years with mentions, 
+# The spreadsheet shows for each term: year of first mention, total number of years with mentions,
 # standard deviation of the rank and mean pmi
 agg_terms = cu.analyse_rank_pmi_over_time(agg_pmi)
 
 # %%
 # Save to disc.
-with open (DISC_OUTPUTS_DIR / 'pmi_inters_rank_hp.json', "wb") as outfile:
+with open(DISC_OUTPUTS_DIR / "pmi_inters_rank_hp.json", "wb") as outfile:
     pickle.dump(pmi_inters_ranks, outfile)
-agg_pmi.to_csv(DISC_OUTPUTS_DIR / 'agg_terms_long_hp.csv', index = False)
-agg_terms.to_csv(DISC_OUTPUTS_DIR / 'agg_terms_stats_hp.csv', index = False)
+agg_pmi.to_csv(DISC_OUTPUTS_DIR / "agg_terms_long_hp.csv", index=False)
+agg_terms.to_csv(DISC_OUTPUTS_DIR / "agg_terms_stats_hp.csv", index=False)
 
 # %%
