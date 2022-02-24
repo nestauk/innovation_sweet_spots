@@ -104,24 +104,15 @@ target/
 # exclude /inputs and /outputs/data except top-level markdown
 /inputs/*
 !/inputs/*.md
-/outputs/*
 /outputs/data/*
 !/outputs/data/*.md
 /outputs/models/*
 !/outputs/models/*.md
-<<<<<<< HEAD
-/outputs/evaluations/*
-!/outputs/figures/
-/outputs/figures/*
-!/outputs/figures/*.md
-!/outputs/figures/*.png
-=======
 outputs/figures/*
 /outputs/evaluations/*
 /outputs/*
 /outputs/
 !/outputs/figures/*.md
->>>>>>> dev
 
 # Mac OS-specific storage files
 .DS_Store
