@@ -1,20 +1,20 @@
-# Innovation Sweet Spots
+# :satellite: Innovation Sweet Spots
 
 **_Open-source code for data-driven horizon scanning_**
 
-## Welcome!
+## :wave: Welcome!
 
-Innovation Sweet Spots is an experimental, data-driven horizon scanning projects, led by Nesta's [Discovery Hub](https://www.nesta.org.uk/project/discovery-hub/). Read more about our motivation on [Medium](https://medium.com/@nesta_uk/in-search-of-innovation-sweet-spots-can-data-science-help-us-see-through-tech-hype-1f140f50c18b), and check out our [first report on green technologies](https://www.nesta.org.uk/data-visualisation-and-interactive/innovation-sweet-spots/).
+Innovation Sweet Spots is an experimental, data-driven horizon scanning project, led by Nesta's [Discovery Hub](https://www.nesta.org.uk/project/discovery-hub/). Read more about our motivation on [Medium](https://medium.com/@nesta_uk/in-search-of-innovation-sweet-spots-can-data-science-help-us-see-through-tech-hype-1f140f50c18b), and check out our [first report on green technologies](https://www.nesta.org.uk/data-visualisation-and-interactive/innovation-sweet-spots/).
 
 We are building upon Nesta's [Data Analytics Practice](https://www.nesta.org.uk/project/data-analytics/) expertise and previous work on [innovation mapping](https://www.nesta.org.uk/feature/innovation-methods/innovation-mapping/), leveraging data science and machine-learning methods to track the trajectory of innovations and technologies for social good.
 
 By combining insights across several large [datasets](#datasets) that are commonly only analysed in isolation, we paint a multi-dimensional picture of the innovations indicating the resources they are attracting and how they are perceived.
 
-_NB: The codebase is still under development, with several parts of the analyses being presently refactored into modules._
+_NB: The codebase and these guidelines are still under development, with several parts of the analyses being presently refactored into modules._
 
-## Setup
+## :hammer_and_wrench: Installation
 
-Check that you meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter). In brief, you should:
+**Step 1.** Check that you meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter). In brief, you should:
 
 - Install the following components:
   - [gh](https://formulae.brew.sh/formula/gh), GitHub command line tool
@@ -22,19 +22,19 @@ Check that you meet the data science cookiecutter [requirements](http://nestauk.
   - [git-crypt](https://github.com/AGWA/git-crypt/blob/master/INSTALL.md#installing-on-mac-os-x), tool for encryption of sensitive files
 - Have a Nesta AWS account, and install and configure your [AWS Command Line Interface](https://docs.aws.amazon.com/polly/latest/dg/setup-aws-cli.html)
 
-After installing the packages above, run the following command to configure the development environment:
+**Step 2.** Run the following command from the repo root folder:
 
 ```
 make install
 ```
 
-This will do the following:
+This will configure the development environment:
 
 - Setup the conda environment with the name `innovation_sweet_spots`
 - Configure pre-commit actions (for example, running a code formatter before each commit)
 - Configure metaflow
 
-The expected command line output is the following:
+The expected output:
 
 ```
 conda env create -q -n innovation_sweet_spots -f environment.yaml
@@ -50,13 +50,13 @@ source bin/conda_activate.sh && conda_activate &&  /bin/bash ./bin/install_metaf
 INSTALL COMPLETE
 ```
 
-You should then activate the newly created conda environment, and you're good to go!
+**Step 3.** Activate the newly created conda environment and you're good to go!
 
 ```shell
 $ conda activate innovation_sweet_spots
 ```
 
-### Datasets
+## :floppy_disk: Datasets
 
 To uncover research, investment and public discourse trends, we are presently using the following data:
 
@@ -65,11 +65,15 @@ To uncover research, investment and public discourse trends, we are presently us
 - **[The Guardian news](https://open-platform.theguardian.com/)**: to the best of our knowledge, the only major UK newspaper to make its text freely available for research.
 - **[Hansard](https://zenodo.org/record/4066772#.YXCN1kbYrlw)**: Records of parliamentary debates
 
-All these datasets except Crunchbase are freely available. Note, however, that this project accesses some of these large datasets (namely GtR and Crunchbase) via our internal Nesta database.
+All these datasets except Crunchbase are freely available. Note, however, that this project accesses some of these large datasets (namely GtR and Crunchbase) via our internal Nesta database and as such are intended for internal use.
 
 In the future, we might add other datasets to our approach.
 
-#### Research project and company data
+<details>
+  <summary>Click to read data access guidelines</summary>
+
+
+### Research project and company data
 
 To download GtR and Crunchbase datasets from Nesta database, you will first need to decrypt the config files (if you don't have the key, reach out to Karlis).
 
@@ -84,15 +88,17 @@ The most recent version of the Gateway to Research (GtR) and Crunchbase datasets
 $ python innovation_sweet_spots/pipeline/fetch_daps1_data/flow.py --no-pylint --environment=conda run
 ```
 
-#### The Guardian news
+### The Guardian news
 
 Coming soon...
 
-#### Hansard
+### Hansard
 
 Coming soon...
 
-## Contributor guidelines
+  </details>
+  
+## :handshake: Contributor guidelines
 
 [Technical and working style guidelines](https://github.com/nestauk/ds-cookiecutter/blob/master/GUIDELINES.md)
 
