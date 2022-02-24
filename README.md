@@ -72,7 +72,6 @@ In the future, we might add other datasets to our approach.
 <details>
   <summary>Click to read data access guidelines</summary>
 
-
 ### Research project and company data
 
 To download GtR and Crunchbase datasets from Nesta database, you will first need to decrypt the config files (if you don't have the key, reach out to Karlis).
@@ -97,7 +96,7 @@ Coming soon...
 Coming soon...
 
   </details>
-  
+
 ## :handshake: Contributor guidelines
 
 [Technical and working style guidelines](https://github.com/nestauk/ds-cookiecutter/blob/master/GUIDELINES.md)
