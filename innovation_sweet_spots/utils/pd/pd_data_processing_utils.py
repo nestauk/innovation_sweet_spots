@@ -12,7 +12,6 @@ import re
 from typing import Iterator
 
 from innovation_sweet_spots.utils import text_cleaning_utils as tcu
-from innovation_sweet_spots.utils import text_pre_processing as tpu
 from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
 
 
@@ -250,6 +249,34 @@ def view_collocations(
     if output_to_file:
         results_df = pd.DataFrame.from_records(results)
         results_df.to_csv(output_path / "sentences_w_collocations.csv", index=False)
+
+
+def view_collocations_given_year(
+    year_sentences,
+    metadata_dict,
+    sentence_record_dict,
+    url_field="webUrl",
+    title_field="webTitle",
+):
+    """Prints sentences and corresponding article metadata for a given year.
+
+    Args:
+        year_sentences: A pandas dataframe.
+        metadata_dict: A dict mapping article IDs to original article metadata.
+        sentence_record_dict: A dict mapping sentences to article IDs.
+
+    Returns:
+        None.
+    """
+    for ix, row in year_sentences.iterrows():
+        sentence = row["sentence"]
+        sent_id = sentence_record_dict[sentence]
+        web_url = metadata_dict[sent_id][url_field]
+        article_title = metadata_dict[sent_id][title_field]
+        print(article_title)
+        print(sentence, end="\n\n")
+        print(web_url, end="\n\n")
+        print("----------")
 
 
 # Utility functions for quickly checking mentions (adapted from above)

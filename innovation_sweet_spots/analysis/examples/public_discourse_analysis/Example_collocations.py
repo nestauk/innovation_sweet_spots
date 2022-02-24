@@ -3,13 +3,14 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.11.3
+#       jupytext_version: 1.13.6
 #   kernelspec:
-#     display_name: Python 3
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -33,7 +34,7 @@ import pickle
 from collections import defaultdict
 
 # %%
-from innovation_sweet_spots.utils import pd_collocation_utils as cu
+from innovation_sweet_spots.utils.pd import pd_collocation_utils as cu
 from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
 
 # %%

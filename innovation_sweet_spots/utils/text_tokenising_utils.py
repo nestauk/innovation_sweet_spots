@@ -1,16 +1,37 @@
-# Functions to pre-process text
-
+import spacy
 import logging
 import re
 
 import spacy
 from gensim import models
 
-from innovation_sweet_spots.analysis.text_analysis import setup_spacy_model
-
+# DEF_LANGUAGE_MODEL = {"model": "en_core_web_sm", "disable": ["ner"]}
 DEF_LANGUAGE_MODEL = {"model": "en_core_web_sm", "disable": ["tok2vec"]}
 DROP_NERS = ["ORG", "DATE", "QUANTITY", "PERSON", "CARDINAL", "ORDINAL", "GPE", "LOC"]
 DROP_NERS_MIN = []
+
+
+def setup_spacy_model(model_parameters=DEF_LANGUAGE_MODEL):
+    """
+    Load and set up a spacy language model
+    Args:
+        model_parameters (dict): Dictionary containing language model parameters.
+        The dictionary is expected to have the following structure:
+            {
+                "model":
+                    Spacy language model name; for example "en_core_web_sm",
+                "disable":
+                    Pipeline components to disable for faster processing
+                    (e.g. disable=["ner"] to disable named entity recognition).
+                    If not required, set it to None.
+            }
+    Returns:
+        (spacy.Language): A spacy language model
+    """
+    nlp = spacy.load(model_parameters["model"])
+    if model_parameters["disable"] is not None:
+        nlp.select_pipes(disable=model_parameters["disable"])
+    return nlp
 
 
 def remove_newline(text):
