@@ -51,3 +51,13 @@ def get_crunchbase_people() -> pd.DataFrame:
 def get_crunchbase_degrees() -> pd.DataFrame:
     """Table with university degrees"""
     return pd.read_csv(CB_PATH / "crunchbase_degrees.csv")
+
+
+def get_crunchbase_ipos() -> pd.DataFrame:
+    """Table with crunchbase ipos"""
+    return pd.read_csv(CB_PATH / "crunchbase_ipos.csv")
+
+
+def get_crunchbase_acquisitions() -> pd.DataFrame:
+    """Table with crunchbase acquisitions"""
+    return pd.read_csv(CB_PATH / "crunchbase_acquisitions.csv")
