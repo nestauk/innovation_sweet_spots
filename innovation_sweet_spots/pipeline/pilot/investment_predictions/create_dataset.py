@@ -15,6 +15,7 @@ import pandas as pd
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 
 
+
 KEEP_COLS = [
     "id",
     "name",
