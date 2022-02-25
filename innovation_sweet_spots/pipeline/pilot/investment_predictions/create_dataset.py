@@ -12,6 +12,7 @@ from innovation_sweet_spots.getters.crunchbase import (
 import utils
 import pandas as pd
 
+
 KEEP_COLS = [
     "id",
     "name",
