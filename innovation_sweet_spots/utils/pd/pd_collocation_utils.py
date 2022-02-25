@@ -16,7 +16,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
-from innovation_sweet_spots.utils import text_tokenising_utils as tku
+from innovation_sweet_spots.utils import text_processing_utils as tpu
 
 ###
 # The following functions relate to tokenising the corpus and producing
@@ -34,7 +34,7 @@ def get_spacy_tokens(sentence_collection, nlp_model):
         A list of spacy tokens.
     """
     tokenised = [
-        tku.process_text_disc(doc) for doc in nlp_model.pipe(sentence_collection)
+        tpu.process_text_disc(doc) for doc in nlp_model.pipe(sentence_collection)
     ]
     return tokenised
 
