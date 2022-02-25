@@ -16,7 +16,8 @@ GUARDIAN_PATH = INPUTS_PATH / "guardian"
 DEALROOM_PATH = INPUTS_PATH / "dealroom"
 
 # Output paths
-OUTPUT_DATA_PATH = PROJECT_DIR / "outputs/data/"
+OUTPUT_PATH = PROJECT_DIR / "outputs"
+OUTPUT_DATA_PATH = OUTPUT_PATH / "data"
 OUTPUT_GTR_PATH = OUTPUT_DATA_PATH / "gtr"
 OUTPUT_CB_PATH = OUTPUT_DATA_PATH / "cb"
 PILOT_OUTPUTS = PROJECT_DIR / "outputs/finals/pilot_outputs/"

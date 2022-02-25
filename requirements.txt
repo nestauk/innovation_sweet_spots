@@ -15,4 +15,10 @@ tomotopy
 altair-saver
 selenium
 webdriver-manager
+spacy
+scikit-learn
+beautifulsoup4
+textacy
+gensim
+sentence-transformers
 #data_getters @ git+https://github.com/nestauk/data_getters.git
