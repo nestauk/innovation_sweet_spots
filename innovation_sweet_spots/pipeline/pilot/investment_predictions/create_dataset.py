@@ -158,7 +158,7 @@ def create_dataset(
         # Save to csv
         .to_csv(
             pilot_outputs
-            / f"investment_predictions/company_data_window_{str(window_start_date).split(' ')[0]}-{str(window_end_date).split(' ')[0]}_y.csv"
+            / f"investment_predictions/company_data_window_{str(window_start_date).split(' ')[0]}-{str(window_end_date).split(' ')[0]}.csv"
         )
     )
 
