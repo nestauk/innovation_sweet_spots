@@ -112,24 +112,55 @@ embedding_model = sentence_transformers.SentenceTransformer("all-MiniLM-L6-v2")
 vectors = embedding_model.encode(CB.industries)
 
 # %%
-q = QueryEmbeddings(vectors, CB.industries, embedding_model)
+group_vectors = embedding_model.encode(CB.industry_groups)
 
 # %%
-q.find_most_similar("education").head(30).text.to_list()
+q_industries = QueryEmbeddings(vectors, CB.industries, embedding_model)
+q_groups = QueryEmbeddings(group_vectors, CB.industry_groups, embedding_model)
 
 # %%
-INDUSTRIES = [
+q_groups.find_most_similar("parenting").head(30).text.to_list()
+
+# %%
+# CB.group_to_industries['consumer electronics']
+CB.industry_to_group["virtual world"]
+
+# %%
+RELEVANT_INDUSTRIES = [
     "parenting",
-    "fertility",
     "child care",
     "children",
     "underserved children",
     "family",
     "baby",
     "education",
-    "toys",
     "edtech",
-    "video games",
+    "toys",
+    "fertility",
+]
+
+# %%
+DIGITAL_INDUSTRY_GROUPS = [
+    "information technology",
+    "hardware",
+    "software",
+    "mobile",
+    "consumer electronics",
+    "music and audio",
+    "gaming",
+    "design",
+    "privacy and security",
+    "messaging and telecommunications",
+    "internet services",
+    "artificial intelligence",
+    "media and entertainment",
+    "platforms",
+    "data and analytics",
+    "apps",
+    "video",
+    "content and publishing",
+    "advertising",
+    "consumer electronics",
 ]
 
 # %% [markdown]
@@ -180,19 +211,10 @@ corpus_full = get_full_crunchbase_corpus()
 CB.cb_organisations.sample()[["id", "name", "short_description"]]
 
 # %%
-INDUSTRIES = [
-    "parenting",
-    "fertility",
-    "child care",
-    "children",
-    "underserved children",
-    "family",
-    "baby",
-    "education",
-    "toys",
-    "edtech",
-    "video games",
-]
+RELEVANT_INDUSTRIES
+
+# %%
+DIGITAL_INDUSTRY_GROUPS
 
 # %%
 USER_TERMS = [
@@ -206,22 +228,62 @@ USER_TERMS = [
     ["infant"],
     ["child"],
     ["toddler"],
-    ["preschool"],
-    ["pre school"],
     [" kid "],
     ["kids"],
+    ["son"],
+    ["daughter"],
+    ["boy"],
+    ["girl"],
 ]
 
-LEARN_TERMS = [["learn"], ["educat"]]
+LEARN_TERMS = [
+    ["learn"],
+    ["educat"],
+    ["preschool"],
+    ["pre school"],
+    ["kindergarten"],
+    ["pre k"],
+    ["montessori"],
+    ["develop"],
+    ["literacy"],
+    ["numeracy"],
+    ["phonics"],
+    ["early years"],
+    ["child", "development"],
+    ["literacy"],
+    ["numeracy"],
+    ["pregnancy"],
+    ["pregnant"],
+]
 
+# EXTRA_TERMS = [
+#     ["early years"],
+#     ["child", "development"],
+#     ["literacy"],
+#     ["numeracy"],
+#     ["pregnancy"],
+#     ["pregnant"],
+# ]
 
 # %%
 Query = QueryTerms(corpus=corpus_full)
 
 # %%
+CB.cb_organisations[["address", "email"]]
+
+# %%
 query_df = Query.find_matches(USER_TERMS, return_only_matches=True)
 
 # %%
+# import numpy as np
+j = np.random.randint(len(Query.text_corpus))
+Query.text_corpus[j]
+
+# %%
 # CB.add_company_data(query_df[query_df["['parent']"]==True], columns=['name', 'long_description']).short_description.to_list()
+
+# %%
+df_ = df[-df["SUB INDUSTRIES"].isnull()]
+df_[df_["SUB INDUSTRIES"].str.contains("social media")]
 
 # %%
