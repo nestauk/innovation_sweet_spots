@@ -21,4 +21,5 @@ beautifulsoup4
 textacy
 gensim
 sentence-transformers
+pyairtable
 #data_getters @ git+https://github.com/nestauk/data_getters.git
