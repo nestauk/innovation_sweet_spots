@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from itertools import chain
 
 
 def convert_col_to_has_col(df: pd.DataFrame, col: str, drop: bool) -> pd.DataFrame:
@@ -18,6 +19,33 @@ def convert_col_to_has_col(df: pd.DataFrame, col: str, drop: bool) -> pd.DataFra
     if drop:
         return df.drop(columns=[col])
     return df
+
+
+def convert_nan_list_to_no_industry_listed(industries: list) -> list:
+    """If list of industries contains a nan item, return
+    ['no_industry_listed'], else return the list unchanged
+    """
+    return ["no_industry_listed"] if np.nan in industries else industries
+
+
+def ind_to_group(industries: list, industry_to_group_map: dict) -> set:
+    """Turns list of industries into a set of wider category groups.
+    If the industry does not map to a category group, the industry name will
+    be used instead.
+
+    Args:
+        industries: List of industries that a company is in
+        industry_to_group_map: Maps industries to wider category groups
+
+    Returns:
+        Flattened set of industries
+    """
+    groups = [
+        [ind] if industry_to_group_map[ind] == [] else industry_to_group_map[ind]
+        for ind in industries
+    ]
+    flattened = list(chain(*groups))
+    return set(flattened)
 
 
 def tech_cats_to_dummies(cb_data: pd.DataFrame) -> pd.DataFrame:
@@ -39,6 +67,31 @@ def tech_cats_to_dummies(cb_data: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def add_industry_dummies(cb_orgs: pd.DataFrame) -> pd.DataFrame:
+    """Adds dummy columns for industries"""
+    industry_dummies = pd.get_dummies(cb_orgs["industry_clean"].explode()).sum(level=0)
+    return cb_orgs.merge(industry_dummies, left_index=True, right_index=True)
+
+
+def add_group_dummies(
+    cb_orgs: pd.DataFrame, industry_to_group_map: dict
+) -> pd.DataFrame:
+    """Adds dummy columns for wider category groups
+
+    Args:
+        cb_orgs: Dataframe containing column industry_clean
+        industry_to_group_map: Maps industries to wider category groups
+
+    Returns:
+        Dataframe with dummy columns for wider category groups added
+    """
+    cb_orgs["groups"] = cb_orgs["industry_clean"].apply(
+        ind_to_group, args=(industry_to_group_map,)
+    )
+    group_dummies = pd.get_dummies(cb_orgs["groups"].explode()).sum(level=0)
+    return cb_orgs.merge(group_dummies, left_index=True, right_index=True)
+
+
 def dedupe_descriptions(cb_data: pd.DataFrame) -> pd.DataFrame:
     """For rows which are duplicates except for differences in their description
     column, drop the rows with no description or the shorter description"""
@@ -46,7 +99,7 @@ def dedupe_descriptions(cb_data: pd.DataFrame) -> pd.DataFrame:
         cb_data.groupby("id")
         .agg(
             {
-                "description": lambda x: max(
+                "long_description": lambda x: max(
                     [str(np.nan_to_num(desc, 0)) for desc in x], key=len
                 )
             }
@@ -54,7 +107,7 @@ def dedupe_descriptions(cb_data: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
     return (
-        cb_data.drop(columns=["description"])
+        cb_data.drop(columns="long_description")
         .drop_duplicates()
         .merge(dedupe_descs, left_on="id", right_on="id")
     )
