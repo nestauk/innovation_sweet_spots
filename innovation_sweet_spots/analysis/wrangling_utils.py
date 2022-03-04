@@ -466,14 +466,14 @@ class CrunchbaseWrangler:
 
     @property
     def cb_people(self):
-        """Table with investors"""
+        """Table with people"""
         if self._cb_people is None:
             self._cb_people = cb.get_crunchbase_people()
         return self._cb_people
 
     @property
     def cb_degrees(self):
-        """Table with investors"""
+        """Table with degrees"""
         if self._cb_degrees is None:
             self._cb_degrees = cb.get_crunchbase_degrees()
         return self._cb_degrees
