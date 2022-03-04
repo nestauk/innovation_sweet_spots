@@ -345,9 +345,57 @@ def sort_companies_by_funding(
             len(cb_orgs.dropna(subset=["total_funding_usd"])) / len(cb_orgs) * 100
         )
         logging.info(
-            f"{percent_with_funding:.0f}% of organisations have funding information."
+            f"{percent_with_funding:.0f}% of organisations have funding amount information."
         )
     return df
+
+
+def sort_companies_by_deals(
+    cb_orgs: pd.DataFrame,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """
+    Args:
+        cb_orgs: A dataframe with a column for 'num_funding_rounds' among other data
+        verbose: If True, will print what percentage of organisations that have deal info
+
+    Returns:
+        A dataframe with organisations sorted by the number of deals
+    """
+    df = (
+        cb_orgs
+        # Add zeros for companies without funding info
+        .fillna({"num_funding_rounds": 0})
+        # Covert all funding values to float
+        .assign(
+            num_funding_rounds=lambda x: x.num_funding_rounds.astype(float)
+        ).sort_values("num_funding_rounds", ascending=False)
+    )
+    if verbose:
+        percent_with_funding = (
+            len(cb_orgs.dropna(subset=["num_funding_rounds"])) / len(cb_orgs) * 100
+        )
+        logging.info(
+            f"{percent_with_funding:.0f}% of organisations have deal information."
+        )
+    return df
+
+
+def get_companies_with_funds(cb_orgs: pd.DataFrame) -> pd.DataFrame:
+    """
+    Returns Crunchbase companies that have funding data
+    """
+    # Companies with non-zero funding amounts
+    cb_orgs_with_funds = (
+        sort_companies_by_funding(cb_orgs).query("total_funding_usd > 0").id.to_list()
+    )
+    # Companies with non-zero deals
+    cb_orgs_with_deals = (
+        sort_companies_by_deals(cb_orgs).query("num_funding_rounds > 0").id.to_list()
+    )
+    # Return companies with non-zero amounts or deals
+    ids_with_funds = set(cb_orgs_with_deals + cb_orgs_with_deals)
+    return cb_orgs.query("id in @ids_with_funds")
 
 
 ### Time series trends
