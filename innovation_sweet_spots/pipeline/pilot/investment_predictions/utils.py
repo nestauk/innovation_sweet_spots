@@ -83,6 +83,27 @@ def add_unstack_data(
 
     Returns:
         Left dataframe with columns added relating to specified column in right dataframe
+
+    Example:
+        left = pd.DataFrame({"id": ["1", "2"]})
+        right = pd.DataFrame({
+            "id": ["1", "1", "2"],
+            "date": ["01/01/2020", "01/01/2021", "01/01/2022"]
+            })
+        add_unstack_data(
+            left=left,
+            right=right,
+            left_id="id",
+            right_id="id",
+            right_col_to_add="date",
+            prefix="right_date_"
+        )
+        ->
+        pd.DataFrame({
+            "id": ["1", "2"],
+            "right_date_0": ["01/01/2020", "01/01/2022"],
+            "right_date_1": ["01/01/2021", np.nan]
+        })
     """
     unstacked = (
         left.merge(
@@ -102,7 +123,7 @@ def add_unstack_data(
 def add_acquired_on(
     cb_data: pd.DataFrame, acquired_on_data: pd.DataFrame
 ) -> pd.DataFrame:
-    """Add columns for acquired on dates from the acqisitions data"""
+    """Add columns for acquired on dates from the acquisitions data"""
     return add_unstack_data(
         left=cb_data,
         right=acquired_on_data,
@@ -253,7 +274,7 @@ def add_n_funding_rounds_in_window(
     return cb_data
 
 
-def add_n_month_since_last_investment_in_window(
+def add_n_months_since_last_investment_in_window(
     cb_data: pd.DataFrame, start_date: pd.DatetimeIndex, end_date: pd.DatetimeIndex
 ) -> pd.DataFrame:
     """Add column for number of months since last investment in the time window
@@ -290,7 +311,7 @@ def add_n_month_since_last_investment_in_window(
     return cb_data
 
 
-def add_n_month_since_founded(
+def add_n_months_since_founded(
     cb_data: pd.DataFrame, end_date: pd.DatetimeIndex
 ) -> pd.DataFrame:
     """Add number of months since company was founded (where the
@@ -304,7 +325,7 @@ def add_n_month_since_founded(
         Dataframe with additional column for number of month since the company
         was founded
     """
-    cb_data["n_month_since_founded"] = (
+    cb_data["n_months_since_founded"] = (
         ((end_date - pd.to_datetime(cb_data["founded_on"])) / np.timedelta64(1, "M"))
         .fillna(-1)
         .astype(int)

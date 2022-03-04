@@ -12,6 +12,38 @@ from innovation_sweet_spots.getters.crunchbase import (
 import utils
 import pandas as pd
 
+KEEP_COLS = [
+    "id",
+    "name",
+    "legal_name",
+    "description",
+    "location_id",
+    "tech_category",
+    "has_email",
+    "has_phone",
+    "has_facebook_url",
+    "has_twitter_url",
+    "has_homepage_url",
+    "has_linkedin_url",
+    "founded_on",
+    "closed_on",
+]
+
+SUCCESS_COLS = [
+    "future_funding_round_date",
+    "future_acquired_on",
+    "future_went_public_on",
+]
+
+BINARISE_COLS = [
+    "twitter_url",
+    "email",
+    "phone",
+    "facebook_url",
+    "homepage_url",
+    "linkedin_url",
+]
+
 
 def create_dataset(
     window_start_date: str = "01/01/2014", window_end_date: str = "01/01/2018"
@@ -37,37 +69,12 @@ def create_dataset(
     cb_funding_rounds = get_crunchbase_funding_rounds()
 
     # Binarise columns
-    cols_to_binarise = [
-        "twitter_url",
-        "email",
-        "phone",
-        "facebook_url",
-        "homepage_url",
-        "linkedin_url",
-    ]
-    for col in cols_to_binarise:
+    for col in BINARISE_COLS:
         cb_orgs = utils.convert_col_to_has_col(df=cb_orgs, col=col, drop=True)
 
-    # Select relevant cols
     (
-        cb_orgs[
-            [
-                "id",
-                "name",
-                "legal_name",
-                "description",
-                "location_id",
-                "tech_category",
-                "has_email",
-                "has_phone",
-                "has_facebook_url",
-                "has_twitter_url",
-                "has_homepage_url",
-                "has_linkedin_url",
-                "founded_on",
-                "closed_on",
-            ]
-        ]
+        # Select relevant cols
+        cb_orgs[KEEP_COLS]
         # Add additional variables
         .pipe(utils.tech_cats_to_dummies)
         .pipe(utils.dedupe_descriptions)
@@ -116,33 +123,19 @@ def create_dataset(
             utils.future_flag, start_date=success_start_date, variable="went_public_on"
         )
         # Create future_success variable which is set to 1 if one of the above flags is 1
-        .assign(
-            future_success=lambda x: x[
-                [
-                    "future_funding_round_date",
-                    "future_acquired_on",
-                    "future_went_public_on",
-                ]
-            ].max(axis=1)
-        )
-        .drop(
-            columns=[
-                "future_funding_round_date",
-                "future_acquired_on",
-                "future_went_public_on",
-            ]
-        )
+        .assign(future_success=lambda x: x[SUCCESS_COLS].max(axis=1))
+        .drop(columns=SUCCESS_COLS)
         .pipe(
             utils.add_n_funding_rounds_in_window,
             start_date=window_start_date,
             end_date=window_end_date,
         )
         .pipe(
-            utils.add_n_month_since_last_investment_in_window,
+            utils.add_n_months_since_last_investment_in_window,
             start_date=window_start_date,
             end_date=window_end_date,
         )
-        .pipe(utils.add_n_month_since_founded, end_date=window_end_date)
+        .pipe(utils.add_n_months_since_founded, end_date=window_end_date)
         # Drop columns
         .pipe(
             utils.drop_multi_cols,
