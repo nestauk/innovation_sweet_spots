@@ -19,7 +19,7 @@ KEEP_COLS = [
     "id",
     "name",
     "legal_name",
-    "description",
+    "long_description",
     "location_id",
     "tech_category",
     "has_email",
@@ -101,6 +101,9 @@ def create_dataset(
     # Binarise columns
     for col in BINARISE_COLS:
         cb_orgs = utils.convert_col_to_has_col(df=cb_orgs, col=col, drop=True)
+
+    # Remove columns that are not needed
+    cb_orgs = cb_orgs[KEEP_COLS]
 
     # Add dummy columns for industry information
     if industries_or_groups is "industries":
