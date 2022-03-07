@@ -21,6 +21,7 @@ KEEP_COLS = [
     "legal_name",
     "long_description",
     "location_id",
+    "industry_clean",
     "has_email",
     "has_phone",
     "has_facebook_url",
