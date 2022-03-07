@@ -47,6 +47,15 @@ BINARISE_COLS = [
     "linkedin_url",
 ]
 
+DROP_MULTI_COLS = [
+    "funding_round_date",
+    "funding_round_id",
+    "acquired_on",
+    "went_public_on",
+]
+
+DROP_COLS = ["founded_on", "closed_on", "industry_clean", "groups"]
+
 
 def create_dataset(
     window_start_date: str = "01/01/2014",
@@ -174,14 +183,9 @@ def create_dataset(
         # Drop columns
         .pipe(
             utils.drop_multi_cols,
-            cols_to_drop_str_containing=[
-                "funding_round_date",
-                "funding_round_id",
-                "acquired_on",
-                "went_public_on",
-            ],
+            cols_to_drop_str_containing=DROP_MULTI_COLS,
         )
-        .drop(columns=["founded_on", "closed_on"])
+        .drop(columns=DROP_COLS)
         .reset_index(drop=True)
         # Save to csv
         .to_csv(
