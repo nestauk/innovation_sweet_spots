@@ -113,7 +113,7 @@ def link_cb_to_gtr(
     # Save cb org name, gtr name, ids, and address info csv
     CB_GTR_LINK_SAVE_PATH.mkdir(exist_ok=True)
     cb_gtr_id_names_and_addresses.to_csv(
-        CB_GTR_LINK_SAVE_PATH / "cb_gtr_id_names_and_addresses_m.csv"
+        CB_GTR_LINK_SAVE_PATH / "cb_gtr_id_names_and_addresses.csv"
     )
 
     # Create cb org id -> gtr org id lookup
@@ -123,7 +123,7 @@ def link_cb_to_gtr(
         .reset_index(name="gtr_org_ids")
     )
     # Save cb org id -> gtr org id lookup csv
-    cb_gtr_id_lookup.to_csv(CB_GTR_LINK_SAVE_PATH / "cb_gtr_id_lookup_m.csv")
+    cb_gtr_id_lookup.to_csv(CB_GTR_LINK_SAVE_PATH / "cb_gtr_id_lookup.csv")
 
 
 if __name__ == "__main__":
