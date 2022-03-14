@@ -46,6 +46,8 @@ def link_cb_to_gtr(
             if running out of memory. Defaults to 100_000.
         sim_mean_min: Keep fuzzy matches where the similary mean is above this
             value. Defaults to 92.
+        stopwords: Words to be removed when preprocessing the lists of names before
+            they are fuzzy matched.
     """
     # Load csvs as dataframes
     cb = (
