@@ -54,11 +54,20 @@ DROP_MULTI_COLS = [
     "went_public_on",
 ]
 
-DROP_COLS = ["founded_on", "closed_on", "industry_clean", "groups"]
+DROP_COLS = [
+    "founded_on",
+    "closed_on",
+    "industry_clean",
+    "groups",
+    "first_funding_date_in_window",
+    "last_funding_round_in_window",
+    "latest_funding_date_in_window",
+    "org_id",
+]
 
 
 def create_dataset(
-    window_start_date: str = "01/01/2014",
+    window_start_date: str = "01/01/2010",
     window_end_date: str = "01/01/2018",
     industries_or_groups: str = "groups",
 ):
@@ -80,7 +89,6 @@ def create_dataset(
     success_start_date = window_end_date
 
     # Load datasets
-    pilot_outputs = PROJECT_DIR / "outputs/finals/pilot_outputs/"
     cb_orgs = cb_orgs = (
         get_crunchbase_orgs().query("country_code == 'GBR'").reset_index()
     )
@@ -169,6 +177,42 @@ def create_dataset(
         # Create future_success variable which is set to 1 if one of the above flags is 1
         .assign(future_success=lambda x: x[SUCCESS_COLS].max(axis=1))
         .drop(columns=SUCCESS_COLS)
+        # Add col for lastest funding date in window
+        .pipe(
+            utils.add_first_last_date,
+            "funding_round_date",
+            True,
+            window_start_date,
+            window_end_date,
+            "latest_funding_date_in_window",
+        )
+        # Add col for first funding date in window
+        .pipe(
+            utils.add_first_last_date,
+            "funding_round_date",
+            False,
+            window_start_date,
+            window_end_date,
+            "first_funding_date_in_window",
+        )
+        # Add col for last funding round in window
+        .pipe(
+            utils.add_first_last_date_col_number,
+            col_contains_string="funding_round_date",
+            last=True,
+            start_date=window_start_date,
+            end_date=window_end_date,
+            new_col="last_funding_round_in_window",
+        )
+        .pipe(utils.add_last_funding_round_id_in_window)
+        .pipe(utils.add_last_investment_round_info, cb_funding_rounds)
+        .pipe(utils.add_n_months_before_first_investment_in_window)
+        .pipe(
+            utils.add_total_investment,
+            cb_funding_rounds,
+            window_start_date,
+            window_end_date,
+        )
         .pipe(
             utils.add_n_funding_rounds_in_window,
             start_date=window_start_date,
@@ -176,7 +220,6 @@ def create_dataset(
         )
         .pipe(
             utils.add_n_months_since_last_investment_in_window,
-            start_date=window_start_date,
             end_date=window_end_date,
         )
         .pipe(utils.add_n_months_since_founded, end_date=window_end_date)
@@ -189,7 +232,8 @@ def create_dataset(
         .reset_index(drop=True)
         # Save to csv
         .to_csv(
-            pilot_outputs
+            PROJECT_DIR
+            / "outputs/finals/pilot_outputs/"
             / f"investment_predictions/company_data_window_{str(window_start_date).split(' ')[0]}-{str(window_end_date).split(' ')[0]}.csv"
         )
     )
