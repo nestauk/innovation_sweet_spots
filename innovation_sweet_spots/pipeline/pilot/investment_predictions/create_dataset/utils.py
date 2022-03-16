@@ -313,7 +313,7 @@ def add_n_funding_rounds_in_window(
         in the date window
     """
     cols_to_loop = cb_data.columns[cb_data.columns.str.contains("funding_round_date")]
-    cb_data["n_funding_rounds_in_window"] = (
+    cb_data["n_funding_rounds"] = (
         pd.DataFrame(
             [
                 pd.to_datetime(cb_data[col])
@@ -472,7 +472,7 @@ def add_n_months_since_last_investment_in_window(
         Dataframe with column added for number of months since last investment
         in the time window
     """
-    cb_data["n_months_since_last_investment_in_window"] = n_months_delta(
+    cb_data["n_months_since_last_investment"] = n_months_delta(
         end_date, cb_data["latest_funding_date_in_window"]
     )
     return cb_data
@@ -529,7 +529,7 @@ def add_n_months_before_first_investment_in_window(
         Dataframe with column added for number of months before first investment
         in the time window
     """
-    cb_data["n_months_before_first_investment_in_window"] = n_months_delta(
+    cb_data["n_months_before_first_investment"] = n_months_delta(
         cb_data["first_funding_date_in_window"], cb_data["founded_on"]
     )
     return cb_data
