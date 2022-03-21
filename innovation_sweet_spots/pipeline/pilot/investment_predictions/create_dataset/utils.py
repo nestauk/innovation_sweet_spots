@@ -579,7 +579,7 @@ def add_total_investment(
     total_invest = total_investment(cb_funding_rounds, start_date, end_date)
     return cb_data.merge(
         right=total_invest, left_on="id", right_on="org_id", how="left", validate="1:1"
-    )
+    ).fillna({"total_investment_amount_usd": -1})
 
 
 def drop_multi_cols(
