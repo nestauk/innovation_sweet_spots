@@ -19,6 +19,7 @@ def link_cb_to_gtr(
     chunksize: int = 100_000,
     sim_mean_min: int = 92,
     stopwords: List[str] = STOPWORDS,
+    test: bool = False,
 ):
     """Link crunchbase organisation ids to gateway to research organisation ids
     using fuzzy matching on the organisation names.
@@ -48,6 +49,8 @@ def link_cb_to_gtr(
             value. Defaults to 92.
         stopwords: Words to be removed when preprocessing the lists of names before
             they are fuzzy matched.
+        test: If set to True, reduces crunchbase data to 500 records. Set to
+            True to quickly check functionality.
     """
     # Load csvs as dataframes
     cb = (
@@ -65,6 +68,10 @@ def link_cb_to_gtr(
     cb_names = preproc_names(cb["name"], stopwords=stopwords).to_list()
     cb_legal_names = preproc_names(cb["legal_name"], stopwords=stopwords).to_list()
     gtr_names = preproc_names(gtr["name"], stopwords=stopwords).to_list()
+
+    if test:
+        cb_names = cb_names[:500]
+        cb_legal_names = cb_legal_names[:500]
 
     # Load configs
     cos_config = Cos_config()
@@ -112,8 +119,13 @@ def link_cb_to_gtr(
     ).drop_duplicates(subset=["cb_org_id", "gtr_org_id"])
     # Save cb org name, gtr name, ids, and address info csv
     CB_GTR_LINK_SAVE_PATH.mkdir(exist_ok=True)
+    cb_gtr_id_names_and_addresses_filename = (
+        "cb_gtr_id_names_and_addresses_test.csv"
+        if test
+        else "cb_gtr_id_names_and_addresses.csv"
+    )
     cb_gtr_id_names_and_addresses.to_csv(
-        CB_GTR_LINK_SAVE_PATH / "cb_gtr_id_names_and_addresses.csv"
+        CB_GTR_LINK_SAVE_PATH / cb_gtr_id_names_and_addresses_filename
     )
 
     # Create cb org id -> gtr org id lookup
@@ -123,7 +135,10 @@ def link_cb_to_gtr(
         .reset_index(name="gtr_org_ids")
     )
     # Save cb org id -> gtr org id lookup csv
-    cb_gtr_id_lookup.to_csv(CB_GTR_LINK_SAVE_PATH / "cb_gtr_id_lookup.csv")
+    cb_gtr_id_lookup_filename = (
+        "cb_gtr_id_lookup_test.csv" if test else "cb_gtr_id_lookup.csv"
+    )
+    cb_gtr_id_lookup.to_csv(CB_GTR_LINK_SAVE_PATH / cb_gtr_id_lookup_filename)
 
 
 if __name__ == "__main__":
