@@ -1,3 +1,13 @@
+"""
+Script to link organisations in the GtR and Crunchbase datasets by using fuzzy matching.
+Run the following command in the terminal to see the options for matching the datasets:
+python innovation_sweet_spots/pipeline/pilot/investment_predictions/link_cb_gtr/link_cb_gtr.py --help
+
+On an M1 macbook it takes:
+~9 mins to match the full UK Crunchbase organisations dataset (30k rows) with the full GtR dataset (55k rows)
+~40 seconds to match the test Crunchbase organisations dataset (500 rows) with the full GtR dataset (55k rows)
+"""
+
 from innovation_sweet_spots import PROJECT_DIR
 from jacc_hammer.name_clean import preproc_names
 from pathlib import Path
@@ -21,14 +31,16 @@ def link_cb_to_gtr(
     stopwords: List[str] = STOPWORDS,
     test: bool = False,
 ):
-    """Link crunchbase organisation ids to gateway to research organisation ids
-    using fuzzy matching on the organisation names.
+    """Link UK Crunchbase organisation ids to Gateway to Research organisation ids
+    by fuzzy matching on the organisation names. Both name and legal name are used
+    for the Crunchbase organisations.  A GtR match can be found on both the name and
+    the legal name. Crunchbase organisations can have more than 1 GtR match.
 
-    Saves:
+    Saves two files:
 
-    Lookup csv in the format cb org id -> list of gtr org ids
+    1. Lookup csv in the format cb org id -> list of gtr org ids (one -> many)
 
-    Csv which can be used to check the fuzzy matches, containing columns for:
+    2. Csv which can be used to check the fuzzy matches, containing columns for:
         - cb_org_id
         - cb_address
         - cb_name
@@ -46,7 +58,7 @@ def link_cb_to_gtr(
         chunksize: Number of chunks to process at a time. Lower the number
             if running out of memory. Defaults to 100_000.
         sim_mean_min: Keep fuzzy matches where the similary mean is above this
-            value. Defaults to 92.
+            value. Matches below the sim_mean_min are filtered out. Defaults to 92.
         stopwords: Words to be removed when preprocessing the lists of names before
             they are fuzzy matched.
         test: If set to True, reduces crunchbase data to 500 records. Set to
