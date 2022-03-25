@@ -575,7 +575,7 @@ def add_total_investment(
     start_date: pd.DatetimeIndex,
     end_date: pd.DatetimeIndex,
 ) -> pd.DataFrame:
-    "Add column to cb_data for total investment"
+    "Add column to cb_data for total usd investment in the specified date range"
     total_invest = total_investment(cb_funding_rounds, start_date, end_date)
     return cb_data.merge(
         right=total_invest, left_on="id", right_on="org_id", how="left", validate="1:1"
