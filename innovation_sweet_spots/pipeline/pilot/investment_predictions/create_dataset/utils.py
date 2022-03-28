@@ -367,19 +367,19 @@ def add_first_last_date_col_number(
     return cb_data
 
 
-def add_last_funding_round_id_in_window(
+def add_last_funding_id_in_window(
     cb_data: pd.DataFrame,
 ) -> pd.DataFrame:
     """Adds column for last funding round id in window,
     needs col 'last_funding_round_in_window'"""
-    last_funding_round_id_in_window = []
+    last_funding_id_in_window = []
     for _, row in cb_data.iterrows():
         rnd = row["last_funding_round_in_window"]
         try:
-            last_funding_round_id_in_window.append(row[f"funding_round_id_{rnd}"])
+            last_funding_id_in_window.append(row[f"funding_round_id_{rnd}"])
         except:
-            last_funding_round_id_in_window.append(np.nan)
-    cb_data["last_funding_round_id_in_window"] = last_funding_round_id_in_window
+            last_funding_id_in_window.append(np.nan)
+    cb_data["last_funding_id_in_window"] = last_funding_id_in_window
     return cb_data
 
 
@@ -485,7 +485,7 @@ def add_last_investment_round_info(
 
     Args:
         cb_data: Dataframe containing column
-            for 'last_funding_round_id_in_window'
+            for 'last_funding_id_in_window'
         cb_funding_rounds: DataFrame containing funding round
             ids and associated funding round information
 
@@ -496,7 +496,7 @@ def add_last_investment_round_info(
         cb_data.merge(
             right=cb_funding_rounds[["id", "investment_type", "raised_amount_usd"]],
             how="left",
-            left_on="last_funding_round_id_in_window",
+            left_on="last_funding_id_in_window",
             right_on="id",
         )
         .drop(columns="id_y")
@@ -533,6 +533,73 @@ def add_n_months_before_first_investment_in_window(
         cb_data["first_funding_date_in_window"], cb_data["founded_on"]
     )
     return cb_data
+
+
+def add_n_unique_investors_total(
+    cb_data: pd.DataFrame,
+    cb_funding_rounds: pd.DataFrame,
+    cb_investments: pd.DataFrame,
+    start_date: pd.DatetimeIndex,
+    end_date: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    """Add column for number of unique investors total
+
+    Args:
+        cb_data: Dataframe to add column for number of unique investors total to
+        cb_funding_rounds: Dataframe containing information about crunchbase
+            funding rounds
+        cb_investments: Dataframe containing information about crunchbase investments
+        start_date: Start date of the time window
+        end_date: End date of the time window
+
+    Returns:
+        cb_data with additional column for number of unique investors total
+
+    """
+    funding_rounds_in_window = (
+        cb_funding_rounds.astype({"announced_on": "datetime64[ns]"})
+        .query(f"'{start_date}' <= announced_on <= '{end_date}'")[["id", "org_id"]]
+        .rename(columns={"id": "funding_round_id"})
+    )
+    n_unique_investors = (
+        funding_rounds_in_window.merge(
+            right=cb_investments[["funding_round_id", "investor_id"]],
+            how="left",
+            left_on="funding_round_id",
+            right_on="funding_round_id",
+        )
+        .drop(columns="funding_round_id")
+        .drop_duplicates()
+        .groupby("org_id")["investor_id"]
+        .agg("count")
+        .reset_index(name="n_unique_investors_total")
+    )
+    return cb_data.merge(
+        n_unique_investors, left_on="id", right_on="org_id", how="left"
+    ).fillna({"n_unique_investors_total": -1})
+
+
+def add_n_unique_investors_last_round(
+    cb_data: pd.DataFrame, cb_investments: pd.DataFrame
+) -> pd.DataFrame:
+    """Add column for number of unique investors in the last funding round"""
+    n_unique_investors_last_round = (
+        cb_data[["id", "last_funding_id_in_window"]]
+        .dropna(subset=["last_funding_id_in_window"])
+        .merge(
+            right=cb_investments[["funding_round_id", "investor_id"]],
+            how="left",
+            left_on="last_funding_id_in_window",
+            right_on="funding_round_id",
+        )[["id", "investor_id"]]
+        .drop_duplicates()
+        .groupby("id")["investor_id"]
+        .agg("count")
+        .reset_index(name="n_unique_investors_last_round")
+    )
+    return cb_data.merge(
+        n_unique_investors_last_round, left_on="id", right_on="id", how="left"
+    ).fillna({"n_unique_investors_last_round": -1})
 
 
 def add_n_months_since_founded(
