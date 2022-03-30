@@ -14,6 +14,7 @@ from innovation_sweet_spots.getters.crunchbase import (
     get_crunchbase_ipos,
     get_crunchbase_acquisitions,
     get_crunchbase_orgs,
+    get_crunchbase_investments,
 )
 import utils
 import pandas as pd
@@ -67,7 +68,8 @@ DROP_COLS = [
     "first_funding_date_in_window",
     "last_funding_round_in_window",
     "latest_funding_date_in_window",
-    "org_id",
+    "org_id_x",
+    "org_id_y",
 ]
 
 
@@ -100,6 +102,7 @@ def create_dataset(
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
     cb_funding_rounds = get_crunchbase_funding_rounds()
+    cb_investments = get_crunchbase_investments()
 
     # Dedupe descriptions
     cb_orgs = cb_orgs.pipe(utils.dedupe_descriptions)
@@ -209,7 +212,7 @@ def create_dataset(
             end_date=window_end_date,
             new_col="last_funding_round_in_window",
         )
-        .pipe(utils.add_last_funding_round_id_in_window)
+        .pipe(utils.add_last_funding_id_in_window)
         .pipe(utils.add_last_investment_round_info, cb_funding_rounds)
         .pipe(utils.add_n_months_before_first_investment_in_window)
         .pipe(
@@ -228,6 +231,14 @@ def create_dataset(
             end_date=window_end_date,
         )
         .pipe(utils.add_n_months_since_founded, end_date=window_end_date)
+        .pipe(utils.add_n_unique_investors_last_round, cb_investments=cb_investments)
+        .pipe(
+            utils.add_n_unique_investors_total,
+            cb_funding_rounds=cb_funding_rounds,
+            cb_investments=cb_investments,
+            start_date=window_start_date,
+            end_date=window_end_date,
+        )
         # Drop columns
         .pipe(
             utils.drop_multi_cols,
