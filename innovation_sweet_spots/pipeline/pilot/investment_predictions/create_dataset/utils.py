@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from itertools import chain
+from typing import Union
 
 
 def convert_col_to_has_col(df: pd.DataFrame, col: str, drop: bool) -> pd.DataFrame:
@@ -312,7 +313,7 @@ def add_n_funding_rounds_in_window(
         in the date window
     """
     cols_to_loop = cb_data.columns[cb_data.columns.str.contains("funding_round_date")]
-    cb_data["n_funding_rounds_in_window"] = (
+    cb_data["n_funding_rounds"] = (
         pd.DataFrame(
             [
                 pd.to_datetime(cb_data[col])
@@ -327,39 +328,209 @@ def add_n_funding_rounds_in_window(
     return cb_data
 
 
+def add_first_last_date_col_number(
+    cb_data: pd.DataFrame,
+    col_contains_string: str,
+    last: bool,
+    start_date: pd.DatetimeIndex,
+    end_date: pd.DatetimeIndex,
+    new_col: str,
+) -> pd.DataFrame:
+    """Add a new column with values of the column name number of the first or last
+    dates across columns containing specified string
+
+    Args:
+        cb_data: Dataframe containing columns with date values
+        col_contains_string: String to use to find columns containing that string
+        last: True to find column name number relating to latest date,
+            False to find column name number relating to first date
+        start_date: Start date of the time window
+        end_date: End date of the time window
+        new_col: Name of the new column
+
+    Returns:
+        cb_data with a new column containing column name number relating
+        to first or last date across specified columns
+    """
+    dates_in_window = keep_dates_in_window(
+        cb_data, col_contains_string, start_date, end_date
+    )
+    cb_data[new_col] = (
+        (
+            dates_in_window.eq(dates_in_window.max(1), axis=0)
+            if last
+            else dates_in_window.eq(dates_in_window.min(1), axis=0)
+        )
+        .dot(dates_in_window.columns)
+        .str.extract("(\d+)")
+    )
+    return cb_data
+
+
+def add_last_funding_round_id_in_window(
+    cb_data: pd.DataFrame,
+) -> pd.DataFrame:
+    """Adds column for last funding round id in window,
+    needs col 'last_funding_round_in_window'"""
+    last_funding_round_id_in_window = []
+    for _, row in cb_data.iterrows():
+        rnd = row["last_funding_round_in_window"]
+        try:
+            last_funding_round_id_in_window.append(row[f"funding_round_id_{rnd}"])
+        except:
+            last_funding_round_id_in_window.append(np.nan)
+    cb_data["last_funding_round_id_in_window"] = last_funding_round_id_in_window
+    return cb_data
+
+
+def keep_dates_in_window(
+    cb_data: pd.DataFrame,
+    col_contains_string: str,
+    start_date: pd.DatetimeIndex,
+    end_date: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    """Return columns containing specified string, keep values with
+    dates within the start and end date provided
+
+    Args:
+        cb_data: Dataframe containing columns with date values
+        col_contains_string: String to use to find columns containing that string
+        start_date: Start date of the time window
+        end_date: End date of the time window
+
+    Returns:
+        Dataframe with columns containing specified string, only with values
+            within the start and end date provided
+    """
+    cols_to_loop = cb_data.columns[cb_data.columns.str.contains(col_contains_string)]
+    return cb_data[cols_to_loop][
+        pd.DataFrame(
+            [
+                pd.to_datetime(cb_data[col]).between(
+                    start_date, end_date, inclusive="both"
+                )
+                for col in cols_to_loop
+            ]
+        ).transpose()
+    ].astype("datetime64[ns]")
+
+
+def add_first_last_date(
+    cb_data: pd.DataFrame,
+    col_contains_string: str,
+    last: bool,
+    start_date: pd.DatetimeIndex,
+    end_date: pd.DatetimeIndex,
+    new_col: str,
+) -> pd.DataFrame:
+    """Add a new column for first or last dates across columns
+    containing specified string
+
+    Args:
+        cb_data: Dataframe to add number of months since last investment to
+        col_contains_string: String to use to find columns containing that string
+        last: True to find latest date, False to find first date
+        start_date: Start date of the time window
+        end_date: End date of the time window
+        new_col: Name of new column
+
+    Returns:
+        cb_data with a new column containing first or last date across
+            specified columns
+    """
+    dates_in_window = keep_dates_in_window(
+        cb_data, col_contains_string, start_date, end_date
+    )
+    cb_data[new_col] = (
+        dates_in_window.max(axis=1) if last else dates_in_window.min(axis=1)
+    )
+    return cb_data
+
+
+def n_months_delta(
+    date1: Union[str, pd.Series], date2: Union[str, pd.Series]
+) -> Union[int, pd.Series]:
+    """Returns number of months between two dates, returns -1 for NaT values"""
+    return (
+        ((pd.to_datetime(date1) - pd.to_datetime(date2)) / np.timedelta64(1, "M"))
+        .fillna(-1)
+        .astype(int)
+    )
+
+
 def add_n_months_since_last_investment_in_window(
-    cb_data: pd.DataFrame, start_date: pd.DatetimeIndex, end_date: pd.DatetimeIndex
+    cb_data: pd.DataFrame, end_date: pd.DatetimeIndex
 ) -> pd.DataFrame:
     """Add column for number of months since last investment in the time window
 
     Args:
-        cb_data: Dataframe to add number of months since last investment to
-        start_date: Start date of the time window
+        cb_data: Dataframe to add number of months since last investment to,
+            must contain column for 'latest_funding_date_in_window'
         end_date: End date of the time window
 
     Returns:
         Dataframe with column added for number of months since last investment
         in the time window
     """
-    cols_to_loop = cb_data.columns[cb_data.columns.str.contains("funding_round_date")]
-    latest_investment_window_date = (
-        cb_data[cols_to_loop][
-            pd.DataFrame(
-                [
-                    pd.to_datetime(cb_data[col]).between(
-                        start_date, end_date, inclusive="both"
-                    )
-                    for col in cols_to_loop
-                ]
-            ).transpose()
-        ]
-        .astype("datetime64[ns]")
-        .max(axis=1)
+    cb_data["n_months_since_last_investment"] = n_months_delta(
+        end_date, cb_data["latest_funding_date_in_window"]
     )
-    cb_data["n_months_since_last_investment_in_window"] = (
-        ((end_date - latest_investment_window_date) / np.timedelta64(1, "M"))
-        .fillna(-1)
-        .astype(int)
+    return cb_data
+
+
+def add_last_investment_round_info(
+    cb_data: pd.DataFrame, cb_funding_rounds: pd.DataFrame
+) -> pd.DataFrame:
+    """Add variables relating to lastest investment round
+
+    Args:
+        cb_data: Dataframe containing column
+            for 'last_funding_round_id_in_window'
+        cb_funding_rounds: DataFrame containing funding round
+            ids and associated funding round information
+
+    Returns:
+        cb_data with additional variables relating to latest investment round
+    """
+    return (
+        cb_data.merge(
+            right=cb_funding_rounds[["id", "investment_type", "raised_amount_usd"]],
+            how="left",
+            left_on="last_funding_round_id_in_window",
+            right_on="id",
+        )
+        .drop(columns="id_y")
+        .rename(
+            columns={
+                "investment_type": "last_investment_round_type",
+                "raised_amount_usd": "last_investment_round_usd",
+                "id_x": "id",
+            }
+        )
+        .fillna(
+            {
+                "last_investment_round_type": "no_last_round",
+                "last_investment_round_usd": -1,
+            }
+        )
+    )
+
+
+def add_n_months_before_first_investment_in_window(
+    cb_data: pd.DataFrame,
+) -> pd.DataFrame:
+    """Add column for number of months before first investment in the time window
+
+    Args:
+        cb_data: Dataframe to add number of months before first investment to,
+            must contain column for 'first_funding_date_in_window' and 'founded_on'
+
+    Returns:
+        Dataframe with column added for number of months before first investment
+        in the time window
+    """
+    cb_data["n_months_before_first_investment"] = n_months_delta(
+        cb_data["first_funding_date_in_window"], cb_data["founded_on"]
     )
     return cb_data
 
@@ -378,12 +549,37 @@ def add_n_months_since_founded(
         Dataframe with additional column for number of month since the company
         was founded
     """
-    cb_data["n_months_since_founded"] = (
-        ((end_date - pd.to_datetime(cb_data["founded_on"])) / np.timedelta64(1, "M"))
-        .fillna(-1)
-        .astype(int)
-    )
+    cb_data["n_months_since_founded"] = n_months_delta(end_date, cb_data["founded_on"])
     return cb_data
+
+
+def total_investment(
+    cb_funding_rounds: pd.DataFrame,
+    start_date: pd.DatetimeIndex,
+    end_date: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    """Produce a dataframe containing org_id and total_investment_amount_usd
+    for within the specified date range"""
+    return (
+        cb_funding_rounds.astype({"announced_on": "datetime64[ns]"})
+        .query(f"'{start_date}' <= announced_on <= '{end_date}'")
+        .groupby("org_id")["raised_amount_usd"]
+        .agg("sum")
+        .reset_index(name="total_investment_amount_usd")
+    )
+
+
+def add_total_investment(
+    cb_data: pd.DataFrame,
+    cb_funding_rounds: pd.DataFrame,
+    start_date: pd.DatetimeIndex,
+    end_date: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    "Add column to cb_data for total usd investment in the specified date range"
+    total_invest = total_investment(cb_funding_rounds, start_date, end_date)
+    return cb_data.merge(
+        right=total_invest, left_on="id", right_on="org_id", how="left", validate="1:1"
+    ).fillna({"total_investment_amount_usd": -1})
 
 
 def drop_multi_cols(
