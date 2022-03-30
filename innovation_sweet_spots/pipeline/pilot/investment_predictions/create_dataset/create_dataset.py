@@ -1,6 +1,11 @@
 """
-Script to create csv using Crunchbase data that can be
-used for predicting future investment sucess for companies
+Script to create csv dataset using Crunchbase and Gateway to Research data that can be
+used for predicting future investment sucess for companies.
+
+Run the following command in the terminal to see the options for creating the dataset:
+python innovation_sweet_spots/pipeline/pilot/investment_predictions/create_dataset/create_dataset.py --help
+
+On an M1 macbook it takes ~7 mins to run.
 """
 import typer
 from innovation_sweet_spots import PROJECT_DIR
