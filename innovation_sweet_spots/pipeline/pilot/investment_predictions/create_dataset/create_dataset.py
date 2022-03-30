@@ -177,7 +177,7 @@ def create_dataset(
         # Create future_success variable which is set to 1 if one of the above flags is 1
         .assign(future_success=lambda x: x[SUCCESS_COLS].max(axis=1))
         .drop(columns=SUCCESS_COLS)
-        # Add col for lastest funding date in window
+        # Add col for latest funding date in window
         .pipe(
             utils.add_first_last_date,
             "funding_round_date",
