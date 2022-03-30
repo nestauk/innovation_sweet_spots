@@ -195,7 +195,7 @@ def create_dataset(
             window_end_date,
             "first_funding_date_in_window",
         )
-        # Add col for last funding round in window
+        # Add col for last funding round number in window
         .pipe(
             utils.add_first_last_date_col_number,
             col_contains_string="funding_round_date",
