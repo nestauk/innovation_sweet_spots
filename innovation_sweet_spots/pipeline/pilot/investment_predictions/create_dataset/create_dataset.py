@@ -96,9 +96,7 @@ def create_dataset(
     success_start_date = window_end_date
 
     # Load datasets
-    cb_orgs = cb_orgs = (
-        get_crunchbase_orgs().query("country_code == 'GBR'").reset_index()
-    )
+    cb_orgs = get_crunchbase_orgs().query("country_code == 'GBR'").reset_index()
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
     cb_funding_rounds = get_crunchbase_funding_rounds()
