@@ -15,6 +15,8 @@ from innovation_sweet_spots.getters.crunchbase import (
     get_crunchbase_acquisitions,
     get_crunchbase_orgs,
     get_crunchbase_investments,
+    get_crunchbase_people,
+    get_crunchbase_degrees,
 )
 from innovation_sweet_spots.pipeline.pilot.investment_predictions.create_dataset import (
     utils,
@@ -72,6 +74,17 @@ DROP_COLS = [
     "latest_funding_date_in_window",
     "org_id_x",
     "org_id_y",
+    "org_id",
+]
+
+PEOPLE_COLS = [
+    "person_id",
+    "person_country",
+    "location_id",
+    "org_id",
+    "is_founder",
+    "is_male_founder",
+    "is_female_founder",
 ]
 
 
@@ -98,11 +111,15 @@ def create_dataset(
     success_start_date = window_end_date
 
     # Load datasets
-    cb_orgs = get_crunchbase_orgs().query("country_code == 'GBR'").reset_index()
+    cb_orgs = (
+        get_crunchbase_orgs().query("country_code == 'GBR'").reset_index().head(5000)
+    )
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
     cb_funding_rounds = get_crunchbase_funding_rounds()
     cb_investments = get_crunchbase_investments()
+    cb_people = get_crunchbase_people()
+    cb_degrees = get_crunchbase_degrees()
 
     # Dedupe descriptions
     cb_orgs = cb_orgs.pipe(utils.dedupe_descriptions)
@@ -135,6 +152,42 @@ def create_dataset(
         cb_orgs = cb_orgs.pipe(utils.add_industry_dummies)
     if industries_or_groups is "groups":
         cb_orgs = cb_orgs.pipe(utils.add_group_dummies, industry_to_group_map)
+
+    # Add founder info to people
+    cb_people = (
+        cb_people.pipe(utils.add_clean_job_title)
+        .pipe(utils.add_is_founder)
+        .pipe(utils.add_is_gender, gender="male")
+        .pipe(utils.add_is_gender, gender="female")
+        .dropna(subset=["featured_job_organization_id"])
+        .rename(
+            columns={
+                "id": "person_id",
+                "featured_job_organization_id": "org_id",
+                "country": "person_country",
+            }
+        )[PEOPLE_COLS]
+        .reset_index(drop=True)
+    )
+
+    # Create dataframe for person id and degree count
+    person_degree_count = utils.person_id_degree_count(cb_degrees)
+
+    # Create dataframe for founders with gender and degree data
+    cb_founders = cb_people.query("is_founder == 1").merge(
+        person_degree_count, how="left", left_on="person_id", right_on="person_id"
+    )
+
+    # Create dataframe for org_id with grouped founders data
+    org_id_founders = (
+        cb_founders.groupby("org_id").agg(
+            founder_count=("is_founder", "sum"),
+            female_founder_count=("is_female_founder", "sum"),
+            male_founder_count=("is_male_founder", "sum"),
+            founder_max_degrees=("degree_count", "max"),
+            founder_mean_degrees=("degree_count", "mean"),
+        )
+    ).reset_index()
 
     (
         # Add flag for founded on and filter out companies with 0 flag
@@ -239,6 +292,8 @@ def create_dataset(
             start_date=window_start_date,
             end_date=window_end_date,
         )
+        # Add cols for founders information
+        .pipe(utils.add_founders, org_id_founders)
         # Drop columns
         .pipe(
             utils.drop_multi_cols,
