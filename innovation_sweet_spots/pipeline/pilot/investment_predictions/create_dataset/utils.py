@@ -658,3 +658,67 @@ def drop_multi_cols(
             cb_data.columns.str.contains("|".join(cols_to_drop_str_containing))
         ]
     )
+
+
+def add_clean_job_title(cb_people: pd.DataFrame) -> pd.DataFrame:
+    """Add cleaned job title column to crunchbase people dataset"""
+    cb_people["clean_job_title"] = cb_people.featured_job_title.str.lower()
+    return cb_people
+
+
+def add_is_founder(cb_people: pd.DataFrame) -> pd.DataFrame:
+    """Add is_founder column to crunchbase people dataset"""
+    cb_people["is_founder"] = (
+        cb_people.clean_job_title.str.contains(
+            "founde"
+        )  # not a typo but quite a few founde typos in dataset
+        .fillna(-1)
+        .astype("int")
+        .replace(-1, np.nan)
+    )
+    return cb_people
+
+
+def add_is_gender(cb_people: pd.DataFrame, gender: str) -> pd.DataFrame:
+    """Add is_male_founder or is_female_founder to crunchbase people dataset"""
+    cb_people[f"is_{gender}_founder"] = np.where(
+        ((cb_people.is_founder == 1) & (cb_people.gender == gender)), 1, 0
+    )
+    return cb_people
+
+
+def person_id_degree_count(cb_degrees: pd.DataFrame) -> pd.DataFrame:
+    """Return a dataframe with cols for person_id and degree_count"""
+    return (
+        cb_degrees.groupby("person_id")["id"]
+        .agg("count")
+        .reset_index(name="degree_count")
+    )
+
+
+def add_founders(cb_data: pd.DataFrame, org_id_founders: pd.DataFrame) -> pd.DataFrame:
+    """Adds columns relating to the founders of the companies
+
+    Args:
+        cb_data: dataframe to add additional founders columns to
+        org_id_founders: dataframe to be merged, containing founders columns
+
+    Returns:
+        cb_data with additional columns for:
+            - founder_count
+            - female_founder_count
+            - male_founder_count
+            - founder_max_degrees
+            - founder_mean_degrees
+    """
+    return cb_data.merge(
+        org_id_founders, how="left", left_on="id", right_on="org_id"
+    ).fillna(
+        {
+            "founder_count": -1,
+            "female_founder_count": -1,
+            "male_founder_count": -1,
+            "founder_max_degrees": -1,
+            "founder_mean_degrees": -1,
+        }
+    )
