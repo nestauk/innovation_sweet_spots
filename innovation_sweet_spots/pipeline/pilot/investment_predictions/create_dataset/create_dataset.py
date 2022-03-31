@@ -22,6 +22,9 @@ from innovation_sweet_spots.getters.crunchbase import (
 from innovation_sweet_spots.pipeline.pilot.investment_predictions.create_dataset import (
     utils,
 )
+from innovation_sweet_spots.pipeline.pilot.investment_predictions.create_dataset import (
+    utils,
+)
 import pandas as pd
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 
