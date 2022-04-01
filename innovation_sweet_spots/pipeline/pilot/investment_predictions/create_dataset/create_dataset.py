@@ -156,7 +156,7 @@ def create_dataset(
     if industries_or_groups is "groups":
         cb_orgs = cb_orgs.pipe(utils.add_group_dummies, industry_to_group_map)
 
-    # Add founder info to people
+    # Add founder info to people info
     cb_people = (
         cb_people.pipe(utils.add_clean_job_title)
         .pipe(utils.add_is_founder)
@@ -268,26 +268,35 @@ def create_dataset(
             end_date=window_end_date,
             new_col="last_funding_round_in_window",
         )
+        # Add col for last funding id in window
         .pipe(utils.add_last_funding_id_in_window)
+        # Add col for last_investment_round_type and last_investment_round_usd
         .pipe(utils.add_last_investment_round_info, cb_funding_rounds)
+        # Add col for number of months before first investment
         .pipe(utils.add_n_months_before_first_investment_in_window)
+        # Add col for total investment received
         .pipe(
             utils.add_total_investment,
             cb_funding_rounds,
             window_start_date,
             window_end_date,
         )
+        # Add col for number of funding rounds
         .pipe(
             utils.add_n_funding_rounds_in_window,
             start_date=window_start_date,
             end_date=window_end_date,
         )
+        # Add col for number of months since last investment
         .pipe(
             utils.add_n_months_since_last_investment_in_window,
             end_date=window_end_date,
         )
+        # Add col for number of months since founded
         .pipe(utils.add_n_months_since_founded, end_date=window_end_date)
+        # Add col for number of unique investors in the last funding round
         .pipe(utils.add_n_unique_investors_last_round, cb_investments=cb_investments)
+        # Add col for number of unique investors total
         .pipe(
             utils.add_n_unique_investors_total,
             cb_funding_rounds=cb_funding_rounds,
