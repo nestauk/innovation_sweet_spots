@@ -75,6 +75,7 @@ DROP_COLS = [
     "org_id_x",
     "org_id_y",
     "org_id",
+    "last_funding_id_in_window",
 ]
 
 PEOPLE_COLS = [
