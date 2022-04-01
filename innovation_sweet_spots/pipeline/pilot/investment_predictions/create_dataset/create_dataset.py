@@ -5,7 +5,7 @@ used for predicting future investment sucess for companies.
 Run the following command in the terminal to see the options for creating the dataset:
 python innovation_sweet_spots/pipeline/pilot/investment_predictions/create_dataset/create_dataset.py --help
 
-On an M1 macbook it takes ~7 mins to run.
+On an M1 macbook it takes ~7 mins to run on the full dataset and ~1 min 30 secs to run in test mode.
 """
 import typer
 from innovation_sweet_spots import PROJECT_DIR
@@ -92,6 +92,7 @@ def create_dataset(
     window_start_date: str = "01/01/2010",
     window_end_date: str = "01/01/2018",
     industries_or_groups: str = "groups",
+    test: bool = False,
 ):
     """Loads crunchbase data, processes and saves dataset which can be used
     to predict future investment success for companies
@@ -104,6 +105,8 @@ def create_dataset(
         industries_or_groups: 'industries' to have a column to indicate which
             industries the company is in or 'groups' to have a column to indicate
             which wider industry group the company is in.
+        test: If set to True, reduces crunchbase orgs to 5000 records. Set to
+            True to quickly check functionality.
     """
     # Date information
     window_start_date = pd.to_datetime(window_start_date)
@@ -111,9 +114,9 @@ def create_dataset(
     success_start_date = window_end_date
 
     # Load datasets
-    cb_orgs = (
-        get_crunchbase_orgs().query("country_code == 'GBR'").reset_index().head(5000)
-    )
+    cb_orgs = get_crunchbase_orgs().query("country_code == 'GBR'").reset_index()
+    if test:
+        cb_orgs = cb_orgs.head(5000)
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
     cb_funding_rounds = get_crunchbase_funding_rounds()
