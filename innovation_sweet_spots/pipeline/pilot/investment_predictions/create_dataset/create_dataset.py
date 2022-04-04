@@ -114,29 +114,38 @@ def create_dataset(
     window_end_date = pd.to_datetime(window_end_date)
     success_start_date = window_end_date
 
+    # Create a CrunchbaseWrangler
+    cb_wrangler = CrunchbaseWrangler()
+
     # Load datasets
     cb_orgs = get_crunchbase_orgs().query("country_code == 'GBR'").reset_index()
     if test:
         cb_orgs = cb_orgs.head(5000)
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
-    cb_funding_rounds = get_crunchbase_funding_rounds()
+    cb_funding_rounds_usd = get_crunchbase_funding_rounds()
     cb_investments = get_crunchbase_investments()
     cb_people = get_crunchbase_people()
     cb_degrees = get_crunchbase_degrees()
 
+    # Convert funding amounts to GBP
+    cb_funding_rounds_gbp = cb_wrangler.convert_deal_currency_to_gbp(
+        funding=cb_funding_rounds_usd.astype({"announced_on": "datetime64[ns]"}),
+        date_column="announced_on",
+        amount_column="raised_amount",
+        usd_amount_column="raised_amount_usd",
+        converted_column="raised_amount_gbp",
+    )
+
     # Dedupe descriptions
     cb_orgs = cb_orgs.pipe(utils.dedupe_descriptions)
 
-    # Create a CrunchbaseWrangler
-    CB = CrunchbaseWrangler()
-
     # Create dict of industry to wider category groupings
-    industry_to_group_map = CB.industry_to_group
+    industry_to_group_map = cb_wrangler.industry_to_group
     industry_to_group_map["no_industry_listed"] = []
 
     # Add industries
-    inds = CB.get_company_industries(cb_orgs, return_lists=True)
+    inds = cb_wrangler.get_company_industries(cb_orgs, return_lists=True)
     # Rename nan industries
     inds["industry_clean"] = inds["industry"].apply(
         utils.convert_nan_list_to_no_industry_listed
@@ -205,8 +214,8 @@ def create_dataset(
         # Add additional variables
         .pipe(utils.add_acquired_on, cb_acquisitions)
         .pipe(utils.add_went_public_on, cb_ipos)
-        .pipe(utils.add_funding_round_ids, cb_funding_rounds)
-        .pipe(utils.add_funding_round_dates, cb_funding_rounds)
+        .pipe(utils.add_funding_round_ids, cb_funding_rounds_gbp)
+        .pipe(utils.add_funding_round_dates, cb_funding_rounds_gbp)
         # Add flags for company acquired on and went public in time window
         .pipe(
             utils.window_flag,
@@ -272,13 +281,13 @@ def create_dataset(
         # Add col for last funding id in window
         .pipe(utils.add_last_funding_id_in_window)
         # Add col for last_investment_round_type and last_investment_round_usd
-        .pipe(utils.add_last_investment_round_info, cb_funding_rounds)
+        .pipe(utils.add_last_investment_round_info, cb_funding_rounds_gbp)
         # Add col for number of months before first investment
         .pipe(utils.add_n_months_before_first_investment_in_window)
         # Add col for total investment received
         .pipe(
             utils.add_total_investment,
-            cb_funding_rounds,
+            cb_funding_rounds_gbp,
             window_start_date,
             window_end_date,
         )
@@ -300,7 +309,7 @@ def create_dataset(
         # Add col for number of unique investors total
         .pipe(
             utils.add_n_unique_investors_total,
-            cb_funding_rounds=cb_funding_rounds,
+            cb_funding_rounds=cb_funding_rounds_gbp,
             cb_investments=cb_investments,
             start_date=window_start_date,
             end_date=window_end_date,

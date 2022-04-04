@@ -494,7 +494,7 @@ def add_last_investment_round_info(
     """
     return (
         cb_data.merge(
-            right=cb_funding_rounds[["id", "investment_type", "raised_amount_usd"]],
+            right=cb_funding_rounds[["id", "investment_type", "raised_amount_gbp"]],
             how="left",
             left_on="last_funding_id_in_window",
             right_on="id",
@@ -503,14 +503,14 @@ def add_last_investment_round_info(
         .rename(
             columns={
                 "investment_type": "last_investment_round_type",
-                "raised_amount_usd": "last_investment_round_usd",
+                "raised_amount_gbp": "last_investment_round_gbp",
                 "id_x": "id",
             }
         )
         .fillna(
             {
                 "last_investment_round_type": "no_last_round",
-                "last_investment_round_usd": -1,
+                "last_investment_round_gbp": -1,
             }
         )
     )
@@ -625,14 +625,14 @@ def total_investment(
     start_date: pd.DatetimeIndex,
     end_date: pd.DatetimeIndex,
 ) -> pd.DataFrame:
-    """Produce a dataframe containing org_id and total_investment_amount_usd
+    """Produce a dataframe containing org_id and total_investment_amount_gbp
     for within the specified date range"""
     return (
         cb_funding_rounds.astype({"announced_on": "datetime64[ns]"})
         .query(f"'{start_date}' <= announced_on <= '{end_date}'")
-        .groupby("org_id")["raised_amount_usd"]
+        .groupby("org_id")["raised_amount_gbp"]
         .agg("sum")
-        .reset_index(name="total_investment_amount_usd")
+        .reset_index(name="total_investment_amount_gbp")
     )
 
 
@@ -642,11 +642,11 @@ def add_total_investment(
     start_date: pd.DatetimeIndex,
     end_date: pd.DatetimeIndex,
 ) -> pd.DataFrame:
-    "Add column to cb_data for total usd investment in the specified date range"
+    "Add column to cb_data for total gbp investment in the specified date range"
     total_invest = total_investment(cb_funding_rounds, start_date, end_date)
     return cb_data.merge(
         right=total_invest, left_on="id", right_on="org_id", how="left", validate="1:1"
-    ).fillna({"total_investment_amount_usd": -1})
+    ).fillna({"total_investment_amount_gbp": -1})
 
 
 def drop_multi_cols(
