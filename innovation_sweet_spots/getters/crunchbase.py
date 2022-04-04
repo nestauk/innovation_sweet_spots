@@ -5,7 +5,7 @@ Module for easy access to downloaded CB data
 
 """
 import pandas as pd
-from innovation_sweet_spots.getters.path_utils import CB_PATH
+from innovation_sweet_spots.getters.path_utils import CB_PATH, CB_GTR_LINK_PATH
 
 
 def get_crunchbase_category_groups() -> pd.DataFrame:
@@ -61,3 +61,9 @@ def get_crunchbase_ipos() -> pd.DataFrame:
 def get_crunchbase_acquisitions() -> pd.DataFrame:
     """Table with crunchbase acquisitions"""
     return pd.read_csv(CB_PATH / "crunchbase_acquisitions.csv")
+
+
+def get_crunchbase_gtr_lookup() -> pd.DataFrame:
+    """Table with UK Crunchbase organisation ids with fuzzy
+    matched Gateway to Research organisation ids"""
+    return pd.read_csv(CB_GTR_LINK_PATH / "cb_gtr_id_lookup.csv", index_col=0)
