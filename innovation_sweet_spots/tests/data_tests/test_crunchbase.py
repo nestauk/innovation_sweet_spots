@@ -1,6 +1,9 @@
 """
 A simple test suite reports some basic information about Crunchbase data
 
+Usage (from the terminal):
+
+python innovation_sweet_spots/tests/data_tests/test_crunchbase.py
 """
 
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
