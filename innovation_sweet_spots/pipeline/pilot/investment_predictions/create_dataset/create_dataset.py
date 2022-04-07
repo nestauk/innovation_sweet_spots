@@ -189,7 +189,7 @@ def create_dataset(
     )
     # Create a GtreWrangler
     gtr_wrangler = GtrWrangler()
-
+    # Create dataframe of grants with funding amounts and receiving organisation id
     gtr_grants = utils.gtr_projects_with_lead_orgs(
         gtr_wrangler,
         gtr_lead_orgs_to_project_id_lookup,
