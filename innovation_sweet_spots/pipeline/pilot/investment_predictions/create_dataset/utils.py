@@ -329,53 +329,15 @@ def add_n_funding_rounds_in_window(
     return cb_data
 
 
-def add_first_last_date_col_number(
-    cb_data: pd.DataFrame,
-    col_contains_string: str,
-    last: bool,
-    start_date: pd.DatetimeIndex,
-    end_date: pd.DatetimeIndex,
-    new_col: str,
-) -> pd.DataFrame:
-    """Add a new column with values of the column name number of the first or last
-    dates across columns containing specified string
-
-    Args:
-        cb_data: Dataframe containing columns with date values
-        col_contains_string: String to use to find columns containing that string
-        last: True to find column name number relating to latest date,
-            False to find column name number relating to first date
-        start_date: Start date of the time window
-        end_date: End date of the time window
-        new_col: Name of the new column
-
-    Returns:
-        cb_data with a new column containing column name number relating
-        to first or last date across specified columns
-    """
-    dates_in_window = keep_dates_in_window(
-        cb_data, col_contains_string, start_date, end_date
-    )
-    cb_data[new_col] = (
-        (
-            dates_in_window.eq(dates_in_window.max(1), axis=0)
-            if last
-            else dates_in_window.eq(dates_in_window.min(1), axis=0)
-        )
-        .dot(dates_in_window.columns)
-        .str.extract("(\d+)")
-    )
-    return cb_data
-
-
 def add_last_funding_id_in_window(
     cb_data: pd.DataFrame,
 ) -> pd.DataFrame:
     """Adds column for last funding round id in window,
-    needs col 'last_funding_round_in_window'"""
+    needs col 'n_funding_rounds'"""
     last_funding_id_in_window = []
     for _, row in cb_data.iterrows():
-        rnd = row["last_funding_round_in_window"]
+        rnd = row["n_funding_rounds"] - 1
+        rnd = np.nan if rnd == -1 else rnd
         try:
             last_funding_id_in_window.append(row[f"funding_round_id_{rnd}"])
         except:

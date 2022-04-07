@@ -81,7 +81,6 @@ DROP_COLS = [
     "industry_clean",
     "groups",
     "first_funding_date_in_window",
-    "last_funding_round_in_window",
     "latest_funding_date_in_window",
     "last_funding_id_in_window",
     "org_id_x",
@@ -347,14 +346,11 @@ def create_dataset(
             window_end_date,
             "first_funding_date_in_window",
         )
-        # Add col for last funding round number in window
+        # Add col for number of funding rounds
         .pipe(
-            utils.add_first_last_date_col_number,
-            col_contains_string="funding_round_date",
-            last=True,
+            utils.add_n_funding_rounds_in_window,
             start_date=window_start_date,
             end_date=window_end_date,
-            new_col="last_funding_round_in_window",
         )
         # Add col for last funding id in window
         .pipe(utils.add_last_funding_id_in_window)
@@ -368,12 +364,6 @@ def create_dataset(
             cb_funding_rounds_gbp,
             window_start_date,
             window_end_date,
-        )
-        # Add col for number of funding rounds
-        .pipe(
-            utils.add_n_funding_rounds_in_window,
-            start_date=window_start_date,
-            end_date=window_end_date,
         )
         # Add col for number of months since last investment
         .pipe(
