@@ -799,7 +799,7 @@ def remove_gtr_grants_from_cb_grants(
     ukri_grant_providers_to_filter: list,
 ) -> pd.DataFrame:
     """Remove grants that are from UKRI from crunchbase grants
-    to avoid having a grant picked from both crunchbase and
+    to avoid having a grant counted from both crunchbase and
     gateway to research
 
     Args:
@@ -831,7 +831,7 @@ def remove_gtr_grants_from_cb_grants(
 
 
 def standardise_cb_grants(cb_grants_without_gtr_grants: pd.DataFrame) -> pd.DataFrame:
-    """Standard crunchbase grants data so that it can be
+    """Standardise crunchbase grants data so that it can be
     combined with gtr grants data"""
     return (
         cb_grants_without_gtr_grants.rename(
@@ -848,7 +848,7 @@ def standardise_cb_grants(cb_grants_without_gtr_grants: pd.DataFrame) -> pd.Data
 
 
 def explode_cb_gtr_lookup(cb_gtr_lookup: pd.DataFrame) -> pd.DataFrame:
-    """Explode crunchase to gtr organisation lookup"""
+    """Explode crunchbase to gtr organisation lookup"""
     # Convert gtr_org_ids type to string
     cb_gtr_lookup["gtr_org_ids"] = cb_gtr_lookup["gtr_org_ids"].apply(literal_eval)
     # Explode cb to gtr lookup
@@ -871,7 +871,7 @@ def add_gtr_project_to_cb_gtr_lookup(
 
 
 def standardise_gtr_grants(cb_gtr_lookup_projects):
-    """Standard gtr grants data so that it can be
+    """Standardise gtr grants data so that it can be
     combined with crunchbase grants data"""
     return (
         cb_gtr_lookup_projects.rename(
