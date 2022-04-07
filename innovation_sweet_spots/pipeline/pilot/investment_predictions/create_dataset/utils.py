@@ -722,3 +722,71 @@ def add_founders(cb_data: pd.DataFrame, org_id_founders: pd.DataFrame) -> pd.Dat
             "founder_mean_degrees": -1,
         }
     )
+
+
+def add_grants(cb_data: pd.DataFrame, grants: pd.DataFrame) -> pd.DataFrame:
+    """Add grants related features to the dataset
+
+    Args:
+        cb_data: dataframe to add additional grants related columns to
+        grants: dataframe containing grants features
+
+    Returns:
+        cb_data dataframe with additional columns for:
+            - total_grant_amount_gbp
+            - n_grants
+            - first_grant_date
+            - last_grant_date
+            - has_received_ukri_grant
+            - has_received_grant
+            - last_grant_amount_gbp
+
+    """
+    return cb_data.merge(
+        right=grants, how="left", left_on="id", right_on="cb_org_id"
+    ).fillna(
+        {
+            "total_grant_amount_gbp": -1,
+            "n_grants": -1,
+            "has_received_ukri_grant": -1,
+            "has_received_grant": -1,
+            "last_grant_amount_gbp": -1,
+        }
+    )
+
+
+def add_n_months_since_last_grant(
+    cb_data: pd.DataFrame, end_date: pd.DatetimeIndex
+) -> pd.DataFrame:
+    """Add column for number of months since last grant
+
+    Args:
+        cb_data: Dataframe to add number of months since last grant to,
+            must contain column for 'last_grant_date'
+        end_date: End date of the time window
+
+    Returns:
+        Dataframe with column added for number of months since last grant
+    """
+    cb_data["n_months_since_last_grant"] = n_months_delta(
+        end_date, cb_data["last_grant_date"]
+    )
+    return cb_data
+
+
+def add_n_months_before_first_grant(
+    cb_data: pd.DataFrame,
+) -> pd.DataFrame:
+    """Add column for number of months before first grant
+
+    Args:
+        cb_data: Dataframe to add number of months before first grant,
+            must contain column for 'first_grant_date' and 'founded_on'
+
+    Returns:
+        Dataframe with column added for number of months before first grant
+    """
+    cb_data["n_months_before_first_grant"] = n_months_delta(
+        cb_data["first_grant_date"], cb_data["founded_on"]
+    )
+    return cb_data
