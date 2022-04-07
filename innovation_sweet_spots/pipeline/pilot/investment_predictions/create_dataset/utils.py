@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from itertools import chain
 from typing import Union
+from ast import literal_eval
 
 
 def convert_col_to_has_col(df: pd.DataFrame, col: str, drop: bool) -> pd.DataFrame:
@@ -242,7 +243,7 @@ def window_flag(
     Args:
         cb_data: Dataframe to check
         start_date: Window start date
-        end_date: Widnow end date
+        end_date: Window end date
         variable: Variable to find relevant columns. For example, if variable is
             "acquired_on", it will be used to find columns "acquired_on_1" and
             "acquired_on_2" etc
@@ -790,3 +791,178 @@ def add_n_months_before_first_grant(
         cb_data["first_grant_date"], cb_data["founded_on"]
     )
     return cb_data
+
+
+def remove_gtr_grants_from_cb_grants(
+    cb_grants_gbp: pd.DataFrame,
+    cb_investments: pd.DataFrame,
+    ukri_grant_providers_to_filter: list,
+) -> pd.DataFrame:
+    """Remove grants that are from UKRI from crunchbase grants
+    to avoid having a grant picked from both crunchbase and
+    gateway to research
+
+    Args:
+        cb_grants_gbp: Crunchbase grants dataframe
+        cb_investments: Crunchbase investments dataframe
+        ukri_grant_providers_to_filter: UKRI councils to find grants
+            from and filter out
+
+    Returns:
+        cb_grants_gbp but with grants from UKRI removed
+    """
+    cb_grants_gbp_w_investments = cb_grants_gbp.merge(
+        right=cb_investments,
+        how="left",
+        left_on="funding_round_id",
+        right_on="funding_round_id",
+    )
+    cb_grants_gbp_w_investments_in_gtr = cb_grants_gbp_w_investments[
+        cb_grants_gbp_w_investments.investor_name.str.contains(
+            ukri_grant_providers_to_filter
+        ).fillna(False)
+    ]
+    gtr_funding_rounds_to_drop = list(
+        cb_grants_gbp_w_investments_in_gtr.funding_round_id.drop_duplicates().values
+    )
+    return cb_grants_gbp[
+        ~cb_grants_gbp.funding_round_id.isin(gtr_funding_rounds_to_drop)
+    ].reset_index(drop=True)
+
+
+def standardise_cb_grants(cb_grants_without_gtr_grants: pd.DataFrame) -> pd.DataFrame:
+    """Standard crunchbase grants data so that it can be
+    combined with gtr grants data"""
+    return (
+        cb_grants_without_gtr_grants.rename(
+            columns={
+                "funding_round_id": "grant_id",
+                "announced_on": "grant_date",
+                "raised_amount_gbp": "grant_amount_gbp",
+                "org_id": "cb_org_id",
+            }
+        )
+        .assign(ukri_grant=0)
+        .drop(columns="org_name")
+    )
+
+
+def explode_cb_gtr_lookup(cb_gtr_lookup: pd.DataFrame) -> pd.DataFrame:
+    """Explode crunchase to gtr organisation lookup"""
+    # Convert gtr_org_ids type to string
+    cb_gtr_lookup["gtr_org_ids"] = cb_gtr_lookup["gtr_org_ids"].apply(literal_eval)
+    # Explode cb to gtr lookup
+    return cb_gtr_lookup.explode("gtr_org_ids").reset_index(drop=True)
+
+
+def add_gtr_project_to_cb_gtr_lookup(
+    cb_gtr_org_lookup: pd.DataFrame, gtr_grants: pd.DataFrame
+) -> pd.DataFrame:
+    """Add gtr project information to cb_gtr_org_lookup"""
+    return (
+        cb_gtr_org_lookup.merge(
+            right=gtr_grants, left_on="gtr_org_ids", right_on="gtr_org_id", how="left"
+        )
+        .dropna(subset=["gtr_org_id"])
+        .drop(columns="gtr_org_ids")
+        .drop_duplicates(subset=["project_id", "cb_org_id"])
+        .reset_index(drop=True)
+    )
+
+
+def standardise_gtr_grants(cb_gtr_lookup_projects):
+    """Standard gtr grants data so that it can be
+    combined with crunchbase grants data"""
+    return (
+        cb_gtr_lookup_projects.rename(
+            columns={
+                "project_id": "grant_id",
+                "fund_start": "grant_date",
+                "amount": "grant_amount_gbp",
+            }
+        )
+        .assign(ukri_grant=1)
+        .drop(columns="gtr_org_id")
+    )
+
+
+def join_cb_gtr_grants(
+    cb_grants_standardised: pd.DataFrame, gtr_grants_standardised: pd.DataFrame
+) -> pd.DataFrame:
+    """Join crunchbase and gtr grants together"""
+    return pd.concat([cb_grants_standardised, gtr_grants_standardised]).reset_index(
+        drop=True
+    )
+
+
+def grants_features(combined_cb_gtr_grants: pd.DataFrame) -> pd.DataFrame:
+    """Create groupby grants features for each crunchbase organisation id"""
+    return (
+        combined_cb_gtr_grants.fillna({"grant_amount_gbp": 0})
+        .groupby("cb_org_id")
+        .agg(
+            total_grant_amount_gbp=("grant_amount_gbp", "sum"),
+            n_grants=("grant_id", "count"),
+            first_grant_date=("grant_date", "min"),
+            last_grant_date=("grant_date", "max"),
+            has_received_ukri_grant=("ukri_grant", "max"),
+        )
+        .assign(has_received_grant=1)
+        .reset_index()
+    )
+
+
+def last_grant_amount(combined_cb_gtr_grants: pd.DataFrame) -> pd.DataFrame:
+    """Calculate last grant amount received for each crunchbase organisation id"""
+    return (
+        combined_cb_gtr_grants.fillna({"grant_amount_gbp": 0})
+        .sort_values("grant_date", ascending=False)
+        .groupby("cb_org_id")
+        .head(1)
+        .rename(
+            columns={
+                "grant_date": "last_grant_date",
+                "grant_amount_gbp": "last_grant_amount_gbp",
+            }
+        )[["cb_org_id", "last_grant_amount_gbp"]]
+    )
+
+
+def gtr_projects_with_lead_orgs(
+    gtr_wrangler: classmethod,
+    gtr_lead_orgs_to_project_id_lookup: pd.DataFrame,
+    start_date: pd.DatetimeIndex,
+    end_date: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    """Use GtrWrangler to find gtr projects within the time window and
+    add funding and lead organisation information.
+
+    Note that this creates a small amount of assignments of a project to
+    more than one 'lead' gtr organisation
+
+    Args:
+        gtr_wrangler: class which can be used to get gtr project data
+            and add funding information
+        gtr_lead_orgs_to_project_id_lookup: Lookup that can be used to
+            link gtr organisations and projects
+        start_date: Window start date
+        end_date: Window end date
+
+    Returns:
+        Dataframe with columns for:
+            - project_id
+            - fund_start
+            - amount
+            - gtr_org_id
+    """
+    return (
+        gtr_wrangler.get_funding_data(gtr_wrangler.gtr_projects)
+        .query(f"'{start_date}' <= fund_start <= '{end_date}'")
+        .reset_index(drop=True)
+        .merge(
+            right=gtr_lead_orgs_to_project_id_lookup,
+            left_on="project_id",
+            right_on="project_id",
+            how="left",
+        )[["project_id", "fund_start", "amount", "gtr_org_id"]]
+    )
