@@ -1036,7 +1036,7 @@ def explode_table(
 ) -> pd.DataFrame:
     """
     Explodes the specified column and does some housekeeping (eg, deduplication). The column
-    should contain strings, which in turn contain substrigns separated by a character (eg, comma).
+    should contain strings, which in turn contain substrings separated by a character (eg, comma).
 
     Args:
         df: Table that has a column with list-like text strings (eg comma-separated words)
