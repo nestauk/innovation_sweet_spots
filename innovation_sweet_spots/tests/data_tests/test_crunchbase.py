@@ -1,9 +1,11 @@
 """
 A simple test suite reports some basic information about Crunchbase data
 
-Usage (from the terminal):
-
+Usage examples (running from the terminal):
+1) To check the default dataset
 python innovation_sweet_spots/tests/data_tests/test_crunchbase.py
+2) To check a different data snapshot in a differently named folder (NB: should be still in inputs/data)
+python innovation_sweet_spots/tests/data_tests/test_crunchbase.py --data-folder-name cb_2021
 """
 
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
