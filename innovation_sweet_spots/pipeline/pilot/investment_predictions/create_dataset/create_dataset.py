@@ -21,7 +21,6 @@ from innovation_sweet_spots.getters.crunchbase import (
     get_crunchbase_gtr_lookup,
 )
 from innovation_sweet_spots.getters.gtr import get_link_table
-from ast import literal_eval
 from innovation_sweet_spots.pipeline.pilot.investment_predictions.create_dataset import (
     utils,
 )
@@ -159,9 +158,12 @@ def create_dataset(
         converted_column="raised_amount_gbp",
     )
 
+    # Split out crunchbase investment from grants
     cb_funding_rounds_gbp = cb_funding_rounds_grants_gbp.query(
         "investment_type != 'grant'"
     )
+
+    # Split out crunchbase grants from investments
     cb_grants_gbp = (
         cb_funding_rounds_grants_gbp.query("investment_type == 'grant'")[
             ["id", "announced_on", "raised_amount_gbp", "org_id", "org_name"]
@@ -170,125 +172,50 @@ def create_dataset(
         .rename(columns={"id": "funding_round_id"})
     )
 
-    cb_grants_gbp_w_investments = cb_grants_gbp.merge(
-        right=cb_investments,
-        how="left",
-        left_on="funding_round_id",
-        right_on="funding_round_id",
+    # Remove GtR grants from crunchbase grants
+    cb_grants_without_gtr_grants = utils.remove_gtr_grants_from_cb_grants(
+        cb_grants_gbp=cb_grants_gbp,
+        cb_investments=cb_investments,
+        ukri_grant_providers_to_filter=UKRI_GRANT_PROVIDERS_TO_FILTER,
     )
+    # Standardise crunchbase grants so it can be combined with gtr grants
+    cb_grants_standardised = utils.standardise_cb_grants(cb_grants_without_gtr_grants)
 
-    cb_grants_gbp_w_investments_in_gtr = cb_grants_gbp_w_investments[
-        cb_grants_gbp_w_investments.investor_name.str.contains(
-            UKRI_GRANT_PROVIDERS_TO_FILTER
-        ).fillna(False)
-    ]
-    gtr_funding_rounds_to_drop = list(
-        cb_grants_gbp_w_investments_in_gtr.funding_round_id.drop_duplicates().values
-    )
-
-    cb_grants_gbp_wo_gtr = cb_grants_gbp[
-        ~cb_grants_gbp.funding_round_id.isin(gtr_funding_rounds_to_drop)
-    ].reset_index(drop=True)
-
-    cb_grants_standardised = (
-        cb_grants_gbp_wo_gtr.rename(
-            columns={
-                "funding_round_id": "grant_id",
-                "announced_on": "grant_date",
-                "raised_amount_gbp": "grant_amount_gbp",
-                "org_id": "cb_org_id",
-            }
-        )
-        .assign(ukri_grant=0)
-        .drop(columns="org_name")
-    )
-
-    # Load cb to gtr lookup
-    cb_gtr_lookup = get_crunchbase_gtr_lookup()
-    # Convert gtr_org_ids type to string
-    cb_gtr_lookup["gtr_org_ids"] = cb_gtr_lookup["gtr_org_ids"].apply(literal_eval)
-    # Explode cb to gtr lookup
-    cb_gtr_lookup = cb_gtr_lookup.explode("gtr_org_ids").reset_index(drop=True)
-
-    gtr_orgs_to_project_id_lookup = (
+    # Load gtr_orgs link table and filter data to lead organisations only
+    gtr_lead_orgs_to_project_id_lookup = (
         get_link_table(table="gtr_organisations")
         .rename(columns={"id": "gtr_org_id"})
         .query("rel == 'LEAD_ORG'")
     )
-
+    # Create a GtreWrangler
     gtr_wrangler = GtrWrangler()
 
-    gtr_grants = (
-        gtr_wrangler.get_funding_data(gtr_wrangler.gtr_projects)
-        .query(f"'{window_start_date}' <= fund_start <= '{window_end_date}'")
-        .reset_index(drop=True)
-        .merge(
-            right=gtr_orgs_to_project_id_lookup,
-            left_on="project_id",
-            right_on="project_id",
-            how="left",
-        )[["project_id", "fund_start", "amount", "gtr_org_id"]]
+    gtr_grants = utils.gtr_projects_with_lead_orgs(
+        gtr_wrangler,
+        gtr_lead_orgs_to_project_id_lookup,
+        window_start_date,
+        window_end_date,
     )
 
-    """Note that this creates a small amount of assignments of a project to
-    more than one 'lead' gtr organisation"""
-
+    # Load cb to gtr lookup
+    cb_gtr_org_lookup = utils.explode_cb_gtr_lookup(get_crunchbase_gtr_lookup())
     # Add gtr project info to cb_gtr_lookup
-    cb_gtr_lookup_projects = (
-        cb_gtr_lookup.merge(
-            right=gtr_grants, left_on="gtr_org_ids", right_on="gtr_org_id", how="left"
-        )
-        .dropna(subset=["gtr_org_id"])
-        .drop(columns="gtr_org_ids")
-        .drop_duplicates(subset=["project_id", "cb_org_id"])
-        .reset_index(drop=True)
+    cb_gtr_lookup_projects = utils.add_gtr_project_to_cb_gtr_lookup(
+        cb_gtr_org_lookup, gtr_grants
     )
-
-    gtr_grants_standardised = (
-        cb_gtr_lookup_projects.rename(
-            columns={
-                "project_id": "grant_id",
-                "fund_start": "grant_date",
-                "amount": "grant_amount_gbp",
-            }
-        )
-        .assign(ukri_grant=1)
-        .drop(columns="gtr_org_id")
+    # Standardise gtr grants so it can be combined with crunchbase grants
+    gtr_grants_standardised = utils.standardise_gtr_grants(cb_gtr_lookup_projects)
+    # Join together crunchbase and gtr grants
+    combined_cb_gtr_grants = utils.join_cb_gtr_grants(
+        cb_grants_standardised, gtr_grants_standardised
     )
-
-    combined_cb_gtr_grants = pd.concat(
-        [cb_grants_standardised, gtr_grants_standardised]
-    ).reset_index(drop=True)
-
-    grants = (
-        combined_cb_gtr_grants.fillna({"grant_amount_gbp": 0})
-        .groupby("cb_org_id")
-        .agg(
-            total_grant_amount_gbp=("grant_amount_gbp", "sum"),
-            n_grants=("grant_id", "count"),
-            first_grant_date=("grant_date", "min"),
-            last_grant_date=("grant_date", "max"),
-            has_received_ukri_grant=("ukri_grant", "max"),
-        )
-        .assign(has_received_grant=1)
-        .reset_index()
-    )
-
-    latest_grants = (
-        combined_cb_gtr_grants.fillna({"grant_amount_gbp": 0})
-        .sort_values("grant_date", ascending=False)
-        .groupby("cb_org_id")
-        .head(1)
-        .rename(
-            columns={
-                "grant_date": "last_grant_date2",
-                "grant_amount_gbp": "last_grant_amount_gbp",
-            }
-        )[["cb_org_id", "last_grant_amount_gbp"]]
-    )
-
+    # Create grants features
+    grants = utils.grants_features(combined_cb_gtr_grants)
+    # Create last_grant_amount_gbp feature
+    latest_grant_amount = utils.last_grant_amount(combined_cb_gtr_grants)
+    # Add last_grant_amount_gbp to grants features
     grants = grants.merge(
-        right=latest_grants, how="left", left_on="cb_org_id", right_on="cb_org_id"
+        right=latest_grant_amount, how="left", left_on="cb_org_id", right_on="cb_org_id"
     )
 
     # Dedupe company descriptions
@@ -353,7 +280,7 @@ def create_dataset(
         )
     ).reset_index()
 
-    (
+    dataset = (
         # Add flag for founded on and filter out companies with 0 flag
         cb_orgs.pipe(
             utils.window_flag,
@@ -480,14 +407,13 @@ def create_dataset(
         )
         .drop(columns=DROP_COLS)
         .reset_index(drop=True)
-        # Save to csv
-        .to_csv(
-            PROJECT_DIR
-            / "outputs/finals/pilot_outputs"
-            / "investment_predictions/company_data_window_"
-            f"{str(window_start_date).split(' ')[0]}-{str(window_end_date).split(' ')[0]}"
-            "_grants_1.csv"
-        )
+    )
+    dataset.to_csv(
+        PROJECT_DIR
+        / "outputs/finals/pilot_outputs"
+        / "investment_predictions/company_data_window_"
+        f"{str(window_start_date).split(' ')[0]}-{str(window_end_date).split(' ')[0]}"
+        ".csv"
     )
 
 
