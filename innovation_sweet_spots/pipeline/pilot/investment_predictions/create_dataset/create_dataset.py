@@ -75,6 +75,7 @@ DROP_COLS = [
     "first_funding_date_in_window",
     "last_funding_round_in_window",
     "latest_funding_date_in_window",
+    "last_funding_id_in_window",
     "org_id_x",
     "org_id_y",
     "org_id",
