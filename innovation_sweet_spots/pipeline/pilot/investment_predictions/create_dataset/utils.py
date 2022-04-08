@@ -716,8 +716,7 @@ def add_founders(cb_data: pd.DataFrame, org_id_founders: pd.DataFrame) -> pd.Dat
     ).fillna(
         {
             "founder_count": -1,
-            "female_founder_count": -1,
-            "male_founder_count": -1,
+            "male_founder_percentage": -1,
             "founder_max_degrees": -1,
             "founder_mean_degrees": -1,
         }

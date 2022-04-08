@@ -80,16 +80,6 @@ DROP_COLS = [
     "org_id",
 ]
 
-PEOPLE_COLS = [
-    "person_id",
-    "person_country",
-    "location_id",
-    "org_id",
-    "is_founder",
-    "is_male_founder",
-    "is_female_founder",
-]
-
 
 def create_dataset(
     window_start_date: str = "01/01/2010",
@@ -164,15 +154,13 @@ def create_dataset(
         cb_people.pipe(utils.add_clean_job_title)
         .pipe(utils.add_is_founder)
         .pipe(utils.add_is_gender, gender="male")
-        .pipe(utils.add_is_gender, gender="female")
         .dropna(subset=["featured_job_organization_id"])
         .rename(
             columns={
                 "id": "person_id",
                 "featured_job_organization_id": "org_id",
-                "country": "person_country",
             }
-        )[PEOPLE_COLS]
+        )
         .reset_index(drop=True)
     )
 
