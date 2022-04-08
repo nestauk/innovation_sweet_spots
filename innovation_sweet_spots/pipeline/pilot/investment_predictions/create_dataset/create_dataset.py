@@ -185,8 +185,7 @@ def create_dataset(
     org_id_founders = (
         cb_founders.groupby("org_id").agg(
             founder_count=("is_founder", "sum"),
-            female_founder_count=("is_female_founder", "sum"),
-            male_founder_count=("is_male_founder", "sum"),
+            male_founder_percentage=("is_male_founder", "mean"),
             founder_max_degrees=("degree_count", "max"),
             founder_mean_degrees=("degree_count", "mean"),
         )
