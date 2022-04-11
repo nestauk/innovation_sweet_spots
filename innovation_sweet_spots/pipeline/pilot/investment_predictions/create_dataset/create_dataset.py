@@ -134,16 +134,17 @@ def create_dataset(
     cb_orgs = (
         get_crunchbase_orgs()
         .query("country_code == 'GBR'")
-        .query(f"'{window_start_date}' <= founded_on")
+        .assign(founded_on=lambda x: pd.to_datetime(x.founded_on, errors="coerce"))
         .reset_index()
     )
     if test:
         cb_orgs = cb_orgs.head(2000)
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
-    cb_funding_rounds_grants = get_crunchbase_funding_rounds().query(
-        f"'{window_start_date}' <= announced_on"
+    cb_funding_rounds_grants = get_crunchbase_funding_rounds().assign(
+        announced_on=lambda x: pd.to_datetime(x.announced_on, errors="coerce")
     )
+
     cb_investments = get_crunchbase_investments()
     cb_people = get_crunchbase_people()
     cb_degrees = get_crunchbase_degrees()
