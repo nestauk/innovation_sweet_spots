@@ -25,6 +25,29 @@ from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 import pandas as pd
 import numpy as np
 from innovation_sweet_spots import logging
+from innovation_sweet_spots.utils import geo
+import importlib
+
+importlib.reload(geo)
+
+# %%
+cb_nuts = geo.get_crunchbase_nuts()
+
+
+# %%
+def print_top_values(
+    df: pd.DataFrame, column_name: str, top_n: int = 5
+) -> pd.DataFrame:
+    """Prints the top n values of a given column"""
+    print(
+        (
+            df.groupby(column_name)
+            .agg(counts=(column_name, "count"))
+            .sort_values("counts", ascending=False)
+            .head(top_n)
+        )
+    )
+
 
 # %%
 CB = CrunchbaseWrangler()
@@ -44,26 +67,13 @@ location_columns = [
 ]
 
 # %%
-uk_org_locations = uk_orgs[["id", "name"] + location_columns]
+uk_org_locations = uk_orgs[["id", "name"] + location_columns].copy()
 
 # %%
 uk_org_locations.iloc[0]
 
 # %%
-uk_orgs[["id", "name"] + location_columns].info()
-
-
-# %%
-def print_top_values(df: pd.DataFrame, col: str, top_n: int = 5) -> pd.DataFrame:
-    print(
-        (
-            df.groupby(col)
-            .agg(counts=(col, "count"))
-            .sort_values("counts", ascending=False)
-            .head(top_n)
-        )
-    )
-
+uk_org_locations.info()
 
 # %%
 for col in location_columns:
@@ -74,14 +84,126 @@ for col in location_columns:
     print_top_values(uk_orgs, col)
     print("---")
 
-# %%
-from innovation_sweet_spots.utils import geo
-import importlib
-
-importlib.reload(geo)
 
 # %% [markdown]
-# # Step 1: Using postcode lookup
+# # Step 1: Map companies to NUTS
+
+# %%
+def add_nuts(df: pd.DataFrame, cb_nuts: dict, version: int) -> pd.DataFrame:
+    """
+    Adds a NUTS2 region column to Crunchbase organisation table
+    Versions can be 2010, 2013, 2016
+    """
+    df[f"nuts2_{version}"] = df.location_id.apply(
+        lambda x: cb_nuts[x][f"nuts2_{version}"] if x in cb_nuts else -1
+    )
+    return df
+
+
+# %%
+uk_org_locations = (
+    uk_org_locations.pipe(add_nuts, cb_nuts, 2010)
+    .pipe(add_nuts, cb_nuts, 2013)
+    .pipe(add_nuts, cb_nuts, 2016)
+)
+
+# %%
+# Locations not mapped to NUTS2 yet
+len(uk_org_locations[uk_org_locations.nuts2_2016 == -1])
+
+# %%
+n_mapped = len(uk_org_locations[uk_org_locations.nuts2_2016 != -1])
+logging.info(
+    f"{n_mapped}/{len(uk_orgs)} ({np.round(n_mapped/len(uk_orgs)*100)}%) organisations have been mapped to NUTS2"
+)
+
+# %% [markdown]
+# # Step 2: Map companies to indicators
+
+# %%
+from innovation_sweet_spots.getters import beis_indicators
+
+# %%
+indicators_df = beis_indicators.get_beis_indicators()
+
+
+# %%
+def add_indicator(
+    organisations_df: pd.DataFrame, indicators_df: pd.DataFrame, indicator: str
+) -> pd.DataFrame:
+    """
+    Adds a column to the organisations_df with the most recent specified R&D indicator
+
+    Args:
+        organisations_df: Table with organisations and their NUTS2 regions
+        indicators_df: Table with R&D indicators for different NUTS2 regions
+        indicator: Indicator identifier name
+
+    Returns:
+        organisations_df table with additional column named after the specified indicator
+    """
+    # Find the specified indicator rows
+    df_ind = df.query("indicator_id == @indicator")
+    # Find the most recent year
+    df_ind = df_ind.query(f"year == {df_ind.year.max()}")
+    # Log the indicator
+    row = df_ind.iloc[0]
+    logging.info(f"{row.indicator_id}, {row.title}, {row.year}")
+    # Merge with the organisation table
+    return (
+        organisations_df.merge(
+            df_ind[["region_id", "value"]],
+            left_on=f"nuts2_{row.region_year_spec}",
+            right_on="region_id",
+            how="left",
+        )
+        .rename(columns={"value": indicator})
+        .drop(["region_id"], axis=1)
+        .fillna(-1)
+    )
+
+
+# %%
+unique_indicators = df.indicator_id.unique()
+uk_org_indicators = uk_org_locations.copy()
+for indicator in unique_indicators:
+    uk_org_indicators = add_indicator(uk_org_indicators, indicators_df, indicator)
+
+
+# %%
+uk_org_indicators
+
+# %%
+uk_org_indicators[["name", "city", "nuts2", "travel_time_to_work"]].sample(10)
+
+# %%
+pd.DataFrame([x, x])
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+df.groupby("unique_indicators").agg(x, lambda x: x.sort_)
+
+# %% [markdown]
+# # Step 2: Using postcode lookup
+
+# %%
+# National Statistics Postcode Lookup (NSPL) location
+NSPL_PATH = (
+    PROJECT_DIR / "inputs/data/misc/geo/NSPL_FEB_2021_UK/Data/NSPL_FEB_2021_UK.csv"
+)
+
+
+def get_nspl(file_path=NSPL_PATH, nrows: int = None) -> pd.DataFrame:
+    """
+    Loads the National Statistics Postcode Lookup (NSPL) table
+    """
+    return pd.read_csv(NSPL_PATH, nrows=nrows)
+
 
 # %%
 postcode_data = geo.get_nspl()[["pcd", "pcd2", "pcds", "lat", "long"]]
@@ -103,9 +225,6 @@ def preprocess_postcode(text: str) -> str:
 for col in ["pcd", "pcd2", "pcds"]:
     # Remove spaces
     postcode_data[col] = postcode_data[col].apply(preprocess_postcode)
-
-# %%
-postcode_data.head(3)
 
 # %%
 # Unique postal codes to lat, long
