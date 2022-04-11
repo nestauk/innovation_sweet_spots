@@ -51,7 +51,7 @@ def add_nuts_to_crunchbase(
     df: pd.DataFrame, cb_nuts: dict, version: int
 ) -> pd.DataFrame:
     """
-    Adds a NUTS2 region column to Crunchbase organisation table
+    Adds a NUTS2 region column to a table of Crunchbase organisations
     Versions can be 2010, 2013, 2016
     """
     df[f"nuts2_{version}"] = df.location_id.apply(

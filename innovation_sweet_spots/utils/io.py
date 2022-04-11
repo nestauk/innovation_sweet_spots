@@ -9,11 +9,7 @@ import pickle
 import json
 import os
 import pandas as pd
-import requests
-import shutil
 from zipfile import ZipFile
-from io import BytesIO
-
 
 PathLike = TypeVar("PathLike", str, pathlib.Path, None)
 
