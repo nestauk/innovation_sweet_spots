@@ -66,6 +66,7 @@ def add_indicator(
 def create_beis_indicators(window_end_date: int = 2018, test: bool = False):
     """
     Creates a csv file with Crunchbase organisations and R&D indicators of their locations.
+    The final csv file contains columns for Crunchbase id, name and each R&D indicator.
 
     Args:
         window_end_date: Cut-off year
