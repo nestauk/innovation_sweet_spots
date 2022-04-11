@@ -839,6 +839,22 @@ class CrunchbaseWrangler:
             )
         )
 
+    def get_all_industries_from_groups(
+        self, list_of_groups: Iterator[str]
+    ) -> Iterator[str]:
+        """
+        Returns a list of all industries that are part of the specified industry groups
+        """
+        return sorted(
+            list(
+                set(
+                    itertools.chain(
+                        *[self.group_to_industries[group] for group in list_of_groups]
+                    )
+                )
+            )
+        )
+
     def get_company_persons(self, cb_organisations: pd.DataFrame) -> pd.DataFrame:
         """
         Adds people associated with the specified companies.

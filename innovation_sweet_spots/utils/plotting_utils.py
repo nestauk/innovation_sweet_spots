@@ -8,6 +8,48 @@ import pandas as pd
 
 ChartType = alt.vegalite.v4.api.Chart
 
+FONT = "Averta"
+TITLE_FONT = "Zosia"
+NESTA_COLOURS = [
+    "#0000FF",
+    "#18A48C",
+    "#9A1BBE",
+    "#EB003B",
+    "#FF6E47",
+    "#646363",
+    "#0F294A",
+    "#97D9E3",
+    "#A59BEE",
+    "#F6A4B7",
+    "#FDB633",
+    "#D2C9C0",
+    "#FFFFFF",
+    "#000000",
+]
+
+
+def nestafont():
+    """Define Nesta fonts"""
+    return {
+        "config": {
+            "title": {"font": TITLE_FONT, "anchor": "start"},
+            "subtitle": {"font": FONT},
+            "axis": {"labelFont": FONT, "titleFont": FONT},
+            "header": {"labelFont": FONT, "titleFont": FONT},
+            "legend": {"labelFont": FONT, "titleFont": FONT},
+            "range": {
+                "category": NESTA_COLOURS,
+                "ordinal": {
+                    "scheme": NESTA_COLOURS
+                },  # this will interpolate the colors
+            },
+        }
+    }
+
+
+alt.themes.register("nestafont", nestafont)
+alt.themes.enable("nestafont")
+
 
 def test_chart():
     """Generates a simple test chart"""
@@ -15,15 +57,36 @@ def test_chart():
         alt.Chart(
             pd.DataFrame(
                 {
-                    "x": [1, 2, 3],
-                    "y": [10, 15, 30],
-                    "label": ["point_1", "point_2", "point_3"],
+                    "labels": ["A", "B", "C"],
+                    "values": [10, 15, 30],
+                    "label": ["This is A", "This is B", "And this is C"],
                 }
-            )
+            ),
+            width=400,
+            height=200,
         )
-        .mark_line()
-        .encode(alt.X("x"), alt.Y("y"), tooltip=["label"])
-    ).interactive()
+        .mark_bar()
+        .encode(
+            alt.Y("labels:O", title="Vertical axis"),
+            alt.X("values:Q", title="Horizontal axis"),
+            tooltip=["label", "values"],
+            color="labels",
+        )
+        .properties(
+            title={
+                "anchor": "start",
+                "text": ["Chart title"],
+                "subtitle": ["Longer descriptive subtitle"],
+                "subtitleFont": FONT,
+            },
+        )
+        .configure_axis(
+            gridDash=[1, 7],
+            gridColor="grey",
+        )
+        .configure_view(strokeWidth=0)
+        .interactive()
+    )
 
 
 def process_axis_label(text: str, units: str = None):
