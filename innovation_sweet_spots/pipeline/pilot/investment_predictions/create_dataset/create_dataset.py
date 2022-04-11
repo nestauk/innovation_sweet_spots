@@ -5,21 +5,28 @@ used for predicting future investment sucess for companies.
 Run the following command in the terminal to see the options for creating the dataset:
 python innovation_sweet_spots/pipeline/pilot/investment_predictions/create_dataset/create_dataset.py --help
 
-On an M1 macbook it takes ~7 mins to run.
+On an M1 macbook it takes ~7 mins to run on the full dataset and ~1 min 30 secs to run in test mode.
 """
 import typer
 from innovation_sweet_spots import PROJECT_DIR
+from innovation_sweet_spots.getters import crunchbase
 from innovation_sweet_spots.getters.crunchbase import (
     get_crunchbase_funding_rounds,
     get_crunchbase_ipos,
     get_crunchbase_acquisitions,
     get_crunchbase_orgs,
     get_crunchbase_investments,
+    get_crunchbase_people,
+    get_crunchbase_degrees,
 )
-import utils
+from innovation_sweet_spots.pipeline.pilot.investment_predictions.create_dataset import (
+    utils,
+)
 import pandas as pd
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 
+# Adjust the Crunchbase data snapshot path (ideally, should adapt the code to accommodate the newest snapshot)
+crunchbase.CB_PATH = crunchbase.CB_PATH.parents[0] / "cb_2021"
 
 KEEP_COLS = [
     "id",
@@ -68,8 +75,10 @@ DROP_COLS = [
     "first_funding_date_in_window",
     "last_funding_round_in_window",
     "latest_funding_date_in_window",
+    "last_funding_id_in_window",
     "org_id_x",
     "org_id_y",
+    "org_id",
 ]
 
 
@@ -77,6 +86,7 @@ def create_dataset(
     window_start_date: str = "01/01/2010",
     window_end_date: str = "01/01/2018",
     industries_or_groups: str = "groups",
+    test: bool = False,
 ):
     """Loads crunchbase data, processes and saves dataset which can be used
     to predict future investment success for companies
@@ -89,6 +99,8 @@ def create_dataset(
         industries_or_groups: 'industries' to have a column to indicate which
             industries the company is in or 'groups' to have a column to indicate
             which wider industry group the company is in.
+        test: If set to True, reduces crunchbase orgs to 5000 records. Set to
+            True to quickly check functionality.
     """
     # Date information
     window_start_date = pd.to_datetime(window_start_date)
@@ -96,13 +108,22 @@ def create_dataset(
     success_start_date = window_end_date
 
     # Load datasets
-    cb_orgs = cb_orgs = (
-        get_crunchbase_orgs().query("country_code == 'GBR'").reset_index()
+    cb_orgs = (
+        get_crunchbase_orgs()
+        .query("country_code == 'GBR'")
+        .query(f"'{window_start_date}' <= founded_on")
+        .reset_index()
     )
+    if test:
+        cb_orgs = cb_orgs.head(2000)
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
-    cb_funding_rounds = get_crunchbase_funding_rounds()
+    cb_funding_rounds = get_crunchbase_funding_rounds().query(
+        f"'{window_start_date}' <= announced_on"
+    )
     cb_investments = get_crunchbase_investments()
+    cb_people = get_crunchbase_people()
+    cb_degrees = get_crunchbase_degrees()
 
     # Dedupe descriptions
     cb_orgs = cb_orgs.pipe(utils.dedupe_descriptions)
@@ -135,6 +156,39 @@ def create_dataset(
         cb_orgs = cb_orgs.pipe(utils.add_industry_dummies)
     if industries_or_groups is "groups":
         cb_orgs = cb_orgs.pipe(utils.add_group_dummies, industry_to_group_map)
+
+    # Add founder info to people info
+    cb_people = (
+        cb_people.pipe(utils.add_clean_job_title)
+        .pipe(utils.add_is_founder)
+        .pipe(utils.add_is_gender, gender="male")
+        .dropna(subset=["featured_job_organization_id"])
+        .rename(
+            columns={
+                "id": "person_id",
+                "featured_job_organization_id": "org_id",
+            }
+        )
+        .reset_index(drop=True)
+    )
+
+    # Create dataframe for person id and degree count
+    person_degree_count = utils.person_id_degree_count(cb_degrees)
+
+    # Create dataframe for founders with gender and degree data
+    cb_founders = cb_people.query("is_founder == 1").merge(
+        person_degree_count, how="left", left_on="person_id", right_on="person_id"
+    )
+
+    # Create dataframe for org_id with grouped founders data
+    org_id_founders = (
+        cb_founders.groupby("org_id").agg(
+            founder_count=("is_founder", "sum"),
+            male_founder_percentage=("is_male_founder", "mean"),
+            founder_max_degrees=("degree_count", "max"),
+            founder_mean_degrees=("degree_count", "mean"),
+        )
+    ).reset_index()
 
     (
         # Add flag for founded on and filter out companies with 0 flag
@@ -212,26 +266,35 @@ def create_dataset(
             end_date=window_end_date,
             new_col="last_funding_round_in_window",
         )
+        # Add col for last funding id in window
         .pipe(utils.add_last_funding_id_in_window)
+        # Add col for last_investment_round_type and last_investment_round_usd
         .pipe(utils.add_last_investment_round_info, cb_funding_rounds)
+        # Add col for number of months before first investment
         .pipe(utils.add_n_months_before_first_investment_in_window)
+        # Add col for total investment received
         .pipe(
             utils.add_total_investment,
             cb_funding_rounds,
             window_start_date,
             window_end_date,
         )
+        # Add col for number of funding rounds
         .pipe(
             utils.add_n_funding_rounds_in_window,
             start_date=window_start_date,
             end_date=window_end_date,
         )
+        # Add col for number of months since last investment
         .pipe(
             utils.add_n_months_since_last_investment_in_window,
             end_date=window_end_date,
         )
+        # Add col for number of months since founded
         .pipe(utils.add_n_months_since_founded, end_date=window_end_date)
+        # Add col for number of unique investors in the last funding round
         .pipe(utils.add_n_unique_investors_last_round, cb_investments=cb_investments)
+        # Add col for number of unique investors total
         .pipe(
             utils.add_n_unique_investors_total,
             cb_funding_rounds=cb_funding_rounds,
@@ -239,6 +302,8 @@ def create_dataset(
             start_date=window_start_date,
             end_date=window_end_date,
         )
+        # Add cols for founders information
+        .pipe(utils.add_founders, org_id_founders)
         # Drop columns
         .pipe(
             utils.drop_multi_cols,
