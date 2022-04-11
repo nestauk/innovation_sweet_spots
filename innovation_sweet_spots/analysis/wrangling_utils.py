@@ -417,7 +417,15 @@ class CrunchbaseWrangler:
     investment rounds (deals) and investors participating in the deals
     """
 
-    def __init__(self):
+    def __init__(self, cb_data_path: str = None):
+        """
+        Sets up the CrunchbaseWrangler class
+
+        Args:
+            cb_data_path: Optional argument to specify the location of the
+                Crunchbase data, if it is different from the default location;
+                NB: Note that this changes a global variable.
+        """
         # Tables from the database
         self._cb_organisations = None
         self._cb_funding_rounds = None
@@ -432,6 +440,9 @@ class CrunchbaseWrangler:
         self._industry_groups = None
         self._industry_to_group = None
         self._group_to_industries = None
+        # Set data path (optional)
+        if cb_data_path is not None:
+            cb.CB_PATH = cb_data_path
 
     @property
     def cb_organisations(self):
@@ -466,14 +477,14 @@ class CrunchbaseWrangler:
 
     @property
     def cb_people(self):
-        """Table with investors"""
+        """Table with people"""
         if self._cb_people is None:
             self._cb_people = cb.get_crunchbase_people()
         return self._cb_people
 
     @property
     def cb_degrees(self):
-        """Table with investors"""
+        """Table with degrees"""
         if self._cb_degrees is None:
             self._cb_degrees = cb.get_crunchbase_degrees()
         return self._cb_degrees
