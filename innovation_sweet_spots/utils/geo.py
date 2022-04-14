@@ -9,31 +9,31 @@ export BING_API_KEY=path/to/key
 """
 from innovation_sweet_spots import PROJECT_DIR
 from innovation_sweet_spots.utils.io import load_json
-import geocoder
+
+# import geocoder
 import os
 import dotenv
 import pandas as pd
 
-# BING API key location
-dotenv.load_dotenv(PROJECT_DIR / ".env")
-API_KEY = open(os.environ["BING_API_KEY"], "r").read()
-
 # Crunchbase location_id mapped to NUTS2 regions
 CB_NUTS_PATH = PROJECT_DIR / "inputs/data/misc/geo/cb_geos.json"
 
+# BING API key location (commented out for now as throws an error if there is no API key)
+# dotenv.load_dotenv(PROJECT_DIR / ".env")
+# API_KEY = open(os.environ["BING_API_KEY"], "r").read()
 
-def geolocate_address(address: str, key: str = API_KEY) -> dict:
-    """
-    Uses Bing API to geolocate an address
+# def geolocate_address(address: str, key: str = API_KEY) -> dict:
+#     """
+#     Uses Bing API to geolocate an address
 
-    Args:
-        address: A string with an address
-        key: Bing API key
+#     Args:
+#         address: A string with an address
+#         key: Bing API key
 
-    Returns:
-        A dict object with location information
-    """
-    return geocoder.bing(address, key=API_KEY).json
+#     Returns:
+#         A dict object with location information
+#     """
+#     return geocoder.bing(address, key=API_KEY).json
 
 
 def get_crunchbase_nuts(file_path=CB_NUTS_PATH) -> dict:
