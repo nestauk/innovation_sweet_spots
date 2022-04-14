@@ -9,6 +9,7 @@ On an M1 macbook it takes ~8 mins 30 secs to run on the full dataset and ~2 mins
 """
 import typer
 from innovation_sweet_spots import PROJECT_DIR
+from innovation_sweet_spots.getters import crunchbase
 from innovation_sweet_spots.getters.crunchbase import (
     get_crunchbase_funding_rounds,
     get_crunchbase_ipos,
@@ -29,6 +30,8 @@ from innovation_sweet_spots.analysis.wrangling_utils import (
     GtrWrangler,
 )
 
+# Adjust the Crunchbase data snapshot path (ideally, should adapt the code to accommodate the newest snapshot)
+crunchbase.CB_PATH = crunchbase.CB_PATH.parents[0] / "cb_2021"
 
 KEEP_COLS = [
     "id",
@@ -76,6 +79,7 @@ DROP_COLS = [
     "groups",
     "first_funding_date_in_window",
     "latest_funding_date_in_window",
+    "last_funding_id_in_window",
     "org_id_x",
     "org_id_y",
     "org_id",
@@ -134,12 +138,20 @@ def create_dataset(
     cb_wrangler = CrunchbaseWrangler()
 
     # Load datasets
-    cb_orgs = get_crunchbase_orgs().query("country_code == 'GBR'").reset_index()
+    cb_orgs = (
+        get_crunchbase_orgs()
+        .query("country_code == 'GBR'")
+        .assign(founded_on=lambda x: pd.to_datetime(x.founded_on, errors="coerce"))
+        .reset_index()
+    )
     if test:
-        cb_orgs = cb_orgs.head(5000)
+        cb_orgs = cb_orgs.head(2000)
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
-    cb_funding_rounds_grants = get_crunchbase_funding_rounds()
+    cb_funding_rounds_grants = get_crunchbase_funding_rounds().assign(
+        announced_on=lambda x: pd.to_datetime(x.announced_on, errors="coerce")
+    )
+
     cb_investments = get_crunchbase_investments()
     cb_people = get_crunchbase_people()
     cb_degrees = get_crunchbase_degrees()
@@ -247,15 +259,13 @@ def create_dataset(
         cb_people.pipe(utils.add_clean_job_title)
         .pipe(utils.add_is_founder)
         .pipe(utils.add_is_gender, gender="male")
-        .pipe(utils.add_is_gender, gender="female")
         .dropna(subset=["featured_job_organization_id"])
         .rename(
             columns={
                 "id": "person_id",
                 "featured_job_organization_id": "org_id",
-                "country": "person_country",
             }
-        )[PEOPLE_COLS]
+        )
         .reset_index(drop=True)
     )
 
@@ -271,8 +281,7 @@ def create_dataset(
     org_id_founders = (
         cb_founders.groupby("org_id").agg(
             founder_count=("is_founder", "sum"),
-            female_founder_count=("is_female_founder", "sum"),
-            male_founder_count=("is_male_founder", "sum"),
+            male_founder_percentage=("is_male_founder", "mean"),
             founder_max_degrees=("degree_count", "max"),
             founder_mean_degrees=("degree_count", "mean"),
         )
