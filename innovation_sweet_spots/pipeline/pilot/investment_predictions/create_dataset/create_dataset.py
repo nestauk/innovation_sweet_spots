@@ -24,6 +24,9 @@ from innovation_sweet_spots.getters.gtr import get_link_table
 from innovation_sweet_spots.pipeline.pilot.investment_predictions.create_dataset import (
     utils,
 )
+from innovation_sweet_spots.pipeline.pilot.investment_predictions.create_dataset import (
+    utils,
+)
 import pandas as pd
 from innovation_sweet_spots.analysis.wrangling_utils import (
     CrunchbaseWrangler,
@@ -87,16 +90,6 @@ DROP_COLS = [
     "last_funding_id_in_window",
     "first_grant_date",
     "last_grant_date",
-]
-
-PEOPLE_COLS = [
-    "person_id",
-    "person_country",
-    "location_id",
-    "org_id",
-    "is_founder",
-    "is_male_founder",
-    "is_female_founder",
 ]
 
 UKRI_GRANT_PROVIDERS_TO_FILTER = (
