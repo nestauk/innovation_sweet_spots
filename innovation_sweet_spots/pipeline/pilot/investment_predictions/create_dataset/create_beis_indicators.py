@@ -98,7 +98,7 @@ def create_beis_indicators(window_end_date: int = 2018, test: bool = False):
     indicators_df = get_beis_indicators()
     # Add BEIS indicators
     for indicator in indicators_df.indicator_id.unique():
-        uk_orgs = add_indicator(uk_orgs, indicators_df, indicator, int(window_end_date))
+        uk_orgs = add_indicator(uk_orgs, indicators_df, indicator, window_end_date)
     # Save the final table
     uk_orgs.to_csv(
         OUTPUT_FILEPATH / OUTPUT_FILENAME.format(window_end_date), index=False
