@@ -39,7 +39,7 @@ def add_indicator(
     df_ind = indicators_df.query("indicator_id == @indicator")
     # Find the most recent allowed year
     max_year = df_ind.query("year < @window_end_date").year.max()
-    df_ind = df_ind.query(f"year == @max_year")
+    df_ind = df_ind.query("year == @max_year")
     # Check if there are indicator values for the specified window
     if len(df_ind) != 0:
         # Log the indicator
