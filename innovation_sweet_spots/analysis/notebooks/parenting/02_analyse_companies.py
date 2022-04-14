@@ -69,7 +69,10 @@ pu.test_chart()
 # # Analyse 'parenting' organisations
 
 # %%
-cb_orgs_parenting = CB.get_companies_in_industries(["child care"])
+cb_orgs_parenting = (
+    #     CB.get_companies_in_industries(["parenting"])
+    CB.get_companies_in_industries(utils.USER_INDUSTRIES)
+)
 
 # %%
 cb_orgs = cb_orgs_parenting
@@ -87,10 +90,7 @@ funding_ts = au.cb_get_all_timeseries(
 )
 
 # %%
-funding_ts
-
-# %%
-funding_df.head(3)
+# funding_df.head(3)
 
 # %%
 funding_ts.head(3)
@@ -126,9 +126,6 @@ pu.cb_investments_barplot(
 # %%
 importlib.reload(pu)
 pu.cb_deal_types(funding_df, simpler_types=True)
-
-# %%
-funding_df.info()
 
 # %%
 importlib.reload(au)
@@ -245,7 +242,7 @@ utils.digital_proportion(cb_companies, digital, since=2011)
 
 # %%
 importlib.reload(au)
-au.cb_top_industries(digital, CB)
+au.cb_top_industries(digital, CB).head(15)
 
 # %%
 importlib.reload(utils)
@@ -298,7 +295,10 @@ rounds_by_industry_ts_ma = au.ts_moving_average(rounds_by_industry_ts)
 # pu.time_series(companies_by_industry_ts.reset_index(), y_column="advice")
 
 # %%
-# pu.time_series(rounds_by_industry_ts.reset_index(), y_column="edtech")
+pu.time_series(companies_by_group_ts.reset_index(), y_column="data and analytics")
+
+# %%
+pu.time_series(investment_by_group_ts.reset_index(), y_column="data and analytics")
 
 # %%
 # CB.industry_to_group['computer']
@@ -329,6 +329,28 @@ importlib.reload(pu)
 importlib.reload(au)
 magnitude_growth = au.ts_magnitude_growth(companies_by_group_ts, 2017, 2021)
 pu.magnitude_growth(magnitude_growth, "Average number of new companies")
+
+# %%
+# https://altair-viz.github.io/gallery/area_chart_gradient.html
+importlib.reload(pu)
+importlib.reload(au)
+magnitude_growth = au.ts_magnitude_growth(investment_by_group_ts, 2017, 2021)
+pu.magnitude_growth(magnitude_growth, "Average investment amount")
+
+# %%
+df_funds[
+    [
+        "name",
+        "short_description",
+        "long_description",
+        "homepage_url",
+        "country",
+        "founded_on",
+        "total_funding_usd",
+        "num_funding_rounds",
+        "num_exits",
+    ]
+].sort_values("total_funding_usd", ascending=False).head(15)
 
 # %%
 # Add - millions or thousands

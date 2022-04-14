@@ -525,6 +525,11 @@ def cb_top_industries(cb_orgs: pd.DataFrame, cb_wrangler: CrunchbaseWrangler):
     )
 
 
+def cb_top_groups():
+    # TODO!
+    pass
+
+
 def investments_by_industry_ts(
     cb_orgs: pd.DataFrame,
     industries: Iterator[str],
