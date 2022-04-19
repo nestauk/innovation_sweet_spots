@@ -709,9 +709,9 @@ def add_grants(cb_data: pd.DataFrame, grants: pd.DataFrame) -> pd.DataFrame:
     ).fillna(
         {
             "total_grant_amount_gbp": -1,
-            "n_grants": -1,
-            "has_received_ukri_grant": -1,
-            "has_received_grant": -1,
+            "n_grants": 0,
+            "has_received_ukri_grant": 0,
+            "has_received_grant": 0,
             "last_grant_amount_gbp": -1,
         }
     )
