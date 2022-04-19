@@ -24,9 +24,6 @@ from innovation_sweet_spots.getters.gtr import get_link_table
 from innovation_sweet_spots.pipeline.pilot.investment_predictions.create_dataset import (
     utils,
 )
-from innovation_sweet_spots.pipeline.pilot.investment_predictions.create_dataset import (
-    utils,
-)
 import pandas as pd
 from innovation_sweet_spots.analysis.wrangling_utils import (
     CrunchbaseWrangler,
