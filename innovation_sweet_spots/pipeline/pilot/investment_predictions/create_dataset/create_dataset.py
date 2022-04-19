@@ -187,7 +187,7 @@ def create_dataset(
         .rename(columns={"id": "gtr_org_id"})
         .query("rel == 'LEAD_ORG'")
     )
-    # Create a GtreWrangler
+    # Create a GtrWrangler
     gtr_wrangler = GtrWrangler()
     # Create dataframe of grants with funding amounts and receiving organisation id
     gtr_grants = utils.gtr_projects_with_lead_orgs(
