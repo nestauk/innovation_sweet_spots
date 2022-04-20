@@ -42,10 +42,11 @@ from innovation_sweet_spots import PROJECT_DIR, config, logging
 from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
 
 # %%
-OUTPUTS_CACHE = OUTPUT_DATA_PATH / ".cache"
-DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "discourse_analysis_outputs"
+DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "tutorials/discourse_analysis_outputs"
 DISC_OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+
 TAGS = ["p", "h2"]
+
 CATEGORIES = [
     "Environment",
     "Guardian Sustainable Business",
@@ -71,7 +72,7 @@ search_terms = ["heat pump", "heat pumps"]
 # %%
 # For each search term download corresponding articles.
 articles = [
-    guardian.search_content(search_term, use_cached=False)
+    guardian.search_content(search_term, use_cached=True)
     for search_term in search_terms
 ]
 

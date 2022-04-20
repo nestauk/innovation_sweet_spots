@@ -96,6 +96,8 @@ We are using Guardian API to search for articles with specific key terms. For ac
 - Specify the path to this file in `.env` file, by adding a new line with `export GUARDIAN_API_KEY=path/to/file`
 - Use the functions in `innovation_sweet_spots.getters.guardian`
 
+To see examples of using our public discourse analysis tools, check `innovation_sweet_spots/analysis/examples/public_discourse_analysis`.
+
 ### Hansard
 
 Coming soon...
