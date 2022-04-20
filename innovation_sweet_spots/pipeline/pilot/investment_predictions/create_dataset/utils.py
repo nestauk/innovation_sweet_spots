@@ -482,7 +482,9 @@ def add_last_investment_round_info(
 def add_n_months_before_first_investment_in_window(
     cb_data: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Add column for number of months before first investment in the time window
+    """Add column for number of months before first investment in the time window.
+    For some companies they have received investment before the company was founded.
+    In those cases, the number of months is set to 0.
 
     Args:
         cb_data: Dataframe to add number of months before first investment to,
@@ -494,7 +496,7 @@ def add_n_months_before_first_investment_in_window(
     """
     cb_data["n_months_before_first_investment"] = n_months_delta(
         cb_data["first_funding_date_in_window"], cb_data["founded_on"]
-    )
+    ).apply(lambda x: x if x >= -1 else 0)
     return cb_data
 
 
@@ -739,7 +741,9 @@ def add_n_months_since_last_grant(
 def add_n_months_before_first_grant(
     cb_data: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Add column for number of months before first grant
+    """Add column for number of months before first grant.
+    For some companies they have received a grant before the company
+    was founded. In those cases, the number of months is set to 0.
 
     Args:
         cb_data: Dataframe to add number of months before first grant,
@@ -750,7 +754,7 @@ def add_n_months_before_first_grant(
     """
     cb_data["n_months_before_first_grant"] = n_months_delta(
         cb_data["first_grant_date"], cb_data["founded_on"]
-    )
+    ).apply(lambda x: x if x >= -1 else 0)
     return cb_data
 
 
