@@ -128,14 +128,13 @@ def create_dataset(
     cb_wrangler = CrunchbaseWrangler()
 
     # Load datasets
+    nrows = 5000 if test else None
     cb_orgs = (
-        get_crunchbase_orgs()
+        get_crunchbase_orgs(nrows)
         .query("country_code == 'GBR'")
         .assign(founded_on=lambda x: pd.to_datetime(x.founded_on, errors="coerce"))
         .reset_index()
     )
-    if test:
-        cb_orgs = cb_orgs.head(2000)
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
     cb_funding_rounds_grants = get_crunchbase_funding_rounds().assign(
