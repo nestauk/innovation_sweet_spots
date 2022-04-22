@@ -931,3 +931,32 @@ def gtr_projects_with_lead_orgs(
             how="left",
         )[["project_id", "fund_start", "amount", "gtr_org_id"]]
     )
+
+
+def process_cb_beis(cb_beis):
+    """Drop columns name, id, nuts2_2010, nuts2_2013, nuts2_2016
+    and duplicate rows from cb_beis file
+    """
+    return cb_beis.drop(
+        columns=["name", "id", "nuts2_2010", "nuts2_2013", "nuts2_2016"]
+    ).drop_duplicates()
+
+
+def add_beis_indicators(cb_data, cb_beis_processed):
+    """Add columns for the BEIS indicators to the dataset
+
+    Args:
+        cb_data: Dataframe to add number BEIS indicators too,
+            must contain column for 'location_id'
+        cb_beis_processed: Dataframe containing 'location_id' and BEIS
+            indicators
+
+    Returns:
+        cb_data with BEIS indicators added
+    """
+    return cb_data.merge(
+        right=cb_beis_processed,
+        how="left",
+        left_on="location_id",
+        right_on="location_id",
+    )
