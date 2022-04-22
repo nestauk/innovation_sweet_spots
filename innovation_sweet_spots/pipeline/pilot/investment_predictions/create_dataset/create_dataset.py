@@ -5,7 +5,7 @@ used for predicting future investment sucess for companies.
 Run the following command in the terminal to see the options for creating the dataset:
 python innovation_sweet_spots/pipeline/pilot/investment_predictions/create_dataset/create_dataset.py --help
 
-On an M1 macbook it takes ~8 mins 30 secs to run on the full dataset and ~2 mins 30 secs to run in test mode.
+On an M1 macbook it takes ~8 mins 30 secs to run on the full dataset and ~1 mins 30 secs to run in test mode.
 """
 import typer
 from innovation_sweet_spots import PROJECT_DIR
@@ -21,6 +21,7 @@ from innovation_sweet_spots.getters.crunchbase import (
     get_crunchbase_gtr_lookup,
 )
 from innovation_sweet_spots.getters.gtr import get_link_table
+from innovation_sweet_spots.getters.crunchbase_beis import get_crunchbase_beis
 from innovation_sweet_spots.pipeline.pilot.investment_predictions.create_dataset import (
     utils,
 )
@@ -144,6 +145,8 @@ def create_dataset(
     cb_investments = get_crunchbase_investments()
     cb_people = get_crunchbase_people()
     cb_degrees = get_crunchbase_degrees()
+    cb_beis = get_crunchbase_beis(window_end_date.year)
+    cb_beis_processed = utils.process_cb_beis(cb_beis)
 
     # Convert funding amounts to GBP
     cb_funding_rounds_grants_gbp = cb_wrangler.convert_deal_currency_to_gbp(
@@ -387,6 +390,8 @@ def create_dataset(
         .pipe(utils.add_n_months_since_last_grant, window_end_date)
         # Add col for number of before first grant
         .pipe(utils.add_n_months_before_first_grant)
+        # Add cols for BEIS indicators
+        .pipe(utils.add_beis_indicators, cb_beis_processed)
         # Drop columns
         .pipe(
             utils.drop_multi_cols,
