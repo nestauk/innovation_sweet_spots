@@ -817,7 +817,7 @@ def add_gtr_project_to_cb_gtr_lookup(
     )
 
 
-def standardise_gtr_grants(cb_gtr_lookup_projects):
+def standardise_gtr_grants(cb_gtr_lookup_projects: pd.DataFrame) -> pd.DataFrame:
     """Standardise gtr grants data so that it can be
     combined with crunchbase grants data"""
     return (
@@ -915,7 +915,7 @@ def gtr_projects_with_lead_orgs(
     )
 
 
-def process_cb_beis(cb_beis):
+def process_cb_beis(cb_beis: pd.DataFrame) -> pd.DataFrame:
     """Drop columns name, id, nuts2_2010, nuts2_2013, nuts2_2016
     and duplicate rows from cb_beis file
     """
@@ -924,7 +924,9 @@ def process_cb_beis(cb_beis):
     ).drop_duplicates()
 
 
-def add_beis_indicators(cb_data, cb_beis_processed):
+def add_beis_indicators(
+    cb_data: pd.DataFrame, cb_beis_processed: pd.DataFrame
+) -> pd.DataFrame:
     """Add columns for the BEIS indicators to the dataset
 
     Args:
