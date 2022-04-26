@@ -101,8 +101,8 @@ UKRI_GRANT_PROVIDERS_TO_FILTER = (
 
 
 def create_dataset(
-    window_start_date: str = "01/01/2010",
-    window_end_date: str = "01/01/2018",
+    window_start_date: str = "01/01/2011",
+    window_end_date: str = "01/01/2019",
     industries_or_groups: str = "groups",
     test: bool = False,
 ):
@@ -399,7 +399,7 @@ def create_dataset(
             utils.drop_multi_cols,
             cols_to_drop_str_containing=DROP_MULTI_COLS,
         )
-        .drop(columns=DROP_COLS)
+        .drop(columns=DROP_COLS, errors="ignore")
         .reset_index(drop=True)
     )
     dataset.to_csv(
