@@ -9,7 +9,6 @@ On an M1 macbook it takes ~8 mins 30 secs to run on the full dataset and ~1 mins
 """
 import typer
 from innovation_sweet_spots import PROJECT_DIR
-from innovation_sweet_spots.getters import crunchbase
 from innovation_sweet_spots.getters.crunchbase import (
     get_crunchbase_funding_rounds,
     get_crunchbase_ipos,
@@ -30,9 +29,6 @@ from innovation_sweet_spots.analysis.wrangling_utils import (
     CrunchbaseWrangler,
     GtrWrangler,
 )
-
-# Adjust the Crunchbase data snapshot path (ideally, should adapt the code to accommodate the newest snapshot)
-crunchbase.CB_PATH = crunchbase.CB_PATH.parents[0] / "cb_2021"
 
 KEEP_COLS = [
     "id",
