@@ -5,7 +5,7 @@ used for predicting future investment sucess for companies.
 Run the following command in the terminal to see the options for creating the dataset:
 python innovation_sweet_spots/pipeline/pilot/investment_predictions/create_dataset/create_dataset.py --help
 
-On an M1 macbook it takes ~8 mins 30 secs to run on the full dataset and ~1 mins 30 secs to run in test mode.
+On an M1 macbook it takes ~14 mins to run on the full dataset and ~1 mins 30 secs to run in test mode.
 """
 import typer
 from innovation_sweet_spots import PROJECT_DIR
@@ -125,12 +125,12 @@ def create_dataset(
     cb_wrangler = CrunchbaseWrangler()
 
     # Load datasets
-    nrows = 5000 if test else None
+    nrows = 20_000 if test else None
     cb_orgs = (
         get_crunchbase_orgs(nrows)
         .query("country_code == 'GBR'")
         .assign(founded_on=lambda x: pd.to_datetime(x.founded_on, errors="coerce"))
-        .reset_index()
+        .reset_index(drop=True)
     )
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
