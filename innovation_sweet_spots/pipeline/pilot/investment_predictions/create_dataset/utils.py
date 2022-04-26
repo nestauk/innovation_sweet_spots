@@ -1004,3 +1004,32 @@ def add_green_tech_cats(
         left_on="id",
         right_on="id",
     ).fillna(fill_na_dict)
+
+
+def add_founder_features_to_people(cb_people: pd.DataFrame) -> pd.DataFrame:
+    """Add founder related features to crunchbase people data"""
+    return (
+        cb_people.pipe(add_clean_job_title)
+        .pipe(add_is_founder)
+        .pipe(add_is_gender, gender="male")
+        .dropna(subset=["featured_job_organization_id"])
+        .rename(
+            columns={
+                "id": "person_id",
+                "featured_job_organization_id": "org_id",
+            }
+        )
+        .reset_index(drop=True)
+    )
+
+
+def groupby_founders_features(cb_founders: pd.DataFrame) -> pd.DataFrame:
+    """Groupbys founders features relating to each org_id"""
+    return (
+        cb_founders.groupby("org_id").agg(
+            founder_count=("is_founder", "sum"),
+            male_founder_percentage=("is_male_founder", "mean"),
+            founder_max_degrees=("degree_count", "max"),
+            founder_mean_degrees=("degree_count", "mean"),
+        )
+    ).reset_index()

@@ -243,19 +243,7 @@ def create_dataset(
         cb_orgs = cb_orgs.pipe(utils.add_group_dummies, industry_to_group_map)
 
     # Add founder info to people info
-    cb_people = (
-        cb_people.pipe(utils.add_clean_job_title)
-        .pipe(utils.add_is_founder)
-        .pipe(utils.add_is_gender, gender="male")
-        .dropna(subset=["featured_job_organization_id"])
-        .rename(
-            columns={
-                "id": "person_id",
-                "featured_job_organization_id": "org_id",
-            }
-        )
-        .reset_index(drop=True)
-    )
+    cb_people = utils.add_founder_features_to_people(cb_people)
 
     # Create dataframe for person id and degree count
     person_degree_count = utils.person_id_degree_count(cb_degrees)
@@ -266,14 +254,7 @@ def create_dataset(
     )
 
     # Create dataframe for org_id with grouped founders data
-    org_id_founders = (
-        cb_founders.groupby("org_id").agg(
-            founder_count=("is_founder", "sum"),
-            male_founder_percentage=("is_male_founder", "mean"),
-            founder_max_degrees=("degree_count", "max"),
-            founder_mean_degrees=("degree_count", "mean"),
-        )
-    ).reset_index()
+    org_id_founders = utils.groupby_founders_features(cb_founders)
 
     dataset = (
         # Add flag for founded on and filter out companies with 0 flag
