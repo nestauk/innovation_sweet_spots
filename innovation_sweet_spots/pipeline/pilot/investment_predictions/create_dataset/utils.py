@@ -3,6 +3,7 @@ import numpy as np
 from itertools import chain
 from typing import Union
 from ast import literal_eval
+from innovation_sweet_spots.getters.crunchbase import get_pilot_crunchbase_companies
 
 
 def convert_col_to_has_col(df: pd.DataFrame, col: str, drop: bool) -> pd.DataFrame:
@@ -48,25 +49,6 @@ def ind_to_group(industries: list, industry_to_group_map: dict) -> set:
     ]
     flattened = list(chain(*groups))
     return set(flattened)
-
-
-def tech_cats_to_dummies(cb_data: pd.DataFrame) -> pd.DataFrame:
-    """Convert tech_category column to dummy columns with values 0 or 1"""
-    combine_tech_cats = (
-        cb_data.groupby("id")
-        .agg({"tech_category": lambda x: ", ".join(map(str, x))})
-        .reset_index()
-    )
-    dummies = combine_tech_cats["tech_category"].str.get_dummies(sep=", ")
-    id_dummies = combine_tech_cats.merge(
-        dummies, left_index=True, right_index=True
-    ).drop(columns=["tech_category"])
-
-    return (
-        cb_data.drop(columns=["tech_category"])
-        .drop_duplicates()
-        .merge(id_dummies, left_on="id", right_on="id")
-    )
 
 
 def add_industry_dummies(cb_orgs: pd.DataFrame) -> pd.DataFrame:
@@ -960,3 +942,57 @@ def add_beis_indicators(cb_data, cb_beis_processed):
         left_on="location_id",
         right_on="location_id",
     )
+
+
+def green_pilot_lookup() -> pd.DataFrame:
+    """Crunchbase org id to ISS green pilot tech category lookup"""
+    return (
+        get_pilot_crunchbase_companies()[["id", "tech_category"]]
+        .drop_duplicates()
+        .reset_index(drop=True)
+        .assign(
+            tech_category=lambda x: x.tech_category.str.lower().str.replace(
+                " ", "_", regex=False
+            )
+        )
+    )
+
+
+def tech_cats_to_dummies(green_pilot_lookup: pd.DataFrame) -> pd.DataFrame:
+    """Convert tech_category column to dummy columns with values 0 or 1"""
+    combine_tech_cats = (
+        green_pilot_lookup.groupby("id")
+        .agg({"tech_category": lambda x: ", ".join(map(str, x))})
+        .reset_index()
+    )
+    dummies = (
+        combine_tech_cats["tech_category"]
+        .str.get_dummies(sep=", ")
+        .add_prefix("tech_cat_")
+        .assign(green_pilot=1)
+    )
+    return combine_tech_cats.merge(dummies, left_index=True, right_index=True).drop(
+        columns=["tech_category"]
+    )
+
+
+def add_green_tech_cats(
+    cb_data: pd.DataFrame, green_pilot_lookup: pd.DataFrame
+) -> pd.DataFrame:
+    """Add dummy columns for emerging green technology categories
+
+    Args:
+        cb_data: Dataframe to add green tech category dummy columns to
+        green_pilot_lookup: Crunchbase org id to ISS green pilot tech category lookup
+
+    Returns:
+        cb_data with dummy columns for emerging green technology categories
+    """
+    tech_cats = tech_cats_to_dummies(green_pilot_lookup)
+    fill_na_dict = {col: 0 for col in tech_cats.columns if col != "id"}
+    return cb_data.merge(
+        tech_cats,
+        how="left",
+        left_on="id",
+        right_on="id",
+    ).fillna(fill_na_dict)
