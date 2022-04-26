@@ -53,7 +53,11 @@ def ind_to_group(industries: list, industry_to_group_map: dict) -> set:
 
 def add_industry_dummies(cb_orgs: pd.DataFrame) -> pd.DataFrame:
     """Adds dummy columns for industries"""
-    industry_dummies = pd.get_dummies(cb_orgs["industry_clean"].explode()).sum(level=0)
+    industry_dummies = (
+        pd.get_dummies(cb_orgs["industry_clean"].explode())
+        .sum(level=0)
+        .add_prefix("ind_")
+    )
     return cb_orgs.merge(industry_dummies, left_index=True, right_index=True)
 
 
@@ -72,7 +76,9 @@ def add_group_dummies(
     cb_orgs["groups"] = cb_orgs["industry_clean"].apply(
         ind_to_group, args=(industry_to_group_map,)
     )
-    group_dummies = pd.get_dummies(cb_orgs["groups"].explode()).sum(level=0)
+    group_dummies = (
+        pd.get_dummies(cb_orgs["groups"].explode()).sum(level=0).add_prefix("group_")
+    )
     return cb_orgs.merge(group_dummies, left_index=True, right_index=True)
 
 
