@@ -923,11 +923,19 @@ def gtr_projects_with_lead_orgs(
 
 def process_cb_beis(cb_beis: pd.DataFrame) -> pd.DataFrame:
     """Drop columns name, id, nuts2_2010, nuts2_2013, nuts2_2016
-    and duplicate rows from cb_beis file
+    and duplicate rows from cb_beis file. Add prefix 'beis_' to columns
     """
-    return cb_beis.drop(
-        columns=["name", "id", "nuts2_2010", "nuts2_2013", "nuts2_2016"]
-    ).drop_duplicates()
+    return (
+        cb_beis.drop(columns=["name", "id", "nuts2_2010", "nuts2_2013", "nuts2_2016"])
+        .drop_duplicates()
+        .rename(
+            columns={
+                col: f"beis_{col}"
+                for col in cb_beis.columns
+                if col not in ["id", "name", "location_id"]
+            }
+        )
+    )
 
 
 def add_beis_indicators(
