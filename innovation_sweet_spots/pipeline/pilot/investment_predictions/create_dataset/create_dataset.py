@@ -371,6 +371,8 @@ def create_dataset(
         .pipe(utils.add_beis_indicators, cb_beis_processed)
         # Add dummy cols for green tech categories
         .pipe(utils.add_green_tech_cats, green_pilot_lookup=utils.green_pilot_lookup())
+        # Drop rows without a location_id
+        .dropna(subset=["location_id"])
         # Drop columns
         .pipe(
             utils.drop_multi_cols,
