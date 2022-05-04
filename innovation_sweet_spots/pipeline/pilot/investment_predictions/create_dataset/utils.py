@@ -58,6 +58,7 @@ def add_industry_dummies(cb_orgs: pd.DataFrame) -> pd.DataFrame:
         .sum(level=0)
         .add_prefix("ind_")
     )
+    industry_dummies.columns = industry_dummies.columns.str.replace(" ", "_")
     return cb_orgs.merge(industry_dummies, left_index=True, right_index=True)
 
 
@@ -79,6 +80,7 @@ def add_group_dummies(
     group_dummies = (
         pd.get_dummies(cb_orgs["groups"].explode()).sum(level=0).add_prefix("group_")
     )
+    group_dummies.columns = group_dummies.columns.str.replace(" ", "_")
     return cb_orgs.merge(group_dummies, left_index=True, right_index=True)
 
 
