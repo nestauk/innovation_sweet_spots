@@ -315,6 +315,7 @@ def magnitude_growth(
     magnitude_growth: pd.DataFrame,
     magnitude_label: str,
     growth_label: str = "Growth",
+    #     text_label: str = None,
 ):
     """"""
     return (

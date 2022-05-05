@@ -13,7 +13,7 @@ CB = CrunchbaseWrangler()
 
 def add_space_in_front(list_of_term_lists: Iterator[Iterator[str]]):
     """Adds a space in front of each search term"""
-    return [f" {term}" for term_list in list_of_term_lists for term in term_list]
+    return [[f" {term}" for term in term_list] for term_list in list_of_term_lists]
 
 
 def get_digital_companies(cb_orgs: pd.DataFrame, cb_wrangler: CrunchbaseWrangler):
@@ -55,14 +55,17 @@ def digital_proportion_ts(
 #### Crunchbase industry parameters ####
 
 # Industry labels related to parents or child care
-USER_INDUSTRIES = [
-    "parenting",
+CHILDREN_INDUSTRIES = [
     "child care",
     "children",
     "underserved children",
     "family",
     "baby",
 ]
+
+PARENT_INDUSTRIES = ["parenting"]
+
+USER_INDUSTRIES = CHILDREN_INDUSTRIES + PARENT_INDUSTRIES
 
 # Industry labels related to education
 EDUCATION_INDUSTRIES = [
@@ -140,8 +143,7 @@ DIGITAL_INDUSTRIES = [
 ]
 
 #### Search term parameters ####
-
-USER_TERMS = [
+PARENT_TERMS = [
     ["parent"],
     ["mother"],
     ["mom "],
@@ -149,6 +151,9 @@ USER_TERMS = [
     ["father"],
     ["dad "],
     ["dads "],
+]
+
+CHILDREN_TERMS = [
     ["baby"],
     ["babies"],
     ["infant"],
@@ -162,6 +167,8 @@ USER_TERMS = [
     ["boy"],
     ["girl"],
 ]
+
+USER_TERMS = PARENT_TERMS + CHILDREN_TERMS
 
 LEARNING_TERMS = [
     ["learn"],
@@ -183,7 +190,9 @@ PRESCHOOL_TERMS = [
     ["early year"],
 ]
 
-USER_TERMS = add_space_in_front(USER_TERMS)
+PARENT_TERMS = add_space_in_front(PARENT_TERMS)
+CHILDREN_TERMS = add_space_in_front(CHILDREN_TERMS)
 LEARNING_TERMS = add_space_in_front(LEARNING_TERMS)
 PRESCHOOL_TERMS = add_space_in_front(PRESCHOOL_TERMS)
+USER_TERMS = PARENT_TERMS + CHILDREN_TERMS
 ALL_LEARNING_TERMS = LEARNING_TERMS + PRESCHOOL_TERMS

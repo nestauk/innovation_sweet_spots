@@ -24,9 +24,14 @@ def cluster_texts(documents: Iterator[str], cluster_labels: Iterator) -> Dict:
     """
 
     assert len(documents) == len(cluster_labels)
-    cluster_text_dict = defaultdict(str)
+    doc_type = type(documents[0])
+
+    cluster_text_dict = defaultdict(doc_type)
     for i, doc in enumerate(documents):
-        cluster_text_dict[cluster_labels[i]] += doc + " "
+        if doc_type is str:
+            cluster_text_dict[cluster_labels[i]] += doc + " "
+        elif doc_type is list:
+            cluster_text_dict[cluster_labels[i]] += doc
     return cluster_text_dict
 
 
@@ -34,6 +39,9 @@ def cluster_keywords(
     documents: Iterator[str],
     cluster_labels: Iterator[int],
     n: int = 10,
+    tokenizer=simple_tokenizer,
+    max_df: float = 0.90,
+    min_df: float = 0.01,
 ) -> Dict:
     """
     Generates keywords that characterise the cluster, using the specified Vectorizer
@@ -52,11 +60,11 @@ def cluster_keywords(
     # Define vectorizer
     vectorizer = TfidfVectorizer(
         analyzer="word",
-        tokenizer=simple_tokenizer,
+        tokenizer=tokenizer,
         preprocessor=lambda x: x,
         token_pattern=None,
-        max_df=0.90,
-        min_df=0.01,
+        max_df=max_df,
+        min_df=min_df,
         max_features=10000,
     )
 

@@ -77,53 +77,17 @@ pu.test_chart()
 check_columns = ["name", "short_description", "long_description"]
 
 # %% [markdown]
-# # Get reviewed companies
-
-# %%
-inputs_path = PROJECT_DIR / "outputs/finals/parenting/cb_companies/reviewed"
-
-# %%
-reviewed_df_parenting = pd.read_csv(
-    inputs_path
-    / "cb_companies_parenting_v2022_04_27 - cb_companies_parenting_v2022_04_27.csv"
-)
-reviewed_df_child_ed = pd.read_csv(
-    inputs_path
-    / "cb_companies_child_ed_v2022_04_27 - cb_companies_child_ed_v2022_04_27.csv"
-)
-
-# %%
-# Select the companies with 'relevant'
-reviewed_df_child_ed.info()
-
-# %%
-companies_parenting_df = reviewed_df_parenting.query('relevancy == "relevant"')
-companies_child_ed_df = reviewed_df_child_ed.query(
-    'relevancy == "relevant" or comment == "potentially relevant"'
-)
-
-# %%
-companies_ids = set(companies_parenting_df.id.to_list()).union(
-    set(companies_child_ed_df.id.to_list())
-)
-
-# %%
-len(companies_ids)
-
-# %% [markdown]
 # # Analyse parenting companies
 
 # %% [markdown]
 # ## Selection
 
 # %%
-# importlib.reload(utils);
-# cb_orgs_parenting = (
-#     CB.get_companies_in_industries(utils.PARENT_INDUSTRIES)
-# )
+importlib.reload(utils)
+cb_orgs_parenting = CB.get_companies_in_industries(utils.PARENT_INDUSTRIES)
 
 # %%
-cb_orgs = CB.cb_organisations.query("id in @companies_ids")
+cb_orgs = cb_orgs_parenting
 
 # %% [markdown]
 # ## Analysis
@@ -293,15 +257,8 @@ importlib.reload(utils)
 utils.digital_proportion(cb_companies, digital, since=2011)
 
 # %%
-digital_ids = digital.id.to_list()
-cb_companies.query("id in @digital_ids").total_funding_usd.sum()
-
-# %%
 importlib.reload(au)
-top_industries = au.cb_top_industries(digital, CB)
-
-# %%
-top_industries.query("industry in @utils.DIGITAL_INDUSTRIES").head(50)
+au.cb_top_industries(digital, CB).head(15)
 
 # %%
 importlib.reload(utils)
@@ -309,19 +266,7 @@ digital_fraction_ts = utils.digital_proportion_ts(cb_companies, digital, 1998, 2
 
 # %%
 importlib.reload(pu)
-pu.cb_investments_barplot(
-    digital_fraction_ts,
-    y_column="digital_fraction",
-    x_label="Time period",
-)
-
-# %%
-importlib.reload(pu)
 pu.time_series(digital_fraction_ts, y_column="digital_fraction")
-
-# %%
-# importlib.reload(pu)
-# pu.time_series(digital_fraction_ts, y_column="digital_fraction")
 
 # %%
 importlib.reload(au)
@@ -359,9 +304,6 @@ importlib.reload(au)
 
 
 # %%
-rounds_by_group_ts
-
-# %%
 importlib.reload(au)
 rounds_by_industry_ts_ma = au.ts_moving_average(rounds_by_industry_ts)
 
@@ -370,7 +312,7 @@ rounds_by_industry_ts_ma = au.ts_moving_average(rounds_by_industry_ts)
 
 # %%
 cat = "data and analytics"
-# cat = "apps"
+cat = "apps"
 pu.time_series(companies_by_group_ts.reset_index(), y_column=cat)
 
 # %%
@@ -415,32 +357,6 @@ importlib.reload(pu)
 importlib.reload(au)
 magnitude_growth = au.ts_magnitude_growth(investment_by_group_ts, 2017, 2021)
 pu.magnitude_growth(magnitude_growth, "Average investment amount")
-
-# %%
-CB.group_to_industries["hardware"]
-
-# %%
-# https://altair-viz.github.io/gallery/area_chart_gradient.html
-importlib.reload(pu)
-importlib.reload(au)
-magnitude_growth = au.ts_magnitude_growth(investment_by_industry_ts, 2017, 2021)
-pu.magnitude_growth(magnitude_growth, "Average investment amount")
-
-# %%
-magnitude_growth[-magnitude_growth.growth.isnull()].sort_values(
-    ["growth", "magnitude"], ascending=False
-).head(20)
-
-# %%
-cb_companies.info()
-
-# %%
-cb_companies_industries = df.merge(
-    CB.get_company_industries(cb_companies, return_lists=True), on=["id", "name"]
-)
-
-# %%
-cb_companies_industries
 
 # %%
 # importlib.reload(au)
