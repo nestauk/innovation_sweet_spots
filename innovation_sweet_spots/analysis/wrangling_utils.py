@@ -973,8 +973,10 @@ class DealroomWrangler:
         purposes of the Innovation Sweet Spots project on food tech
         """
         if self._foodtech_data is None:
-            self._foodtech_data = dealroom.get_foodtech_companies().drop_duplicates(
-                "id", keep="first"
+            self._foodtech_data = (
+                dealroom.get_foodtech_companies().drop_duplicates("id", keep="first")
+                # Remove spuriou entries
+                .query("id != 'Error retrieving row data'")
             )
         return self._foodtech_data
 
@@ -1008,6 +1010,50 @@ class DealroomWrangler:
     def explode_dealroom_table(self, column_name: str) -> pd.DataFrame:
         """Returns table with company ids and and a row for each separate element of the specified column"""
         return explode_table(self.company_data[["id", column_name]], column_name, ";")
+
+    @staticmethod
+    #     def get_years_from_parentheses(column_name: str) -> Iterator[int]:
+    #         """
+    #         Converts a column name of format 'COLUMN_NAME (year_1, year_2)'
+    #         to a list of integers [year_1, year_2]
+    #         """
+    #         return [int(y) for y in column_name.split('(')[-1].split(')')[0].split(',')]
+    def get_years_from_parentheses(column_name: str) -> Iterator[int]:
+        """
+        Converts a column name of format 'COLUMN_NAME (year_1, year_2)'
+        to 'year_1;year_2'
+        """
+        return ";".join(column_name.split("(")[-1].split(")")[0].split(","))
+
+    @staticmethod
+    def get_descriptor_name(column_name: str) -> str:
+        """
+        Converts a column name of format 'COLUMN_NAME (year_1, year_2)'
+        to a string 'COLUMN_NAME'
+        """
+        return column_name.split("(")[0].strip()
+
+    def explode_timeseries(self, column_name: str) -> pd.DataFrame:
+        """ """
+        return (
+            self.company_data[["id", column_name]]
+            .assign(
+                new_column=lambda x: x[column_name].apply(
+                    lambda y: split_comma_seperated_string(y, ";")
+                ),
+                year=str(self.get_years_from_parentheses(column_name)),
+            )
+            .assign(
+                year=lambda x: x.year.apply(
+                    lambda y: split_comma_seperated_string(y, ";")
+                )
+            )
+            .explode(["new_column", "year"])
+            .drop(column_name, axis=1)
+            .drop_duplicates()
+            .reset_index(drop=True)
+            .rename(columns={"new_column": self.get_descriptor_name(column_name)})
+        )
 
 
 def get_years(dates: Iterator[datetime.date]) -> Iterator:
