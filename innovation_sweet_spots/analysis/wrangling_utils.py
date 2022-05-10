@@ -7,6 +7,7 @@ from typing import Iterator
 import itertools
 import innovation_sweet_spots.getters.gtr as gtr
 import innovation_sweet_spots.getters.crunchbase as cb
+import innovation_sweet_spots.getters.dealroom as dealroom
 
 
 class GtrWrangler:
@@ -955,14 +956,184 @@ class CrunchbaseWrangler:
         )
 
 
+class DealroomWrangler:
+    """
+    This class helps exploring data downloaded from the Dealroom business platform
+    """
+
+    def __init__(self, dataset="foodtech"):
+        self._company_data = None
+        self._foodtech_data = None
+        # Leave the option for other data downloads in the future
+        if dataset == "foodtech":
+            self._company_data = self.foodtech_data
+        # Wrangled descriptors
+        self._company_tags = None
+        self._company_industries = None
+        self._company_subindustries = None
+        self._funding_rounds = None
+
+    @property
+    def company_data(self):
+        """Company data"""
+        return self._company_data
+
+    @property
+    def foodtech_data(self) -> pd.DataFrame:
+        """
+        Company data downloaded from Dealroom platform, for the
+        purposes of the Innovation Sweet Spots project on food tech
+        """
+        if self._foodtech_data is None:
+            self._foodtech_data = (
+                dealroom.get_foodtech_companies().drop_duplicates("id", keep="first")
+                # Remove spuriou entries
+                .query("id != 'Error retrieving row data'")
+            )
+        return self._foodtech_data
+
+    @property
+    def company_tags(self) -> pd.DataFrame:
+        """
+        Returns table with company id numbers and tags
+        """
+        if self._company_tags is None:
+            self._company_tags = self.explode_dealroom_table("TAGS")
+        return self._company_tags
+
+    @property
+    def company_industries(self) -> pd.DataFrame:
+        """
+        Returns table with company id numbers and industries
+        """
+        if self._company_industries is None:
+            self._company_industries = self.explode_dealroom_table("INDUSTRIES")
+        return self._company_industries
+
+    @property
+    def company_subindustries(self) -> pd.DataFrame:
+        """
+        Returns table with company id numbers and sub-industries
+        """
+        if self._company_subindustries is None:
+            self._company_subindustries = self.explode_dealroom_table("SUB INDUSTRIES")
+        return self._company_subindustries
+
+    @property
+    def funding_rounds(self) -> pd.DataFrame:
+        if self._funding_rounds is None:
+            self._funding_rounds = self.get_funding_rounds()
+        return self._funding_rounds
+
+    def explode_dealroom_table(self, column_name: str) -> pd.DataFrame:
+        """Returns table with company ids and and a row for each separate element of the specified column"""
+        return explode_table(self.company_data[["id", column_name]], column_name, ";")
+
+    @staticmethod
+    def get_years_from_parentheses(column_name: str) -> Iterator[int]:
+        """
+        Converts a column name of format 'COLUMN_NAME (year_1, year_2)'
+        to 'year_1;year_2'
+        """
+        return ";".join(column_name.split("(")[-1].split(")")[0].split(","))
+
+    @staticmethod
+    def get_descriptor_name(column_name: str) -> str:
+        """
+        Converts a column name of format 'COLUMN_NAME (year_1, year_2)'
+        to a string 'COLUMN_NAME'
+        """
+        return column_name.split("(")[0].strip()
+
+    def explode_timeseries(self, column_name: str) -> pd.DataFrame:
+        """
+        Explodes columns with yearly time series, eg "PROFIT (year_1, year_2, ...)" into a
+        dataframe with a row for each year
+        """
+        return (
+            self.company_data[["id", column_name]]
+            .assign(
+                new_column=lambda x: x[column_name].apply(
+                    lambda y: split_comma_seperated_string(y, ";")
+                ),
+                year=str(self.get_years_from_parentheses(column_name)),
+            )
+            .assign(
+                year=lambda x: x.year.apply(
+                    lambda y: split_comma_seperated_string(y, ";")
+                )
+            )
+            .explode(["new_column", "year"])
+            .drop(column_name, axis=1)
+            .drop_duplicates()
+            .reset_index(drop=True)
+            .rename(columns={"new_column": self.get_descriptor_name(column_name)})
+        )
+
+    def get_funding_rounds(self) -> pd.DataFrame:
+        """
+        Returns funding rounds for companies
+        """
+        # Get the columns related to investment time series
+        company_funding_data = (
+            self.company_data[
+                ["id"] + dealroom.COLUMN_CATEGORIES["Funding (detailed)"]
+            ].fillna("n/a")
+        ).copy()
+        # Turn the separated entries into lists
+        for col in dealroom.COLUMN_CATEGORIES["Funding (detailed)"]:
+            company_funding_data[col] = company_funding_data[col].apply(
+                lambda x: split_comma_seperated_string(x, ";")
+            )
+
+        # Check where there is an issue with the investor column (small number of rounds)
+        df_lengths = pd.DataFrame()
+        for col in dealroom.COLUMN_CATEGORIES["Funding (detailed)"]:
+            df_lengths[col] = company_funding_data[col].apply(lambda x: len(x))
+        # NB: The assumption is that only the 'EACH ROUND INVESTORS' column is an issue
+        ambiguous_idx = df_lengths[
+            df_lengths["EACH ROUND TYPE"] != df_lengths["EACH ROUND INVESTORS"]
+        ].index
+        # For the ambigouous cases, replace investors with n/a, and explode funding rounds
+        ambiguous_rounds = (
+            company_funding_data.loc[ambiguous_idx]
+            .copy()
+            .assign(null_investors="n/a")
+            .drop("EACH ROUND INVESTORS", axis=1)
+            .rename(columns={"null_investors": "EACH ROUND INVESTORS"})
+            .explode(
+                [
+                    "EACH ROUND TYPE",
+                    "EACH ROUND AMOUNT",
+                    "EACH ROUND CURRENCY",
+                    "EACH ROUND DATE",
+                ]
+            )
+        )
+
+        # Explode funding rounds for non-ambiguous cases
+        company_funding_rounds = company_funding_data.drop(ambiguous_idx).explode(
+            dealroom.COLUMN_CATEGORIES["Funding (detailed)"]
+        )
+        # Combine both exploded dataframes
+        company_funding_rounds = pd.concat(
+            [company_funding_rounds, ambiguous_rounds], ignore_index=True
+        ).reset_index(drop=True)
+        # Convert funding date to a datetime format
+        company_funding_rounds["EACH ROUND DATE"] = pd.to_datetime(
+            company_funding_rounds["EACH ROUND DATE"], format="%b/%Y", errors="coerce"
+        )
+        return company_funding_rounds
+
+
 def get_years(dates: Iterator[datetime.date]) -> Iterator:
     """Converts a list of datetimes to years"""
     return [x.year for x in dates]
 
 
-def split_comma_seperated_string(text: str) -> Iterator[str]:
+def split_comma_seperated_string(text: str, separator: str = ",") -> Iterator[str]:
     """Splits a string where commas are; for example: 'a, b' -> ['a', 'b']"""
-    return [s.strip() for s in text.split(",")] if type(text) is str else []
+    return [s.strip() for s in text.split(f"{separator}")] if type(text) is str else []
 
 
 def is_string_in_list(list_of_strings: Iterator[str], list_to_check: Iterator[str]):
@@ -974,3 +1145,32 @@ def check_valid(check_var, check_list):
     """Raise ValueError is check_var not in check_list"""
     if check_var not in check_list:
         raise ValueError(f"{check_var} is not valid, it must be one of {check_list}.")
+
+
+def explode_table(
+    df: pd.DataFrame, column_name: str, separator: str = ","
+) -> pd.DataFrame:
+    """
+    Explodes the specified column and does some housekeeping (eg, deduplication). The column
+    should contain strings, which in turn contain substrings separated by a character (eg, comma).
+
+    Args:
+        df: Table that has a column with list-like text strings (eg comma-separated words)
+        column_name: The name of the column with list-like strings
+        separator: Character used to separate the elements in the list-like strings
+
+    Returns:
+        Exploded dataframe with a separate row for each element of the list-like strings
+    """
+    return (
+        df.assign(
+            new_column=lambda x: x[column_name].apply(
+                lambda y: split_comma_seperated_string(y, separator)
+            )
+        )
+        .explode("new_column")
+        .drop(column_name, axis=1)
+        .drop_duplicates()
+        .reset_index(drop=True)
+        .rename(columns={"new_column": column_name})
+    )
