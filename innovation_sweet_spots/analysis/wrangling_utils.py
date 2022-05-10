@@ -960,6 +960,7 @@ class DealroomWrangler:
         self._company_tags = None
         self._company_industries = None
         self._company_subindustries = None
+        self._funding_rounds = None
 
     @property
     def company_data(self):
@@ -1007,17 +1008,17 @@ class DealroomWrangler:
             self._company_subindustries = self.explode_dealroom_table("SUB INDUSTRIES")
         return self._company_subindustries
 
+    @property
+    def funding_rounds(self) -> pd.DataFrame:
+        if self._funding_rounds is None:
+            self._funding_rounds = self.get_funding_rounds()
+        return self._funding_rounds
+
     def explode_dealroom_table(self, column_name: str) -> pd.DataFrame:
         """Returns table with company ids and and a row for each separate element of the specified column"""
         return explode_table(self.company_data[["id", column_name]], column_name, ";")
 
     @staticmethod
-    #     def get_years_from_parentheses(column_name: str) -> Iterator[int]:
-    #         """
-    #         Converts a column name of format 'COLUMN_NAME (year_1, year_2)'
-    #         to a list of integers [year_1, year_2]
-    #         """
-    #         return [int(y) for y in column_name.split('(')[-1].split(')')[0].split(',')]
     def get_years_from_parentheses(column_name: str) -> Iterator[int]:
         """
         Converts a column name of format 'COLUMN_NAME (year_1, year_2)'
@@ -1034,7 +1035,10 @@ class DealroomWrangler:
         return column_name.split("(")[0].strip()
 
     def explode_timeseries(self, column_name: str) -> pd.DataFrame:
-        """ """
+        """
+        Explodes columns with yearly time series, eg "PROFIT (year_1, year_2, ...)" into a
+        dataframe with a row for each year
+        """
         return (
             self.company_data[["id", column_name]]
             .assign(
@@ -1054,6 +1058,61 @@ class DealroomWrangler:
             .reset_index(drop=True)
             .rename(columns={"new_column": self.get_descriptor_name(column_name)})
         )
+
+    def get_funding_rounds(self) -> pd.DataFrame:
+        """
+        Returns funding rounds for companies
+        """
+        # Get the columns related to investment time series
+        company_funding_data = (
+            self.company_data[
+                ["id"] + dealroom.COLUMN_CATEGORIES["Funding (detailed)"]
+            ].fillna("n/a")
+        ).copy()
+        # Turn the separated entries into lists
+        for col in dealroom.COLUMN_CATEGORIES["Funding (detailed)"]:
+            company_funding_data[col] = company_funding_data[col].apply(
+                lambda x: split_comma_seperated_string(x, ";")
+            )
+
+        # Check where there is an issue with the investor column (small number of rounds)
+        df_lengths = pd.DataFrame()
+        for col in dealroom.COLUMN_CATEGORIES["Funding (detailed)"]:
+            df_lengths[col] = company_funding_data[col].apply(lambda x: len(x))
+        # NB: The assumption is that only the 'EACH ROUND INVESTORS' column is an issue
+        ambiguous_idx = df_lengths[
+            df_lengths["EACH ROUND TYPE"] != df_lengths["EACH ROUND INVESTORS"]
+        ].index
+        # For the ambigouous cases, replace investors with n/a, and explode funding rounds
+        ambiguous_rounds = (
+            company_funding_data.loc[ambiguous_idx]
+            .copy()
+            .assign(null_investors="n/a")
+            .drop("EACH ROUND INVESTORS", axis=1)
+            .rename(columns={"null_investors": "EACH ROUND INVESTORS"})
+            .explode(
+                [
+                    "EACH ROUND TYPE",
+                    "EACH ROUND AMOUNT",
+                    "EACH ROUND CURRENCY",
+                    "EACH ROUND DATE",
+                ]
+            )
+        )
+
+        # Explode funding rounds for non-ambiguous cases
+        company_funding_rounds = company_funding_data.drop(ambiguous_idx).explode(
+            dealroom.COLUMN_CATEGORIES["Funding (detailed)"]
+        )
+        # Combine both exploded dataframes
+        company_funding_rounds = pd.concat(
+            [company_funding_rounds, ambiguous_rounds], ignore_index=True
+        ).reset_index(drop=True)
+        # Convert funding date to a datetime format
+        company_funding_rounds["EACH ROUND DATE"] = pd.to_datetime(
+            company_funding_rounds["EACH ROUND DATE"], format="%b/%Y", errors="coerce"
+        )
+        return company_funding_rounds
 
 
 def get_years(dates: Iterator[datetime.date]) -> Iterator:
