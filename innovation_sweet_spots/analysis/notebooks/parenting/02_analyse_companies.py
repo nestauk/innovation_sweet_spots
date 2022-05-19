@@ -238,6 +238,14 @@ pu.time_series_by_category(
 
 # %%
 importlib.reload(pu)
+pu.time_series_by_category(
+    funding_geo_ts,
+    value_column="raised_amount_gbp_total",
+    #     value_label = 'Raised amount (£1000s)'
+)
+
+# %%
+importlib.reload(pu)
 funding_by_city = au.cb_funding_by_geo(
     cb_orgs.query('country == "United Kingdom"'), funding_df, "org_city"
 )
