@@ -1174,3 +1174,75 @@ def explode_table(
         .reset_index(drop=True)
         .rename(columns={"new_column": column_name})
     )
+
+
+def convert_currency(
+    funding: pd.DataFrame,
+    date_column: str,
+    amount_column: str,
+    currency_column: str,
+    converted_column: str = None,
+    target_currency: str = "GBP",
+) -> pd.DataFrame:
+    """
+    Convert amount in any currency to a target currency using CurrencyConverter package.
+    Deal dates should be provided in the datetime.date format
+    NB: Rate conversion for dates before year 2000 is not reliable and hence
+    is not carried out (the function returns nulls instead)
+
+    Args:
+        funding: A dataframe which must have a column for a date and amount to be converted
+        date_column: Name of column with deal dates
+        amount_column: Name of column with the amounts in the original currency
+        currency_column: Name of column with the currency codes (eg, 'USD', 'EUR' etc)
+        converted_column: Name for new column with the converted amounts
+
+    Returns:
+        Same dataframe with an extra column for the converted amount
+
+    """
+    # Column name
+    converted_column = (
+        f"{amount_column}_{target_currency}"
+        if converted_column is None
+        else converted_column
+    )
+    # Check if there is anything to convert
+    rounds_with_funding = len(funding[-funding[amount_column].isnull()])
+    df = funding.copy()
+    if rounds_with_funding > 0:
+        # Set up the currency converter
+        Converter = CurrencyConverter(
+            fallback_on_missing_rate=True,
+            fallback_on_missing_rate_method="linear_interpolation",
+            # If the date is out of bounds (eg, too recent)
+            # then use the closest date available
+            fallback_on_wrong_date=True,
+        )
+        # Convert currencies
+        converted_amounts = []
+        for _, row in df.iterrows():
+            # Only convert deals after year 1999
+            if (row[date_column].year >= 2000) and (
+                row[currency_column] in Converter.currencies
+            ):
+                converted_amounts.append(
+                    Converter.convert(
+                        row[amount_column],
+                        row[currency_column],
+                        target_currency,
+                        date=row[date_column],
+                    )
+                )
+            else:
+                converted_amounts.append(np.nan)
+        df[converted_column] = converted_amounts
+        # For deals that were originally in the target currency, use the database values
+        deals_in_target_currency = df[currency_column] == target_currency
+        df.loc[deals_in_target_currency, converted_column] = df.loc[
+            deals_in_target_currency, amount_column
+        ].copy()
+    else:
+        # If nothing to convert, copy the nulls and return
+        df[converted_column] = df[amount_column].copy()
+    return df
