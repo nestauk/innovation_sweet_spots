@@ -1,8 +1,8 @@
 database_config: "mysqldb_team.config"
 guardian_api:
   data-format: "json"
-  from-date: "2007-01-01"
-  to-date: "2021-06-01"
+  from-date: "2000-01-01"
+  to-date: "2025-12-31"
   page-size: 100
   order-by: "newest"
   lang: "en"

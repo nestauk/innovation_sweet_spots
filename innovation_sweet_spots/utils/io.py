@@ -13,6 +13,7 @@ import pandas as pd
 PathLike = TypeVar("PathLike", str, pathlib.Path, None)
 
 DEF_CONFIG_PATH = PROJECT_DIR / "innovation_sweet_spots/config"
+VERBOSE = True
 
 
 def import_config(filename: str, path=DEF_CONFIG_PATH) -> dict:
@@ -26,14 +27,16 @@ def save_pickle(data, filepath: PathLike):
     """Pickles data at the provided filepath"""
     with open(filepath, "wb") as outfile:
         pickle.dump(data, outfile)
-    logging.info(f"Saved a pickle file in {filepath}")
+    if VERBOSE:
+        logging.info(f"Saved a pickle file in {filepath}")
 
 
 def load_pickle(filepath: PathLike):
     """Loads a pickle file"""
     with open(filepath, "rb") as infile:
         data = pickle.load(infile)
-    logging.info(f"Loaded data from a pickle file in {filepath}")
+    if VERBOSE:
+        logging.info(f"Loaded data from a pickle file in {filepath}")
     return data
 
 
@@ -41,7 +44,8 @@ def save_text_items(list_of_terms: Iterator[str], filepath: PathLike):
     """Writes a text file with comma-separated text terms"""
     with open(filepath, "w") as outfile:
         outfile.write(", ".join(list_of_terms))
-    logging.info(f"Saved {len(list_of_terms)} terms in {filepath}")
+    if VERBOSE:
+        logging.info(f"Saved {len(list_of_terms)} terms in {filepath}")
 
 
 def read_text_items(filepath: PathLike) -> Iterator[str]:
@@ -49,7 +53,8 @@ def read_text_items(filepath: PathLike) -> Iterator[str]:
     with open(filepath, "r") as infile:
         txt = infile.read()
     list_of_terms = txt.split(", ")
-    logging.info(f"Loaded {len(list_of_terms)} text items from {filepath}")
+    if VERBOSE:
+        logging.info(f"Loaded {len(list_of_terms)} text items from {filepath}")
     return list_of_terms
 
 
