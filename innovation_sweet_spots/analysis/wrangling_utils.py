@@ -5,6 +5,7 @@ from currency_converter import CurrencyConverter
 from datetime import datetime
 from typing import Iterator
 import itertools
+from innovation_sweet_spots import logging
 import innovation_sweet_spots.getters.gtr as gtr
 import innovation_sweet_spots.getters.crunchbase as cb
 import innovation_sweet_spots.getters.dealroom as dealroom
@@ -956,6 +957,12 @@ class CrunchbaseWrangler:
         )
 
 
+HARMONISED_DEALROOM_COL_NAMES = {
+    "HQ COUNTRY": "country",
+    "HQ CITY": "city",
+}
+
+
 class DealroomWrangler:
     """
     This class helps exploring data downloaded from the Dealroom business platform
@@ -986,11 +993,37 @@ class DealroomWrangler:
         """
         if self._foodtech_data is None:
             self._foodtech_data = (
-                dealroom.get_foodtech_companies().drop_duplicates("id", keep="first")
-                # Remove spuriou entries
-                .query("id != 'Error retrieving row data'")
+                dealroom.get_foodtech_companies()
+                .drop_duplicates("id", keep="first")
+                .pipe(self.process_input_data)
             )
         return self._foodtech_data
+
+    def harmonise_column_names(self, df: pd.DataFrame):
+        """"""
+        return df.rename(columns=HARMONISED_DEALROOM_COL_NAMES)
+
+    def process_input_data(self, df: pd.DataFrame):
+        """Initial processing"""
+        return (
+            df
+            # Remove spurious entries
+            .query("id != 'Error retrieving row data'")
+            # Normalise the launch date (NB: only year is taken into account for now)
+            .assign(
+                founded_on=lambda df: pd.to_datetime(
+                    df["LAUNCH DATE"].apply(self.extract_year)
+                )
+            ).pipe(self.harmonise_column_names)
+        )
+
+    @staticmethod
+    def extract_year(date: str):
+        """Extracts year from the 'LAUNCH DATE' column"""
+        if type(date) is str:
+            return date[0:4]
+        else:
+            return np.nan
 
     @property
     def company_tags(self) -> pd.DataFrame:
@@ -1045,6 +1078,44 @@ class DealroomWrangler:
         """
         return column_name.split("(")[0].strip()
 
+    def get_ids_in_subindustry(self, subindustry: str):
+        """Get company ids in a subindustry"""
+        return self.company_subindustries.query(
+            "`SUB INDUSTRIES` == @subindustry"
+        ).id.to_list()
+
+    def get_companies_by_subindustry(self, subindustry: str):
+        """Get companies that are in the specific subindustry"""
+        ids_in_industry = self.get_ids_in_subindustry(subindustry)
+        return self.company_data.query("id in @ids_in_industry").assign(
+            subindustry=subindustry
+        )
+
+    def get_rounds_by_subindustry(self, subindustry: str):
+        """Get investment rounds for companies in the specific subindustry"""
+        ids_in_industry = self.get_ids_in_subindustry(subindustry)
+        return self.funding_rounds.query("id in @ids_in_industry").assign(
+            subindustry=subindustry
+        )
+
+    def get_ids_in_industry(self, industry: str):
+        """Get company ids in a subindustry"""
+        return self.company_industries.query("`INDUSTRIES` == @industry").id.to_list()
+
+    def get_companies_by_industry(self, industry: str):
+        """Get companies that are in the specific subindustry"""
+        ids_in_industry = self.get_ids_in_industry(industry)
+        return self.company_data.query("id in @ids_in_industry").assign(
+            industry=industry
+        )
+
+    def get_rounds_by_industry(self, industry: str):
+        """Get investment rounds for companies in the specific subindustry"""
+        ids_in_industry = self.get_ids_in_industry(industry)
+        return self.funding_rounds.query("id in @ids_in_industry").assign(
+            industry=industry
+        )
+
     def explode_timeseries(self, column_name: str) -> pd.DataFrame:
         """
         Explodes columns with yearly time series, eg "PROFIT (year_1, year_2, ...)" into a
@@ -1070,9 +1141,20 @@ class DealroomWrangler:
             .rename(columns={"new_column": self.get_descriptor_name(column_name)})
         )
 
-    def get_funding_rounds(self) -> pd.DataFrame:
+    def impute_month(self, date: str):
+        """Imputes month, eg 2012 becomes jan/2012"""
+        # If only year is present
+        if date.isnumeric() and (len(date) == 4):
+            return f"jan/{date}"
+        else:
+            return date
+
+    def get_funding_rounds(self, currencies=["GBP", "USD"]) -> pd.DataFrame:
         """
         Returns funding rounds for companies
+
+        Args:
+            currencies: List of currencies in which to convert all funding round amounts
         """
         # Get the columns related to investment time series
         company_funding_data = (
@@ -1080,6 +1162,10 @@ class DealroomWrangler:
                 ["id"] + dealroom.COLUMN_CATEGORIES["Funding (detailed)"]
             ].fillna("n/a")
         ).copy()
+        # Remove companies without any funding data
+        company_funding_data = company_funding_data[
+            company_funding_data["EACH ROUND DATE"] != "n/a"
+        ]
         # Turn the separated entries into lists
         for col in dealroom.COLUMN_CATEGORIES["Funding (detailed)"]:
             company_funding_data[col] = company_funding_data[col].apply(
@@ -1116,13 +1202,57 @@ class DealroomWrangler:
             dealroom.COLUMN_CATEGORIES["Funding (detailed)"]
         )
         # Combine both exploded dataframes
-        company_funding_rounds = pd.concat(
-            [company_funding_rounds, ambiguous_rounds], ignore_index=True
-        ).reset_index(drop=True)
-        # Convert funding date to a datetime format
-        company_funding_rounds["EACH ROUND DATE"] = pd.to_datetime(
-            company_funding_rounds["EACH ROUND DATE"], format="%b/%Y", errors="coerce"
+        company_funding_rounds = (
+            pd.concat([company_funding_rounds, ambiguous_rounds], ignore_index=True)
+            .reset_index(drop=True)
+            .assign(
+                **{
+                    # Convert funding date to a datetime format
+                    "announced_on": lambda df: pd.to_datetime(
+                        df["EACH ROUND DATE"].apply(self.impute_month),
+                        format="%b/%Y",
+                        errors="coerce",
+                    ),
+                    # Create a temporary funding round id
+                    "funding_round_id": lambda df: list(range(0, len(df))),
+                }
+            )
         )
+        #         company_funding_rounds['fake_date'] = pd.to_datetime('2020-05-23')
+        # Convert currencies to GBP and USD
+        company_funding_rounds_converted = [
+            convert_currency(
+                funding=(
+                    company_funding_rounds.query("`EACH ROUND AMOUNT` != 'n/a'").query(
+                        "`EACH ROUND CURRENCY` != 'n/a'"
+                    )
+                ),
+                date_column="announced_on",
+                #                 date_column="fake_date",
+                amount_column="EACH ROUND AMOUNT",
+                currency_column="EACH ROUND CURRENCY",
+                target_currency=curr,
+            )
+            for curr in currencies
+        ]
+        # Add the converted amounts to the original dataframe
+        for i, df in enumerate(company_funding_rounds_converted):
+            company_funding_rounds = (
+                company_funding_rounds.merge(
+                    df[["id", "funding_round_id", df.columns[-1]]],
+                    on=["id", "funding_round_id"],
+                    how="left",
+                )
+                .replace("n/a", np.nan)
+                .rename(
+                    columns={df.columns[-1]: f"raised_amount_{currencies[i].lower()}"}
+                )
+                .astype(
+                    {
+                        f"raised_amount_{currencies[i].lower()}": float,
+                    }
+                )
+            )
         return company_funding_rounds
 
 
