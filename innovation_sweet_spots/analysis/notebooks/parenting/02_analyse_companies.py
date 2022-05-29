@@ -44,12 +44,10 @@ importlib.reload(pu)
 
 # %%
 from innovation_sweet_spots import PROJECT_DIR
+import pandas as pd
 
 # %%
 OUTPUTS_DIR = PROJECT_DIR / "outputs/finals/parenting/cb_companies"
-
-# %%
-import pandas as pd
 
 # %%
 CB = CrunchbaseWrangler()
@@ -93,14 +91,124 @@ reviewed_df_child_ed = pd.read_csv(
 )
 
 # %%
-# Select the companies with 'relevant'
-reviewed_df_child_ed.info()
+reviewed_df_parenting
 
 # %%
-companies_parenting_df = reviewed_df_parenting.query('relevancy == "relevant"')
+# Select the companies with 'relevant'
+reviewed_df_parenting.info()
+
+
+# %%
+def map_child_comments_to_user(txt):
+    cats = {
+        "Sports": "Children",
+        "General": "Children",
+        "Learning": "Children",
+        "Numerical / coding": "Children",
+        "Parental support": "Parents",
+        "Child care": "Parents",
+        "Numerical / stem": "Children",
+        "Learning / Play": "Children",
+        "Parental support / Activities": "Parents",
+        "Education management": "Parents",
+        "Older kids": "Children",
+        "Tech": "Children",
+        "Child Care ": "Parents",
+        "Sharing memories": "Parents",
+        "Sharing memories ": "Parents",
+        "Parental suport": "Parents",
+        "Literacy": "Children",
+    }
+    if type(txt) is str:
+        return cats[txt]
+    else:
+        return "Children"
+
+
+def map_parent_comments_to_user(txt):
+    cats = {
+        "Helping babies to sleep": "Parents",
+        "Literacy": "Children",
+        "Media": "Children",
+        "Reading stories": "Children",
+        "Reading stories / Parental support": "Children",
+        "Sharing memories": "Parents",
+        "Play": "Children",
+        "Activities": "Parents",
+        "child care": "Parents",
+        "Community": "Parents",
+        "Educational management": "Parents",
+        "Learning": "Children",
+        "Parental support": "Parents",
+        "Share memories": "Parents",
+        "Stories": "Children",
+        "Activities / outdoors / Play": "Parents",
+        "Child care": "Parents",
+        "Education management": "Parents",
+        "Educational": "Children",
+        "Educational / Education management": "Parents",
+        "Educational / platform": "Parents",
+        "Educational / special needs": "Children",
+        "Learning play": "Children",
+        "Parental support / activities": "Parents",
+        "Parental support / community": "Parents",
+        "Pregancy / health": "Parents",
+        "Pregnancy": "Parents",
+        "Robots": "Children",
+        "Toys / Play": "Children",
+        "Finance": "Parents",
+        "Kids products / retail": "Parents",
+        "Fertility": "Parents",
+        "Adoption": "Parents",
+        "Educational / health": "Parents",
+        "Learning / special needs": "Parents",
+        "Learning play / Outdoors": "Children",
+        "Parental support ": "Parents",
+        "Parental support / co-parenting": "Parents",
+        "Parental support / Community": "Parents",
+        "Play, activities": "Children",
+        "Activities / Play": "Children",
+        "Parental support  / Community": "Parents",
+        "Parental support / Activities": "Parents",
+        "Play / games": "Children",
+        "Clothes / Kids products": "Parents",
+        "Helping babies sleep": "Parents",
+        "Parental support / health": "Parents",
+        "Robots / hardware": "Children",
+        "Robots / Tracking babies rhythms": "Children",
+        "Tracking babies rhythms": "Parents",
+        "Parental support / Child care": "Parents",
+        "Parental support / Communities": "Parents",
+    }
+    if type(txt) is str:
+        return cats[txt]
+    else:
+        return "Parents"
+
+
+# %%
+companies_parenting_df = reviewed_df_parenting.query('relevancy == "relevant"').assign(
+    user=lambda df: df.comment.apply(map_parent_comments_to_user)
+)
+companies_parenting_df["interesting"] = (
+    companies_parenting_df["Unnamed: 16"].str.lower().str.contains("interesting")
+)
+
 companies_child_ed_df = reviewed_df_child_ed.query(
     'relevancy == "relevant" or comment == "potentially relevant"'
+).assign(user=lambda df: df.comment.apply(map_child_comments_to_user))
+companies_child_ed_df["interesting"] = (
+    companies_child_ed_df.interesting.isnull() == False
 )
+
+# %%
+id_to_user = pd.concat(
+    [
+        companies_parenting_df[["id", "user", "interesting"]],
+        companies_child_ed_df[["id", "user", "interesting"]],
+    ],
+    ignore_index=False,
+).fillna({"interesting": False})
 
 # %%
 companies_ids = set(companies_parenting_df.id.to_list()).union(
@@ -109,6 +217,9 @@ companies_ids = set(companies_parenting_df.id.to_list()).union(
 
 # %%
 len(companies_ids)
+
+# %%
+# list(companies_parenting_df.query("id in @companies_ids").comment.unique())
 
 # %% [markdown]
 # # Analyse parenting companies
@@ -140,6 +251,76 @@ funding_df = CB.get_funding_rounds(cb_companies_with_funds)
 funding_ts = au.cb_get_all_timeseries(
     cb_companies_with_funds, funding_df, "year", 2010, 2021
 )
+
+# %% [markdown]
+# ## VCs
+
+# %%
+CB.get_funding_round_investors(funding_df).info()
+
+# %%
+investors = (
+    CB.get_funding_round_investors(funding_df)
+    .groupby(["investor_name"])
+    .agg(raised_amount_gbp=("raised_amount_gbp", "sum"))
+    .sort_values("raised_amount_gbp", ascending=False)
+    .reset_index()
+    .merge(
+        CB.cb_investors[
+            [
+                "id",
+                "name",
+                "country_code",
+                "city",
+                "facebook_url",
+                "linkedin_url",
+                "twitter_url",
+                "roles",
+            ]
+        ],
+        how="left",
+        left_on="investor_name",
+        right_on="name",
+    )
+)
+
+# %%
+# CB.cb_investors.info()
+
+# %%
+investors.drop(["id", "name"], axis=1).query("country_code == 'GBR'").to_csv(
+    PROJECT_DIR / "outputs/finals/parenting/investors_list.csv", index=False
+)
+
+# %%
+# CB.cb_organisations.head(3).info()
+
+# %%
+(cb_companies.merge(id_to_user).query("country_code == 'GBR'"))[
+    [
+        "id",
+        "name",
+        "cb_url",
+        "country_code",
+        "city",
+        "homepage_url",
+        "short_description",
+        "long_description",
+        "total_funding_usd",
+        "last_funding_on",
+        "facebook_url",
+        "linkedin_url",
+        "twitter_url",
+        "user",
+        "interesting",
+    ]
+].to_csv(PROJECT_DIR / "outputs/finals/parenting/company_list.csv", index=False)
+
+# %%
+cb_companies.info()
+
+# %% [markdown]
+# ## Graphs
 
 # %%
 # funding_df.head(3)
@@ -214,7 +395,8 @@ importlib.reload(au)
 funding_geo_ts = au.cb_get_timeseries_by_geo(
     cb_companies_with_funds,
     funding_df,
-    geographies=["United States", "United Kingdom", "China", "Germany"],
+    #     geographies=["United States", "United Kingdom", "China", "Germany"],
+    geographies=["United Kingdom"],
     period="year",
     min_year=2010,
     max_year=2021,
@@ -302,7 +484,7 @@ utils.digital_proportion(cb_companies, digital, since=2011)
 
 # %%
 digital_ids = digital.id.to_list()
-cb_companies.query("id in @digital_ids").total_funding_usd.sum()
+# cb_companies.query("id in @digital_ids").total_funding_usd.sum()
 
 # %%
 importlib.reload(au)
