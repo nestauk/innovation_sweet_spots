@@ -3,7 +3,7 @@
 import innovation_sweet_spots.analysis.analysis_utils as au
 import pandas as pd
 
-ALLOWED_DEAL_TYPES = [
+EARLY_DEAL_TYPES = [
     "SERIES B",
     "EARLY VC",
     "SERIES A",
@@ -41,6 +41,20 @@ ALLOWED_DEAL_TYPES = [
     "MEDIA FOR EQUITY",
     #     'ICO',
     "PROJECT, REAL ESTATE, INFRASTRUCTURE FINANCE",
+]
+
+LATE_DEAL_TYPES = [
+    "ACQUISITION",
+    "DEBT",
+    "POST IPO EQUITY",
+    "IPO",
+    "MERGER",
+    "SPAC IPO",
+    "BUYOUT",
+    "POST IPO DEBT",
+    "POST IPO CONVERTIBLE",
+    "LENDING CAPITAL",
+    "POST IPO SECONDARY",
 ]
 
 

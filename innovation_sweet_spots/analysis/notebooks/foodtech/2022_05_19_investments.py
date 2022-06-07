@@ -136,9 +136,7 @@ importlib.reload(wu)
 DR = wu.DealroomWrangler()
 
 # %%
-# Initialise a Dealroom wrangler instance
-importlib.reload(wu)
-DR = wu.DealroomWrangler()
+importlib.reload(utils)
 
 # %%
 import pandas as pd
@@ -147,7 +145,7 @@ ind_ts = []
 for ind in SUBINDUSTRIES:
     org_df = DR.get_companies_by_subindustry(ind)
     deals_df = DR.get_rounds_by_subindustry(ind).query(
-        "`EACH ROUND TYPE` in @utils.ALLOWED_DEAL_TYPES"
+        "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES"
     )
     ind_ts.append(
         au.cb_get_all_timeseries(
@@ -163,7 +161,7 @@ for ind in INDUSTRIES:
             DR.get_companies_by_industry(ind),
             (
                 DR.get_rounds_by_industry(ind).query(
-                    "`EACH ROUND TYPE` in @utils.ALLOWED_DEAL_TYPES"
+                    "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES"
                 )
             ),
             period="year",
@@ -424,7 +422,7 @@ company_labels.head(3)
 # %%
 country_funding = (
     DR.funding_rounds.merge(DR.company_data[["id", "country"]])
-    .merge(company_labels_)
+    .merge(company_labels)
     .groupby("country")
     .agg(raised_amount_gbp=("raised_amount_gbp", "sum"))
 )
@@ -435,7 +433,7 @@ country_funding.sort_values("raised_amount_gbp", ascending=False).head(15)
 # %%
 country_funding = (
     DR.funding_rounds.merge(DR.company_data[["id", "country"]])
-    .merge(company_labels_)
+    .merge(company_labels)
     .groupby(["country", "Category"])
     .agg(raised_amount_gbp=("raised_amount_gbp", "sum"))
 ).reset_index()
@@ -719,8 +717,5 @@ fig_final
 # %%
 filename = "dealroom_landscape"
 AltairSaver.save(fig_final, filename, filetypes=["html", "png"])
-
-# %% [markdown]
-# #### Averaged vectors
 
 # %%
