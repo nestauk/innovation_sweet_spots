@@ -228,13 +228,11 @@ len(companies_ids)
 # ## Selection
 
 # %%
-# importlib.reload(utils);
-# cb_orgs_parenting = (
-#     CB.get_companies_in_industries(utils.PARENT_INDUSTRIES)
-# )
+importlib.reload(utils)
+cb_orgs = CB.get_companies_in_industries(utils.PARENT_INDUSTRIES)
 
 # %%
-cb_orgs = CB.cb_organisations.query("id in @companies_ids")
+# cb_orgs = CB.cb_organisations.query("id in @companies_ids")
 
 # %% [markdown]
 # ## Analysis
@@ -1228,3 +1226,16 @@ df_.to_csv(OUTPUTS_DIR / "cb_companies_parenting_v2022_04_27.csv", index=False)
 
 # %%
 # for c in corpus_all_ids np.where(c == ids_to_cluster)
+
+# %% [markdown]
+# ## What's in 'family' companies
+
+# %%
+# Make the dataset
+cb_orgs_family = (
+    CB.get_companies_in_industries(["family"])
+    .pipe(select_by_role, "company")
+    .pipe(au.get_companies_with_funds)
+)
+
+# %%
