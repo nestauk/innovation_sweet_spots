@@ -228,11 +228,11 @@ len(companies_ids)
 # ## Selection
 
 # %%
-importlib.reload(utils)
-cb_orgs = CB.get_companies_in_industries(utils.PARENT_INDUSTRIES)
+# importlib.reload(utils)
+# cb_orgs = CB.get_companies_in_industries(utils.PARENT_INDUSTRIES)
 
 # %%
-# cb_orgs = CB.cb_organisations.query("id in @companies_ids")
+cb_orgs = CB.cb_organisations.query("id in @companies_ids")
 
 # %% [markdown]
 # ## Analysis
@@ -245,7 +245,23 @@ cb_companies_with_funds = au.get_companies_with_funds(cb_companies)
 len(cb_companies_with_funds)
 
 # %%
-funding_df = CB.get_funding_rounds(cb_companies_with_funds)
+importlib.reload(utils)
+
+# %%
+funding_df = (
+    CB.get_funding_rounds(cb_companies_with_funds)
+    #     .query("investment_type in @utils.LATE_STAGE_DEALS")
+    .query("investment_type in @utils.EARLY_STAGE_DEALS")
+)
+
+# %%
+len(funding_df)
+
+# %%
+# for p in sorted(funding_df.investment_type.unique()):
+#     print(f'"{p}"')
+
+# %%
 funding_ts = au.cb_get_all_timeseries(
     cb_companies_with_funds, funding_df, "year", 2010, 2021
 )
@@ -332,6 +348,43 @@ pu.time_series(funding_ts, y_column="raised_amount_gbp_total")
 # %%
 funding_ts.head(2)
 
+
+# %%
+def cb_investments_barplot(
+    data: pd.DataFrame,
+    y_column: str,
+    y_label: str = None,
+    y_units: str = None,
+    y_max: float = None,
+    x_column: str = "time_period",
+    x_label: str = None,
+    period: str = "Y",
+    show_trend: bool = False,
+):
+    """Barplot"""
+    y_max = data[y_column].max() if y_max is None else y_max
+    chart = (
+        alt.Chart(
+            data.assign(**{x_column: convert_time_period(data[x_column], period)}),
+            width=400,
+            height=200,
+        )
+        .mark_bar(color=NESTA_COLOURS[0])
+        .encode(
+            alt.X(f"{x_column}:O"),
+            alt.Y(f"{y_column}:Q", scale=alt.Scale(domain=[0, y_max])),
+            tooltip=[y_label, y_column],
+        )
+    )
+    chart.encoding.x.title = (
+        process_axis_label(x_column) if x_label is None else x_label
+    )
+    chart.encoding.y.title = (
+        process_axis_label(y_column, units=y_units) if y_label is None else y_label
+    )
+    return standardise_chart(chart)
+
+
 # %%
 importlib.reload(pu)
 pu.cb_investments_barplot(
@@ -394,7 +447,8 @@ funding_geo_ts = au.cb_get_timeseries_by_geo(
     cb_companies_with_funds,
     funding_df,
     #     geographies=["United States", "United Kingdom", "China", "Germany"],
-    geographies=["United Kingdom"],
+    #     geographies=["United Kingdom"],
+    geographies=["United States"],
     period="year",
     min_year=2010,
     max_year=2021,
@@ -405,14 +459,6 @@ importlib.reload(pu)
 pu.time_series_by_category(
     funding_geo_ts,
     value_column="no_of_rounds",
-    #     value_label = 'Raised amount (£1000s)'
-)
-
-# %%
-importlib.reload(pu)
-pu.time_series_by_category(
-    funding_geo_ts,
-    value_column="raised_amount_gbp_total",
     #     value_label = 'Raised amount (£1000s)'
 )
 
@@ -1237,5 +1283,8 @@ cb_orgs_family = (
     .pipe(select_by_role, "company")
     .pipe(au.get_companies_with_funds)
 )
+
+# %% [markdown]
+# ###
 
 # %%

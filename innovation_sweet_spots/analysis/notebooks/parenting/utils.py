@@ -196,3 +196,56 @@ LEARNING_TERMS = add_space_in_front(LEARNING_TERMS)
 PRESCHOOL_TERMS = add_space_in_front(PRESCHOOL_TERMS)
 USER_TERMS = PARENT_TERMS + CHILDREN_TERMS
 ALL_LEARNING_TERMS = LEARNING_TERMS + PRESCHOOL_TERMS
+
+
+# INVESTMENT TYPES
+
+EARLY_STAGE_DEALS = [
+    "angel",
+    "convertible_note",
+    #     "corporate_round",
+    #     "debt_financing",
+    "equity_crowdfunding",
+    #     "grant",
+    "non_equity_assistance",
+    #     "post_ipo_debt",
+    #     "post_ipo_equity",
+    #     "post_ipo_secondary",
+    "pre_seed",
+    #     "private_equity",
+    "product_crowdfunding",
+    "secondary_market",
+    "seed",
+    "series_a",
+    "series_b",
+    "series_c",
+    "series_d",
+    "series_e",
+    "series_unknown",
+    #     "undisclosed",
+]
+
+LATE_STAGE_DEALS = [
+    #     "angel",
+    #     "convertible_note",
+    "corporate_round",
+    "debt_financing",
+    #     "equity_crowdfunding",
+    #     "grant",
+    #     "non_equity_assistance",
+    "post_ipo_debt",
+    "post_ipo_equity",
+    "post_ipo_secondary",
+    #     "pre_seed",
+    "private_equity",
+    #     "product_crowdfunding",
+    #     "secondary_market",
+    #     "seed",
+    #     "series_a",
+    #     "series_b",
+    #     "series_c",
+    #     "series_d",
+    #     "series_e",
+    #     "series_unknown",
+    "undisclosed",
+]
