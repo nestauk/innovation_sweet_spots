@@ -27,6 +27,7 @@ import utils
 
 importlib.reload(wu)
 import altair as alt
+import pandas as pd
 
 COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
 
@@ -98,14 +99,6 @@ DR.explode_dealroom_table("B2B/B2C").groupby("B2B/B2C").count()
 # %%
 subindustry_counts.head(20).index
 
-# %%
-DR.company_data["TOTAL FUNDING (EUR M)"]
-
-# %%
-import importlib
-
-importlib.reload(wu)
-
 # %% [markdown]
 # # Rapid plots
 #
@@ -131,16 +124,6 @@ INDUSTRIES = [
 ]
 
 # %%
-# Initialise a Dealroom wrangler instance
-importlib.reload(wu)
-DR = wu.DealroomWrangler()
-
-# %%
-importlib.reload(utils)
-
-# %%
-import pandas as pd
-
 ind_ts = []
 for ind in SUBINDUSTRIES:
     org_df = DR.get_companies_by_subindustry(ind)
@@ -659,8 +642,7 @@ df_viz = df_viz.merge(company_labels_list.reset_index(), how="left")
 alt.data_transformers.disable_max_rows()
 
 # %%
-# %%
-list_of_columns = list(df_viz.columns)
+# list_of_columns = list(df_viz.columns)
 
 # %%
 # importlib.reload(pu);
@@ -710,9 +692,6 @@ fig_final = (
 )
 
 fig_final
-
-# %%
-
 
 # %%
 filename = "dealroom_landscape"
