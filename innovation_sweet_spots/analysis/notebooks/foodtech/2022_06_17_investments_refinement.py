@@ -15,3 +15,36 @@
 # ---
 
 # %%
+import innovation_sweet_spots.analysis.wrangling_utils as wu
+import importlib
+import innovation_sweet_spots.analysis.analysis_utils as au
+from innovation_sweet_spots.utils import plotting_utils as pu
+import utils
+
+importlib.reload(wu)
+import altair as alt
+import pandas as pd
+
+COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
+
+# %%
+# Functionality for saving charts
+import innovation_sweet_spots.utils.altair_save_utils as alt_save
+
+AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
+
+# %%
+# Initialise a Dealroom wrangler instance
+importlib.reload(wu)
+DR = wu.DealroomWrangler()
+
+# Number of companies
+len(DR.company_data)
+
+# %%
+DR.labels
+
+# %%
+DR.get_companies_by_industry("health")
+
+# %%
