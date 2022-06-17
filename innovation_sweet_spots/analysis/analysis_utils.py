@@ -402,6 +402,27 @@ def percentage_change(initial_value, new_value):
     return (new_value - initial_value) / initial_value * 100
 
 
+def growth(
+    time_series: pd.DataFrame,
+    year_start: int,
+    year_end: int,
+) -> pd.Series:
+    """Calculates a growth estimate
+    Args:
+        time_series: A dataframe with a columns for 'year' and other data
+        year_start: First year of the trend window
+        year_end: Last year of the trend window
+    Returns:
+        Series with smoothed growth estimates for all data columns
+    """
+    # Smooth timeseries
+    df = time_series.set_index("year")
+    # Percentage change
+    return percentage_change(
+        initial_value=df.loc[year_start, :], new_value=df.loc[year_end, :]
+    )
+
+
 def smoothed_growth(
     time_series: pd.DataFrame, year_start: int, year_end: int, window: int = 3
 ) -> pd.Series:
