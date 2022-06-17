@@ -7,6 +7,72 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from typing import Iterator, Dict
 from collections import defaultdict
 
+import hdbscan
+import umap
+from innovation_sweet_spots import logging
+
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+import re
+
+lemmatizer = WordNetLemmatizer()
+
+DEFAULT_STOPWORDS = stopwords.words("english")
+
+umap_def_params = {
+    "n_components": 50,
+    "n_neighbors": 10,
+    "min_dist": 0.5,
+    "spread": 0.5,
+}
+
+hdbscan_def_params = {
+    "min_cluster_size": 15,
+    "min_samples": 1,
+    "cluster_selection_method": "leaf",
+    "prediction_data": True,
+}
+
+
+def hdbscan_clustering(
+    vectors,
+    umap_params=umap_def_params,
+    hdbscan_params=hdbscan_def_params,
+    random_umap_state=1,
+    random_hdbscan_state=3333,
+    return_only_labels=True,
+):
+    """
+    Helper function for quickly getting some clusters
+
+    Outputs an array of shape (n_vectors, 2) with columns for best cluster index and probability
+    """
+    # UMAP
+    logging.info(
+        f"Generating {umap_def_params['n_components']}-d UMAP embbedings for {len(vectors)} vectors"
+    )
+    reducer_low_dim = umap.UMAP(random_state=random_umap_state, **umap_params)
+    embedding = reducer_low_dim.fit_transform(vectors)
+    logging.info(f"Clustering {len(embedding)} vectors")
+    # HDBSCAN
+    np.random.seed(random_hdbscan_state)
+    clusterer = hdbscan.HDBSCAN(**hdbscan_params)
+    clusterer.fit(embedding)
+    # Cluster probabilities
+    cluster_probs = hdbscan.all_points_membership_vectors(clusterer)
+    best_cluster_prob = np.array([(np.argmax(x), np.max(x)) for x in cluster_probs])
+
+    return best_cluster_prob
+
+
+def simple_preprocessing(text: str, stopwords=DEFAULT_STOPWORDS) -> str:
+    """Simple preprocessing for cluster texts"""
+    text = re.sub(r"[^a-zA-Z ]+", "", text).lower()
+    text = simple_tokenizer(text)
+    text = [lemmatizer.lemmatize(t) for t in text]
+    text = [t for t in text if ((t not in stopwords) and (len(t) > 1))]
+    return " ".join(text)
+
 
 def simple_tokenizer(text: str) -> Iterator[str]:
     return [token.strip() for token in text.split(" ") if len(token) > 0]

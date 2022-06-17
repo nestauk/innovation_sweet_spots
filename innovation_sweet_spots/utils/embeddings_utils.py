@@ -104,7 +104,6 @@ class Vectors:
         files_exist = os.path.exists(
             folder / self.filepath_vectors(filename, model_name, folder)
         )
-        print(files_exist)
 
         if (vector_ids is None) and ((filename is None) or (files_exist is False)):
             # Initialise empty vectors and ids
@@ -127,7 +126,6 @@ class Vectors:
 
     def load_vectors_and_ids(self, filename: str, model_name: str, folder):
         """Loads in vectors and their corresponding document ids from disk"""
-        print("Loading loading")
         self.vector_ids = np.array(
             read_text_items(self.filepath_vector_ids(filename, model_name, folder))
         )

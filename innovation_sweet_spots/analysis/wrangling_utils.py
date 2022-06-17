@@ -996,6 +996,8 @@ class DealroomWrangler:
         if self._foodtech_data is None:
             self._foodtech_data = (
                 dealroom.get_foodtech_companies()
+                # Deduplicate IDs
+                .astype({"id": str})
                 .drop_duplicates("id", keep="first")
                 .pipe(self.process_input_data)
             )

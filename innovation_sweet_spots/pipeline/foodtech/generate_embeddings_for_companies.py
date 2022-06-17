@@ -1,3 +1,4 @@
+# %%
 """
 Script to generate embedding representations of Dealroom companies
 
@@ -10,28 +11,26 @@ import innovation_sweet_spots.utils.embeddings_utils as eu
 import innovation_sweet_spots.utils.text_cleaning_utils as tcu
 import re
 
+# %%
 MODEL = "all-mpnet-base-v2"
 DIR = PROJECT_DIR / "outputs/preprocessed/embeddings"
-FILENAME = "foodtech_may2022_labels"
+FILENAME = "foodtech_may2022_companies"
 
+# %%
 if __name__ == "__main__":
 
-    v_labels = eu.Vectors(
+    v_companies = eu.Vectors(
         model_name=MODEL,
         folder=DIR,
         filename=FILENAME,
     )
 
     DR = wu.DealroomWrangler(dataset="foodtech")
-    labels_unique = (
-        DR.labels.Category.apply(tcu.clean_dealroom_labels).drop_duplicates(
-            keep="first"
-        )
-    ).to_list()
+    DR.company_data.TAGLINE = DR.company_data.TAGLINE.fillna("")
 
-    v_labels.generate_new_vectors(
-        new_document_ids=labels_unique,
-        texts=labels_unique,
+    v_companies.generate_new_vectors(
+        new_document_ids=DR.company_data.id.to_list(),
+        texts=DR.company_data.TAGLINE.to_list(),
     )
 
-    v_labels.save_vectors()
+    v_companies.save_vectors()

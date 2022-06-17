@@ -10,7 +10,8 @@ ChartType = alt.vegalite.v4.api.Chart
 
 # Brand aligned fonts and colours
 FONT = "Averta"
-TITLE_FONT = "Zosia"
+# TITLE_FONT = "Zosia"
+TITLE_FONT = "Averta"
 NESTA_COLOURS = [
     "#0000FF",
     "#FDB633",
