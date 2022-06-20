@@ -273,10 +273,16 @@ funding_ts = au.cb_get_all_timeseries(
 CB.get_funding_round_investors(funding_df).info()
 
 # %%
+import numpy as np
+
+# %%
 investors = (
     CB.get_funding_round_investors(funding_df)
     .groupby(["investor_name"])
-    .agg(raised_amount_gbp=("raised_amount_gbp", "sum"))
+    .agg(
+        raised_amount_gbp=("raised_amount_gbp", "sum"),
+        company_names=("name", lambda x: sorted(list(np.unique(list(x))))),
+    )
     .sort_values("raised_amount_gbp", ascending=False)
     .reset_index()
     .merge(
@@ -296,21 +302,50 @@ investors = (
         left_on="investor_name",
         right_on="name",
     )
+    .merge(
+        CB.cb_organisations[["id", "homepage_url"]],
+        how="left",
+    )
 )
 
 # %%
-# CB.cb_investors.info()
+columns = [
+    "investor_name",
+    "country_code",
+    "city",
+    "raised_amount_gbp",
+    "company_names",
+    "homepage_url",
+    "facebook_url",
+    "linkedin_url",
+    "twitter_url",
+]
 
 # %%
-investors.drop(["id", "name"], axis=1).query("country_code == 'GBR'").to_csv(
-    PROJECT_DIR / "outputs/finals/parenting/investors_list.csv", index=False
+for p in columns:
+    print(p)
+
+# %%
+(
+    investors[columns].to_csv(
+        PROJECT_DIR / "outputs/finals/parenting/investors_list_all.csv", index=False
+    )
 )
 
 # %%
 # CB.cb_organisations.head(3).info()
 
 # %%
-(cb_companies.merge(id_to_user).query("country_code == 'GBR'"))[
+df = (
+    cb_companies.merge(id_to_user).merge(
+        funding_df.groupby("org_id")
+        .sum()
+        .reset_index()[["org_id", "raised_amount_gbp"]],
+        left_on="id",
+        right_on="org_id",
+        how="left",
+    )
+)[
     [
         "id",
         "name",
@@ -321,6 +356,7 @@ investors.drop(["id", "name"], axis=1).query("country_code == 'GBR'").to_csv(
         "short_description",
         "long_description",
         "total_funding_usd",
+        "raised_amount_gbp",
         "last_funding_on",
         "facebook_url",
         "linkedin_url",
@@ -328,10 +364,12 @@ investors.drop(["id", "name"], axis=1).query("country_code == 'GBR'").to_csv(
         "user",
         "interesting",
     ]
-].to_csv(PROJECT_DIR / "outputs/finals/parenting/company_list.csv", index=False)
+]
+df.to_csv(PROJECT_DIR / "outputs/finals/parenting/company_list.csv", index=False)
 
 # %%
-cb_companies.info()
+for p in df.columns.to_list():
+    print(p)
 
 # %% [markdown]
 # ## Graphs
