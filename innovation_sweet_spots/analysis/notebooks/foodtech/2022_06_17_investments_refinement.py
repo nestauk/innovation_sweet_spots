@@ -52,6 +52,10 @@ from innovation_sweet_spots.utils import cluster_analysis_utils
 import innovation_sweet_spots.utils.embeddings_utils as eu
 
 # %%
+import umap
+import numpy as np
+
+# %%
 v_labels = dlr.get_label_embeddings()
 
 # %%
@@ -69,11 +73,28 @@ DR.company_data.query("id in @ids")[["NAME", "TAGLINE", "WEBSITE"]]
 
 # %%
 i = 0
-df = query.find_most_similar("nutrition").merge(labels).iloc[i : i + 20]
+df = query.find_most_similar("restaurant tech").merge(labels).iloc[i : i + 20]
 df
 
 # %%
 df.Category.to_list()
+
+# %%
+category_counts = (
+    DR.company_labels.groupby(["Category", "label_type"], as_index=False)
+    .agg(counts=("id", "count"))
+    .sort_values("counts", ascending=False)
+)
+
+
+# %%
+category_counts[category_counts.counts > 50]
+
+# %%
+from itables import init_notebook_mode
+from itables import show
+
+init_notebook_mode(all_interactive=False)
 
 # %%
 health_Weight = [
@@ -111,11 +132,14 @@ clusters = cluster_analysis_utils.hdbscan_clustering(v_labels.vectors)
 df_clusters = (
     pd.DataFrame(clusters, columns=["cluster", "probability"])
     .astype({"cluster": int, "probability": float})
-    .assign(label=v_labels.vector_ids)
+    .assign(text=v_labels.vector_ids)
+    .merge(labels, how="left")
+    .merge(category_counts, how="left")
+    .drop_duplicates("text")
 )
 
 # %%
-df_clusters.head(2)
+df_clusters
 
 # %%
 extra_stopwords = ["tech", "technology", "food"]
@@ -123,7 +147,7 @@ stopwords = cluster_analysis_utils.DEFAULT_STOPWORDS + extra_stopwords
 
 
 cluster_keywords = cluster_analysis_utils.cluster_keywords(
-    df_clusters.label.apply(
+    df_clusters.text.apply(
         lambda x: cluster_analysis_utils.simple_preprocessing(x, stopwords)
     ).to_list(),
     df_clusters.cluster.to_list(),
@@ -147,27 +171,26 @@ embedding = reducer_2d.fit_transform(v_labels.vectors)
 embedding.shape
 
 # %%
+len(v_labels.vector_ids)
+
+# %%
 df_viz = (
-    pd.DataFrame(v_labels.vector_ids, columns=["Category"])
-    .merge(
-        (
-            DR.company_labels.assign(
-                Category=lambda df: df.Category.apply(tcu.clean_dealroom_labels)
-            )
-            .groupby("Category", as_index=False)
-            .agg(counts=("id", "count"), label_type=("label_type", lambda x: x.iloc[0]))
-        ),
-        how="left",
-    )
+    pd.DataFrame(v_labels.vector_ids, columns=["text"])
+    .merge(df_clusters, how="left")
     .assign(
         x=embedding[:, 0],
         y=embedding[:, 1],
-        cluster=df_clusters.cluster,
-        cluster_prob=df_clusters.probability,
+        #         cluster=df_clusters.cluster,
+        #         cluster_prob=df_clusters.probability,
         cluster_name=df_clusters.cluster.apply(lambda x: str(cluster_keywords[x])),
+        cluster_str=lambda df: df.cluster.astype(str),
         log_counts=lambda df: np.log10(df.counts),
     )
+    .sort_values(["cluster", "counts"], ascending=False)
 )
+
+# %%
+df_viz
 
 # %%
 # Visualise using altair
@@ -180,7 +203,7 @@ fig = (
         size="log_counts",
         tooltip=list(df_viz.columns),
         #         color="label_type",
-        color="cluster_name",
+        color="cluster_str",
     )
 )
 
@@ -215,8 +238,23 @@ fig_final = (
 fig_final
 
 # %%
+from innovation_sweet_spots import PROJECT_DIR
+
+df_viz.to_csv(PROJECT_DIR / "outputs/foodtech/interim/dealroom_labels.csv", index=False)
+
+# %%
 # c=34
 # df_clusters.query("cluster == @c").label
+
+# %%
+ids = DR.company_labels.query("Category == 'taste'").id.to_list()
+DR.company_data.query("id in @ids")
+
+# %%
+ids = DR.company_labels.query("Category == 'meal kits'").id.to_list()
+DR.company_labels.query("id in @ids").groupby("Category").agg(
+    counts=("id", "count")
+).sort_values("counts", ascending=False)
 
 # %% [markdown]
 # ## Check health companies in detail
