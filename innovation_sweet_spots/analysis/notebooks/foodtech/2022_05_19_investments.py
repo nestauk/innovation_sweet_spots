@@ -384,20 +384,23 @@ import pandas as pd
 # %%
 # def fetch_company_labels(c)
 label = "SUB INDUSTRIES"
-sub = DR.company_subindustries.rename(columns={label: "Category"})
+sub = DR.company_subindustries.rename(columns={label: "Category"}).assign(
+    label="sub_industry"
+)
 
 label = "INDUSTRIES"
-ind = DR.company_industries.rename(columns={label: "Category"})
+ind = DR.company_industries.rename(columns={label: "Category"}).assign(label="industry")
+
 
 label = "TAGS"
-tags = DR.company_tags.rename(columns={label: "Category"})
+tags = DR.company_tags.rename(columns={label: "Category"}).assign(label="tag")
 
 company_labels = pd.concat([sub, ind, tags], ignore_index=True)
 company_labels = company_labels[-company_labels.Category.isnull()]
 
 
 # %%
-company_labels.head(3)
+company_labels.sample(3)
 
 # %% [markdown]
 # ## Country performance
@@ -469,18 +472,30 @@ def clean_text(text):
 
 
 # %%
-company_labels_ = company_labels.copy().assign(
-    Category=lambda df: df.Category.apply(clean_text)
+importlib.reload(tcu)
+tcu.clean_dealroom_labels
+
+# %%
+importlib.reload(wu)
+DR = wu.DealroomWrangler()
+
+# %%
+company_labels_ = DR.company_labels.copy().assign(
+    Category=lambda df: df.Category.apply(tcu.clean_dealroom_labels)
 )
 
 # %%
 company_labels_list = company_labels_.groupby("id")["Category"].apply(list)
 
+
 # %%
 company_labels_list.head(2)
 
 # %%
-labels_unique = list(company_labels_.Category.unique())
+## Label embeddings
+
+# %%
+labels_unique = DR.labels.Category.to_list()
 
 # %%
 len(labels_unique)
