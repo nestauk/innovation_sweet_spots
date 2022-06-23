@@ -538,6 +538,7 @@ def investments_by_industry_ts(
     min_year: int,
     max_year: int,
     use_industry_groups: bool = False,
+    funding_round_types: list = None,
 ):
     """"""
     # Get companies within specified industries
@@ -564,6 +565,10 @@ def investments_by_industry_ts(
     for industry in industries:
         industry_orgs = industries_orgs.query(f"industry == '{industry}'")
         industry_orgs_deals = cb_wrangler.get_funding_rounds(industry_orgs)
+        if funding_round_types is not None:
+            industry_orgs_deals = industry_orgs_deals.query(
+                "investment_type in @funding_round_types"
+            ).copy()
         ts_df = cb_get_all_timeseries(
             industry_orgs,
             industry_orgs_deals,

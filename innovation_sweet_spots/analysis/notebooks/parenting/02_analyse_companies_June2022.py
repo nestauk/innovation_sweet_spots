@@ -34,6 +34,7 @@
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 from innovation_sweet_spots.analysis.notebooks.parenting import utils
 import innovation_sweet_spots.analysis.analysis_utils as au
+
 import innovation_sweet_spots.utils.plotting_utils as pu
 
 import importlib
@@ -41,6 +42,10 @@ import importlib
 importlib.reload(utils)
 importlib.reload(au)
 importlib.reload(pu)
+
+# %%
+import altair as alt
+import numpy as np
 
 # %%
 from innovation_sweet_spots import PROJECT_DIR
@@ -92,10 +97,6 @@ reviewed_df_child_ed = pd.read_csv(
 
 # %%
 reviewed_df_parenting
-
-# %%
-# Select the companies with 'relevant'
-reviewed_df_parenting.info()
 
 
 # %%
@@ -214,12 +215,23 @@ id_to_user = pd.concat(
 companies_ids = set(companies_parenting_df.id.to_list()).union(
     set(companies_child_ed_df.id.to_list())
 )
+custom_ids = set(
+    [
+        "95487399-812c-d898-a435-c9494023cbbc",
+        "58a73d1f-036b-4f21-875d-dfa3f3ef93be",
+    ]
+)
+companies_ids = companies_ids.union(custom_ids)
 
 # %%
 len(companies_ids)
 
 # %%
-# list(companies_parenting_df.query("id in @companies_ids").comment.unique())
+# CB.cb_organisations.query("id == '58a73d1f-036b-4f21-875d-dfa3f3ef93be'")[check_columns]
+
+# %%
+# CB.cb_organisations[CB.cb_organisations.name.str.contains("Maple") & (CB.cb_organisations.name.isnull()==False)]
+# CB.cb_organisations[(CB.cb_organisations.cb_url=="https://www.crunchbase.com/organization/maple-93be") & (CB.cb_organisations.name.isnull()==False)]
 
 # %% [markdown]
 # # Analyse parenting companies
@@ -245,9 +257,6 @@ cb_companies_with_funds = au.get_companies_with_funds(cb_companies)
 len(cb_companies_with_funds)
 
 # %%
-importlib.reload(utils)
-
-# %%
 funding_df = (
     CB.get_funding_rounds(cb_companies_with_funds)
     #     .query("investment_type in @utils.LATE_STAGE_DEALS")
@@ -257,17 +266,8 @@ funding_df = (
 # %%
 len(funding_df)
 
-# %%
-# for p in sorted(funding_df.investment_type.unique()):
-#     print(f'"{p}"')
-
-# %%
-funding_ts = au.cb_get_all_timeseries(
-    cb_companies_with_funds, funding_df, "year", 2010, 2021
-)
-
 # %% [markdown]
-# ## VCs
+# ## Export tables
 
 # %%
 CB.get_funding_round_investors(funding_df).info()
@@ -372,70 +372,158 @@ for p in df.columns.to_list():
     print(p)
 
 # %% [markdown]
-# ## Graphs
+# ## Generate graphs
+# - Select specific deal types (earlier stage)
+# - Check global
+# - Check UK vs global
+# - Check a baseline growth rate
+# - Report the fraction of digital
+# - Which digital categories are strong, and emerging?
 
 # %%
-# funding_df.head(3)
+funding_df = (
+    CB.get_funding_rounds(cb_companies_with_funds)
+    #     .query("investment_type in @utils.LATE_STAGE_DEALS")
+    .query("investment_type in @utils.EARLY_STAGE_DEALS")
+)
+
+# %%
+funding_ts = au.cb_get_all_timeseries(
+    cb_companies_with_funds, funding_df, "year", 2010, 2021
+)
 
 # %%
 funding_ts.head(3)
 
 # %%
-pu.time_series(funding_ts, y_column="raised_amount_gbp_total")
-
-# %%
-funding_ts.head(2)
-
-
-# %%
-def cb_investments_barplot(
-    data: pd.DataFrame,
-    y_column: str,
-    y_label: str = None,
-    y_units: str = None,
-    y_max: float = None,
-    x_column: str = "time_period",
-    x_label: str = None,
-    period: str = "Y",
-    show_trend: bool = False,
-):
-    """Barplot"""
-    y_max = data[y_column].max() if y_max is None else y_max
-    chart = (
-        alt.Chart(
-            data.assign(**{x_column: convert_time_period(data[x_column], period)}),
-            width=400,
-            height=200,
-        )
-        .mark_bar(color=NESTA_COLOURS[0])
-        .encode(
-            alt.X(f"{x_column}:O"),
-            alt.Y(f"{y_column}:Q", scale=alt.Scale(domain=[0, y_max])),
-            tooltip=[y_label, y_column],
-        )
-    )
-    chart.encoding.x.title = (
-        process_axis_label(x_column) if x_label is None else x_label
-    )
-    chart.encoding.y.title = (
-        process_axis_label(y_column, units=y_units) if y_label is None else y_label
-    )
-    return standardise_chart(chart)
-
-
-# %%
 importlib.reload(pu)
-pu.cb_investments_barplot(
-    funding_ts,
-    y_column="raised_amount_gbp_total",
-    y_label="Raised investment (1000s GBP)",
-    x_label="Year",
+
+# %%
+horizontal_label = "Year"
+values_label = "Investment (million GBP)"
+tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
+
+data = (
+    funding_ts.assign(
+        raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
+    )
+    .query("time_period < 2022")
+    .rename(
+        columns={
+            "time_period": horizontal_label,
+            "raised_amount_gbp_total": values_label,
+        }
+    )
+)
+
+fig = (
+    alt.Chart(
+        data.assign(
+            **{horizontal_label: pu.convert_time_period(data[horizontal_label], "Y")}
+        ),
+        width=400,
+        height=200,
+    )
+    .mark_bar(color=pu.NESTA_COLOURS[0])
+    .encode(
+        alt.X(f"{horizontal_label}:O"),
+        alt.Y(f"{values_label}:Q", scale=alt.Scale(domain=[0, 1200])),
+        tooltip=tooltip,
+    )
+)
+pu.configure_plots(fig)
+
+# %%
+au.percentage_change(
+    data.query("`Year`==2011")[values_label].iloc[0],
+    data.query("`Year`==2021")[values_label].iloc[0],
 )
 
 # %%
-pu.cb_investments_barplot(
-    funding_ts, y_column="no_of_rounds", y_label="Number of deals", x_label="Year"
+au.percentage_change(
+    data.query("`Year`==2020")[values_label].iloc[0],
+    data.query("`Year`==2021")[values_label].iloc[0],
 )
+
+# %% [markdown]
+# ### Baseline
+
+# %%
+funding_ts = au.cb_get_all_timeseries(
+    cb_companies_with_funds, funding_df, "year", 2010, 2021
+)
+
+# %% [markdown]
+# ### UK vs the world
+
+# %%
+cb_companies_with_funds.groupby("country", as_index=False).agg(
+    counts=("id", "count")
+).sort_values("counts", ascending=False).head(10)
+
+# %%
+country_investments = (
+    funding_df
+    # Last five years
+    .query("year >= 2017")
+    .merge(cb_companies_with_funds[["id", "country"]], left_on="org_id", right_on="id")
+    .groupby("country")
+    .agg(raised_amount_gbp=("raised_amount_gbp", "sum"), no_of_deals=("id", "count"))
+    .assign(percentage=lambda df: df.raised_amount_gbp / df.raised_amount_gbp.sum())
+    .sort_values("raised_amount_gbp", ascending=False)
+    .reset_index()
+    .head(10)
+)
+country_investments
+
+# %%
+labels_label = "Country"
+values_label = "Investment (million GBP)"
+tooltip = [labels_label, alt.Tooltip(values_label, format=",.3f")]
+
+data = (
+    country_investments.assign(raised_amount_gbp=lambda df: df.raised_amount_gbp / 1000)
+    #     .query("time_period < 2022")
+    .rename(
+        columns={
+            "country": labels_label,
+            "raised_amount_gbp": values_label,
+        }
+    )
+)
+data
+
+# %%
+fig = (
+    alt.Chart(
+        data,
+        width=200,
+        height=300,
+    )
+    .mark_bar(color=pu.NESTA_COLOURS[0])
+    .encode(
+        alt.X(
+            f"{values_label}:Q",
+            #             "no_of_deals:Q"
+            scale=alt.Scale(domain=[0, 1500]),
+        ),
+        alt.Y(
+            f"{labels_label}:N",
+            sort=data[labels_label].to_list()
+            #             sort="-x"
+        ),
+        tooltip=tooltip,
+    )
+)
+pu.configure_plots(fig)
+
+# %% [markdown]
+# ### Rest of the graphs
+
+# %%
+# pu.cb_investments_barplot(
+#     funding_ts, y_column="no_of_rounds", y_label="Number of deals", x_label="Year"
+# )
 
 # %%
 pu.cb_investments_barplot(
@@ -450,98 +538,76 @@ importlib.reload(pu)
 pu.cb_deal_types(funding_df, simpler_types=True)
 
 # %%
-importlib.reload(au)
-funding_by_country = au.cb_funding_by_geo(cb_orgs, funding_df)
-funding_by_city = au.cb_funding_by_geo(cb_orgs, funding_df, "org_city")
-
-# %%
-importlib.reload(pu)
-pu.cb_top_geographies(
-    funding_by_country,
-    "no_of_rounds",
-    value_label="Number of deals",
-)
-
-# %%
-importlib.reload(pu)
-pu.cb_top_geographies(
-    funding_by_city,
-    value_column="no_of_rounds",
-    value_label="Number of deals",
-    category_column="org_city",
-)
-
-# %%
-importlib.reload(pu)
-pu.cb_top_geographies(
-    funding_by_country,
-    value_column="raised_amount_gbp",
-    value_label="Raised amount (£1000s)",
-)
+countries = ["United States", "United Kingdom", "China", "India"]
 
 # %%
 importlib.reload(au)
 funding_geo_ts = au.cb_get_timeseries_by_geo(
     cb_companies_with_funds,
     funding_df,
-    #     geographies=["United States", "United Kingdom", "China", "Germany"],
-    #     geographies=["United Kingdom"],
-    geographies=["United States"],
+    geographies=countries,
     period="year",
     min_year=2010,
     max_year=2021,
-)
-
-# %%
-importlib.reload(pu)
-pu.time_series_by_category(
-    funding_geo_ts,
-    value_column="no_of_rounds",
-    #     value_label = 'Raised amount (£1000s)'
-)
+).query("time_period < 2022")
 
 # %%
 importlib.reload(pu)
 pu.time_series_by_category(
     funding_geo_ts,
     value_column="raised_amount_gbp_total",
-    #     value_label = 'Raised amount (£1000s)'
 )
 
 # %%
-importlib.reload(pu)
-funding_by_city = au.cb_funding_by_geo(
-    cb_orgs.query('country == "United Kingdom"'), funding_df, "org_city"
-)
-pu.cb_top_geographies(
-    funding_by_city,
-    value_column="no_of_rounds",
-    value_label="Number of deals",
-    category_column="org_city",
-)
+# Longer term growth, 2017 -> 2021
+dfs = []
+for country in countries:
+    dfs.append(
+        au.estimate_magnitude_growth(
+            (
+                funding_geo_ts.query("geography == @country")
+                .assign(year=lambda df: pu.convert_time_period(df["time_period"], "Y"))
+                .drop(["time_period", "geography"], axis=1)
+            ),
+            2017,
+            2021,
+        ).assign(country=country)
+    )
+dfs = pd.concat(dfs, ignore_index=True)
 
 # %%
-importlib.reload(au)
-
-pu.cb_top_geographies(
-    au.cb_companies_by_geo(cb_companies),
-    value_column="no_of_companies",
-    value_label="Number of companies",
-    category_column="country",
-)
+dfs.sort_values(["trend", "country"])
 
 # %%
-importlib.reload(au)
+# Shorter term growth, 2020 -> 2021
+dfs = []
+for country in countries:
+    data = funding_geo_ts.query("geography == @country").assign(
+        year=lambda df: pu.convert_time_period(df["time_period"], "Y")
+    )
+    dfs.append(
+        pd.DataFrame(
+            data={
+                "growth": (
+                    [
+                        au.percentage_change(
+                            data.query("`year`==2020")["raised_amount_gbp_total"].iloc[
+                                0
+                            ],
+                            data.query("`year`==2021")["raised_amount_gbp_total"].iloc[
+                                0
+                            ],
+                        )
+                    ]
+                ),
+                "country": [country],
+            }
+        )
+    )
+dfs = pd.concat(dfs, ignore_index=True)
 
-pu.cb_top_geographies(
-    au.cb_companies_by_geo(
-        cb_companies.query('country == "United Kingdom"'), geo_entity="city"
-    ),
-    value_column="no_of_companies",
-    value_label="Number of companies",
-    category_column="city",
-)
-
+# %%
+dfs
 
 # %% [markdown]
 # ## Digital technologies
@@ -554,7 +620,7 @@ pu.cb_top_geographies(
 # %%
 # Which companies are in digital
 importlib.reload(utils)
-digital = utils.get_digital_companies(cb_companies, CB)
+digital = utils.get_digital_companies(cb_companies_with_funds, CB)
 
 # %%
 importlib.reload(utils)
@@ -573,23 +639,92 @@ importlib.reload(au)
 top_industries = au.cb_top_industries(digital, CB)
 
 # %%
-top_industries.query("industry in @utils.DIGITAL_INDUSTRIES").head(50)
+# top_industries.query("industry in @utils.DIGITAL_INDUSTRIES").head(50)
 
 # %%
 importlib.reload(utils)
 digital_fraction_ts = utils.digital_proportion_ts(cb_companies, digital, 1998, 2021)
 
 # %%
-importlib.reload(pu)
-pu.cb_investments_barplot(
-    digital_fraction_ts,
-    y_column="digital_fraction",
-    x_label="Time period",
-)
+# digital_fraction_ts
 
 # %%
-importlib.reload(pu)
-pu.time_series(digital_fraction_ts, y_column="digital_fraction")
+# importlib.reload(pu)
+# pu.cb_investments_barplot(
+#     digital_fraction_ts,
+#     y_column="digital_fraction",
+#     x_label="Time period",
+# )
+
+# %%
+# importlib.reload(pu)
+# pu.time_series(digital_fraction_ts, y_column="digital_fraction")
+
+# %%
+digital_fraction_ts.head(5)
+
+# %%
+horizontal_label = "Year"
+values_label = "Companies in digital"
+tooltip = [horizontal_label, alt.Tooltip(values_label, format="%")]
+
+data = (
+    digital_fraction_ts.query("time_period < 2022")
+    .assign(year=lambda df: pu.convert_time_period(df["time_period"], "Y"))
+    .rename(
+        columns={
+            "year": horizontal_label,
+            "digital_fraction": values_label,
+        }
+    )
+)
+# data
+
+# %%
+label_expression = (
+    " : ".join([f"datum.label == {y} ? '{y}'" for y in list(range(2000, 2021, 5))])
+    + " : null"
+)
+label_expression
+
+# %%
+fig = (
+    alt.Chart(
+        data,
+        width=350,
+    )
+    .mark_area(color=pu.NESTA_COLOURS[0])
+    .encode(
+        x=alt.X(
+            f"{'time_period'}:T",
+            axis=alt.Axis(
+                grid=False,
+                labelAlign="center",
+                tickCount=20,
+                labelAngle=-0,
+                labelExpr=label_expression,
+                title="Year",
+            ),
+        ),
+        y=alt.Y(
+            f"{values_label}:Q",
+            axis=alt.Axis(
+                grid=False,
+                format="%",
+            ),
+            scale=alt.Scale(domain=(0, 1)),
+        ),
+    )
+    .configure_axis(
+        labelFontSize=pu.FONTSIZE_NORMAL,
+        titleFontSize=pu.FONTSIZE_NORMAL,
+    )
+    .configure_view(strokeWidth=0)
+)
+fig
+
+# %% [markdown]
+# ### Trends for specific digital categories
 
 # %%
 # importlib.reload(pu)
@@ -604,11 +739,12 @@ importlib.reload(au)
 ) = au.investments_by_industry_ts(
     digital.drop("industry", axis=1),
     utils.DIGITAL_INDUSTRIES,
-    #     ['software', 'apps'],
     CB,
     "no_of_rounds",
     2011,
     2021,
+    False,
+    utils.EARLY_STAGE_DEALS,
 )
 
 
@@ -627,18 +763,270 @@ importlib.reload(au)
     2011,
     2021,
     True,
+    utils.EARLY_STAGE_DEALS,
 )
 
 
 # %%
-rounds_by_group_ts
+n_rounds_for_groups = pd.DataFrame(
+    rounds_by_group_ts.reset_index()
+    .query("time_period >= 2017 and time_period < 2022")
+    .set_index("time_period")
+    .sum(),
+    columns=["counts"],
+)
+
+n_rounds_for_industries = pd.DataFrame(
+    rounds_by_industry_ts.reset_index()
+    .query("time_period >= 2017 and time_period < 2022")
+    .set_index("time_period")
+    .sum(),
+    columns=["counts"],
+)
+
+# %%
+comp_industries = CB.get_company_industries(digital)
+
+# %%
+# https://altair-viz.github.io/gallery/area_chart_gradient.html
+importlib.reload(pu)
+importlib.reload(au)
+magnitude_growth = au.ts_magnitude_growth(investment_by_industry_ts, 2017, 2021)
+pu.magnitude_growth(magnitude_growth, "Average investment amount")
+
+# %%
+df = (
+    magnitude_growth.query("magnitude!=0")
+    .query("growth != inf")
+    .sort_values("growth", ascending=False)
+)
+df["counts"] = n_rounds_for_industries["counts"]
+df["company_counts"] = comp_industries.groupby("industry").agg(
+    company_counts=("id", "count")
+)["company_counts"]
+
+# %%
+df
+
+# %%
+labels_to_show = {
+    "machine learning": "machine learning",
+    "ebooks": "ebooks",
+    "online portals": "online portals",
+    "content": "content",
+    "edtech": "edtech",
+    "saas": "saas",
+    "e-learning": "e-learning",
+    "edtech": "edtech",
+    "android": "android",
+    "apps": "apps",
+    "saas": "saas",
+    "ios": "ios",
+    "augmented reality": "AR",
+}
+
+
+def produce_labels(label):
+    if label in labels_to_show:
+        return labels_to_show[label]
+    else:
+        return ""
+
+
+df_filtered = (
+    df.query("company_counts>=5 and counts>=10")
+    .drop(["edtech", "e-learning"])
+    .reset_index()
+    .rename(columns={"index": "digital_technology"})
+    .assign(text_label=lambda df: df.digital_technology.apply(produce_labels))
+    .assign(
+        Increase=lambda df: df.growth.apply(
+            lambda x: "positive" if x >= 0 else "negative"
+        )
+    )
+)
+
+# %%
+df_filtered
+
+# %%
+# # https://altair-viz.github.io/gallery/area_chart_gradient.html
+# importlib.reload(pu)
+# importlib.reload(au)
+# magnitude_growth = au.ts_magnitude_growth(investment_by_industry_ts, 2017, 2021)
+# pu.magnitude_growth(df_filtered, "Average investment amount")
+
+# %%
+fig = (
+    alt.Chart(
+        (
+            df_filtered.assign(
+                growth=lambda df: df.growth / 100,
+                magnitude=lambda df: df.magnitude / 1000,
+            )
+        ),
+        width=350,
+        height=300,
+    )
+    .mark_circle(size=50, color=pu.NESTA_COLOURS[0], clip=True, opacity=0.6)
+    .encode(
+        x=alt.X(
+            "magnitude:Q",
+            axis=alt.Axis(
+                title=f"Average yearly investment (million GBP)", labelAlign="center"
+            ),
+            scale=alt.Scale(domain=(0, 120))
+            # scale=alt.Scale(type="linear"),
+        ),
+        y=alt.Y(
+            "growth:Q",
+            axis=alt.Axis(format="%", title="Growth"),
+            scale=alt.Scale(domain=(-1, 40))
+            # axis=alt.Axis(
+            #     title=f"Growth between {start_year} and {end_year} measured by number of reviews"
+            # ),
+            # scale=alt.Scale(domain=(-.100, .300)),
+        ),
+        # size="cluster_size:Q",
+        #         color=alt.Color(f"{colour_title}:N", legend=None),
+        tooltip=[
+            alt.Tooltip("digital_technology:N", title="Digital technology"),
+            alt.Tooltip(
+                "magnitude:Q",
+                format=",",
+                title="Average yearly investment (million GBP)",
+            ),
+            alt.Tooltip("growth:Q", format=",.0%", title="Growth"),
+        ],
+    )
+)
+
+text = fig.mark_text(align="left", baseline="middle", font=pu.FONT, dx=7).encode(
+    text="text_label:N"
+)
+
+fig_final = (
+    (fig + text)
+    .configure_axis(
+        gridDash=[1, 7],
+        gridColor="white",
+        labelFontSize=pu.FONTSIZE_NORMAL,
+        titleFontSize=pu.FONTSIZE_NORMAL,
+    )
+    .configure_view(strokeWidth=0)
+    .interactive()
+)
+fig_final
+
+# %%
+fig = (
+    alt.Chart(
+        (
+            df_filtered.assign(
+                growth=lambda df: df.growth / 100,
+                magnitude=lambda df: df.magnitude / 1000,
+            )
+        ),
+        width=300,
+        height=450,
+    )
+    .mark_circle(color=pu.NESTA_COLOURS[0], opacity=1)
+    .encode(
+        x=alt.X(
+            "growth:Q",
+            axis=alt.Axis(
+                format="%",
+                title="Growth",
+                #                 tickCount=25,
+                labelAlign="center",
+                labelExpr="datum.value < -1 ? null : datum.label",
+            ),
+            #             axis=alt.Axis(title=f"Average yearly investment (million GBP)", labelAlign='center'),
+            scale=alt.Scale(domain=(-1, 37)),
+            # scale=alt.Scale(type="linear"),
+        ),
+        y=alt.Y(
+            "digital_technology:N",
+            sort="-x",
+            axis=alt.Axis(title="Digital category"),
+            #             scale=alt.Scale(domain=(-1,40))
+            # axis=alt.Axis(
+            #     title=f"Growth between {start_year} and {end_year} measured by number of reviews"
+            # ),
+            # scale=alt.Scale(domain=(-.100, .300)),
+        ),
+        size=alt.Size(
+            "magnitude",
+            title="Yearly investment (million GBP)",
+            legend=alt.Legend(orient="top"),
+        ),
+        color=alt.Color(
+            "Increase",
+            sort=["positive", "negative"],
+            legend=None,
+            scale=alt.Scale(
+                domain=["positive", "negative"],
+                range=[pu.NESTA_COLOURS[0], pu.NESTA_COLOURS[4]],
+            ),
+        ),
+        # size="cluster_size:Q",
+        #         color=alt.Color(f"{colour_title}:N", legend=None),
+        tooltip=[
+            alt.Tooltip("digital_technology:N", title="Digital technology"),
+            alt.Tooltip(
+                "magnitude:Q",
+                format=",.3f",
+                title="Average yearly investment (million GBP)",
+            ),
+            alt.Tooltip("growth:Q", format=",.0%", title="Growth"),
+        ],
+    )
+)
+
+# text = fig.mark_text(align="left", baseline="middle", font=pu.FONT, dx=7).encode(
+#     text='text_label:N'
+# )
+
+fig_final = (
+    (fig)
+    .configure_axis(
+        gridDash=[1, 7],
+        gridColor="grey",
+        labelFontSize=pu.FONTSIZE_NORMAL,
+        titleFontSize=pu.FONTSIZE_NORMAL,
+    )
+    .configure_legend(
+        labelFontSize=pu.FONTSIZE_NORMAL - 1,
+        titleFontSize=pu.FONTSIZE_NORMAL - 1,
+    )
+    .configure_view(strokeWidth=0)
+    #     .interactive()
+)
+fig_final
+
+# %%
+industry_name = "internet of things"
+pd.set_option("max_colwidth", 200)
+ids = comp_industries[comp_industries.industry == industry_name].id.to_list()
+digital.query("id in @ids")[
+    check_columns + ["total_funding_usd", "last_funding_on", "country", "homepage_url"]
+].astype({"total_funding_usd": float}).sort_values("total_funding_usd", ascending=False)
+
+# %%
+
+# %% [raw]
+# (
+#     magnitude_growth
+#     .query("magnitude!=0")
+#     .query("growth != inf")
+#     .sort_values('growth', ascending=False)
+# ).head(20)
+
+# %%
 
 # %%
 importlib.reload(au)
 rounds_by_industry_ts_ma = au.ts_moving_average(rounds_by_industry_ts)
-
-# %%
-# pu.time_series(companies_by_industry_ts.reset_index(), y_column="advice")
 
 # %%
 cat = "data and analytics"
@@ -668,24 +1056,9 @@ au.compare_years(investment_by_group_ts).query("reference_year!=0").sort_values(
 # https://altair-viz.github.io/gallery/area_chart_gradient.html
 importlib.reload(pu)
 importlib.reload(au)
-magnitude_growth = au.ts_magnitude_growth(rounds_by_group_ts, 2017, 2021)
-pu.magnitude_growth(magnitude_growth, "Average number of deals")
-
-# %%
-# magnitude_growth.sort_values('growth', ascending=False).head(50)
-
-# %%
-# https://altair-viz.github.io/gallery/area_chart_gradient.html
-importlib.reload(pu)
-importlib.reload(au)
-magnitude_growth = au.ts_magnitude_growth(companies_by_group_ts, 2017, 2021)
-pu.magnitude_growth(magnitude_growth, "Average number of new companies")
-
-# %%
-# https://altair-viz.github.io/gallery/area_chart_gradient.html
-importlib.reload(pu)
-importlib.reload(au)
-magnitude_growth = au.ts_magnitude_growth(investment_by_group_ts, 2017, 2021)
+magnitude_growth_industry = au.ts_magnitude_growth(
+    investment_by_industry_ts, 2017, 2021
+)
 pu.magnitude_growth(magnitude_growth, "Average investment amount")
 
 # %%

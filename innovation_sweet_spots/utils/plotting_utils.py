@@ -12,6 +12,38 @@ ChartType = alt.vegalite.v4.api.Chart
 # Brand aligned fonts and colours
 FONT = "Averta"
 TITLE_FONT = "Zosia"
+
+FONTSIZE_TITLE = 16
+FONTSIZE_NORMAL = 13
+
+
+def configure_plots(fig, chart_title: str = "", chart_subtitle: str = ""):
+    """Add titles, subtitles and configure font sizes"""
+    return (
+        fig.properties(
+            title={
+                "anchor": "start",
+                "text": chart_title,
+                "fontSize": FONTSIZE_TITLE,
+                "subtitle": chart_subtitle,
+                "subtitleFont": FONT,
+                "subtitleFontSize": FONTSIZE_NORMAL,
+            },
+        )
+        .configure_axis(
+            gridDash=[1, 7],
+            gridColor="grey",
+            labelFontSize=FONTSIZE_NORMAL,
+            titleFontSize=FONTSIZE_NORMAL,
+        )
+        .configure_legend(
+            titleFontSize=FONTSIZE_NORMAL,
+            labelFontSize=FONTSIZE_NORMAL,
+        )
+        .configure_view(strokeWidth=0)
+    )
+
+
 NESTA_COLOURS = [
     "#0000FF",
     "#FDB633",
