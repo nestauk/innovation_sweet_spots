@@ -381,12 +381,13 @@ def create_dataset(
         .drop(columns=DROP_COLS, errors="ignore")
         .reset_index(drop=True)
     )
+    test_indicator = "_test" if test else ""
     dataset.to_csv(
         PROJECT_DIR
         / "outputs/finals/pilot_outputs"
         / "investment_predictions/company_data_window_"
         f"{str(window_start_date).split(' ')[0]}-{str(window_end_date).split(' ')[0]}"
-        ".csv"
+        f"{test_indicator}.csv"
     )
 
 
