@@ -445,6 +445,9 @@ au.percentage_change(
     data.query("`Year`==2021")[values_label].iloc[0],
 )
 
+# %%
+au.smoothed_growth(data.assign(year=lambda df: df["Year"].dt.year), 2017, 2021)
+
 # %% [markdown]
 # ### Baseline
 
@@ -608,6 +611,67 @@ dfs = pd.concat(dfs, ignore_index=True)
 
 # %%
 dfs
+
+# %% [markdown]
+# ## Baseline
+
+# %%
+funding_ts = au.cb_get_all_timeseries(
+    CB.cb_organisations.pipe(select_by_role, "company"),
+    cb_all_funds,
+    "year",
+    2010,
+    2021,
+)
+
+# %%
+len(CB.cb_funding_rounds)
+
+# %%
+CB.cb_funding_rounds[
+    CB.cb_funding_rounds.announced_on.apply(lambda x: type(x) == str)
+].announced_on
+
+# %%
+import innovation_sweet_spots.analysis.wrangling_utils as wu
+
+importlib.reload(wu)
+CB = wu.CrunchbaseWrangler()
+
+# %%
+cb_all_funding_rounds = CB.get_funding_rounds(CB.cb_organisations)
+
+# %%
+df_trend = au.cb_investments_per_period(
+    (cb_all_funding_rounds.query("investment_type in @utils.EARLY_STAGE_DEALS").copy()),
+    period="Y",
+    min_year=2010,
+    max_year=2021,
+).assign(year=lambda df: df.time_period.dt.year)
+
+# %%
+df_trend
+
+# %%
+4.208886e08 / 3.311076e07
+
+# %%
+au.smoothed_growth(df_trend.drop("time_period", axis=1), 2017, 2021)
+
+# %%
+au.percentage_change(
+    df_trend.query("`year`==2011")["raised_amount_gbp_total"].iloc[0],
+    df_trend.query("`year`==2021")["raised_amount_gbp_total"].iloc[0],
+)
+
+# %%
+(142.4 - 115.4) / 142.4
+
+# %%
+au.percentage_change(
+    df_trend.query("`year`==2020")["raised_amount_gbp_total"].iloc[0],
+    df_trend.query("`year`==2021")["raised_amount_gbp_total"].iloc[0],
+)
 
 # %% [markdown]
 # ## Digital technologies
@@ -1006,6 +1070,7 @@ fig_final
 
 # %%
 industry_name = "internet of things"
+industry_name = "gaming"
 pd.set_option("max_colwidth", 200)
 ids = comp_industries[comp_industries.industry == industry_name].id.to_list()
 digital.query("id in @ids")[
@@ -1029,15 +1094,15 @@ importlib.reload(au)
 rounds_by_industry_ts_ma = au.ts_moving_average(rounds_by_industry_ts)
 
 # %%
-cat = "data and analytics"
+cat = "gaming"
 # cat = "apps"
-pu.time_series(companies_by_group_ts.reset_index(), y_column=cat)
+pu.time_series(companies_by_industry_ts.reset_index(), y_column=cat)
 
 # %%
-pu.time_series(investment_by_group_ts.reset_index(), y_column=cat)
+pu.time_series(investment_by_industry_ts.reset_index(), y_column=cat)
 
 # %%
-pu.time_series(rounds_by_group_ts.reset_index(), y_column=cat)
+pu.time_series(rounds_by_industry_ts.reset_index(), y_column=cat)
 
 # %%
 # CB.industry_to_group['computer']

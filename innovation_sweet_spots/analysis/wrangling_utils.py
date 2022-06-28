@@ -612,6 +612,7 @@ class CrunchbaseWrangler:
             )
             # More informative column names
             .rename(columns={"id": "funding_round_id"})
+            .query("announced_on > '1980'")
             .sort_values("announced_on")
             .assign(
                 # Convert to thousands
