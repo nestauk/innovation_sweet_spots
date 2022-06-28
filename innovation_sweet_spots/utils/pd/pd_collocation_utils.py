@@ -168,7 +168,7 @@ def calculate_positive_pmi(
 
         pruned_pmis = {k: v for k, v in pmis.items() if v > 0}
     except:
-        print(f"Term {search_term} not in vocabulary")
+        # print(f"Term {search_term} not in vocabulary")
         pruned_pmis = {}
     return pruned_pmis
 

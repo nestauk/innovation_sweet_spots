@@ -89,7 +89,14 @@ $ python innovation_sweet_spots/pipeline/fetch_daps1_data/flow.py --no-pylint --
 
 ### The Guardian news
 
-Coming soon...
+We are using Guardian API to search for articles with specific key terms. For accessing the API, you you'll need to proceed as follows:
+
+- Request an API key from Guardian website ([see here](https://open-platform.theguardian.com/documentation/))
+- Store it somewhere safe on your local machine (outside the repo) in a `.txt` file
+- Specify the path to this file in `.env` file, by adding a new line with `export GUARDIAN_API_KEY=path/to/file`
+- Use the functions in `innovation_sweet_spots.getters.guardian`
+
+To see examples of using our public discourse analysis tools, check `innovation_sweet_spots/analysis/examples/public_discourse_analysis`.
 
 ### Hansard
 

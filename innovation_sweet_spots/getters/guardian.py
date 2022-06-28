@@ -10,19 +10,36 @@ import requests
 import json
 import os
 import dotenv
-
-dotenv.load_dotenv(PROJECT_DIR)
-dotenv.load_dotenv(PROJECT_DIR / ".env")
-
 from urllib.parse import urlencode, quote
 import requests
 import time
 
+# Base url for calling the api
 BASE_URL = "https://content.guardianapis.com/"
-API_KEY = open(os.environ["GUARDIAN_API_KEY"], "r").read()
-
+# Folders to store the api call results
 API_RESULTS_DIR = GUARDIAN_PATH / "api_results"
 API_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def setup_api_key(api_key: str = None, from_env_file: bool = True):
+    """Initialises The Guardian api key"""
+    if from_env_file:
+        # If .env file exists
+        if os.path.isfile(PROJECT_DIR / ".env"):
+            # Load the .env file
+            dotenv.load_dotenv(PROJECT_DIR / ".env")
+            try:
+                # Try loading API key
+                return open(os.environ["GUARDIAN_API_KEY"], "r").read()
+            except:
+                # If the key is not in the .env file
+                return None
+    else:
+        return api_key
+
+
+# API key
+API_KEY = setup_api_key()
 
 
 def create_url(

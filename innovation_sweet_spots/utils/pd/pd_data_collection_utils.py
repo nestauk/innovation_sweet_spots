@@ -36,8 +36,10 @@ def filter_by_category(aggregated_articles, category_list, field="sectionName"):
     if not isinstance(field, str):
         raise TypeError("parameter field should be a string")
 
-    filtered_articles = [a for a in aggregated_articles if a[field] in category_list]
-    return filtered_articles
+    if len(category_list) > 0:
+        return [a for a in aggregated_articles if a[field] in category_list]
+    else:
+        return aggregated_articles
 
 
 def extract_text_from_html(html, tags):

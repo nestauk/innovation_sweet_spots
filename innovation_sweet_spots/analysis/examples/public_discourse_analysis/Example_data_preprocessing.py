@@ -172,7 +172,7 @@ flat_sentences = pd.concat(
 
 # %%
 # Retrieve sentences where a given term was used together with any of the search terms
-grouped_sentences = dpu.check_collocations(flat_sentences, "retrofit")
+grouped_sentences = dpu.check_collocations(flat_sentences, "hydrogen")
 dpu.collocation_summary(grouped_sentences)
 
 # %%
@@ -188,7 +188,7 @@ sentence_collection_df.columns = ["sentence", "id", "year"]
 
 # %%
 # Retrieve sentences with a given term
-grouped_sentences = dpu.check_mentions(sentence_collection_df, "retrofit")
+grouped_sentences = dpu.check_mentions(sentence_collection_df, "heat pumps")
 dpu.mentions_summary(grouped_sentences)
 
 # %%
