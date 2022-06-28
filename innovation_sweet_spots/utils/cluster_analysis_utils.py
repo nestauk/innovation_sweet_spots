@@ -7,7 +7,12 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from typing import Iterator, Dict
 from collections import defaultdict
-from innovation_sweet_spots.utils.text_processing_utils import simple_tokenizer
+
+# from innovation_sweet_spots.utils.text_processing_utils import simple_tokenizer
+
+
+def simple_tokenizer(text: str) -> Iterator[str]:
+    return [token.strip() for token in text.split(" ") if len(token) > 0]
 
 
 def cluster_texts(documents: Iterator[str], cluster_labels: Iterator) -> Dict:
@@ -42,6 +47,7 @@ def cluster_keywords(
     tokenizer=simple_tokenizer,
     max_df: float = 0.90,
     min_df: float = 0.01,
+    Vectorizer=TfidfVectorizer,
 ) -> Dict:
     """
     Generates keywords that characterise the cluster, using the specified Vectorizer
@@ -58,7 +64,7 @@ def cluster_keywords(
     """
 
     # Define vectorizer
-    vectorizer = TfidfVectorizer(
+    vectorizer = Vectorizer(
         analyzer="word",
         tokenizer=tokenizer,
         preprocessor=lambda x: x,

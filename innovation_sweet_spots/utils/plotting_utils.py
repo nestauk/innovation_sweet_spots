@@ -1,6 +1,5 @@
 """
 innovation_sweet_spots.utils.plotting_utils
-
 Functions for generating graphs
 """
 import innovation_sweet_spots.analysis.analysis_utils as au
@@ -220,8 +219,9 @@ def cb_investments_barplot(
         )
         .mark_bar(color=NESTA_COLOURS[0])
         .encode(
-            alt.X(f"{x_column}:O"),
-            alt.Y(f"{y_column}:Q", scale=alt.Scale(domain=[0, y_max])),
+            x=alt.X(f"{x_column}:O"),
+            y=alt.Y(f"{y_column}:Q", scale=alt.Scale(domain=[0, y_max])),
+            tooltip=[x_column, y_column],
         )
     )
     chart.encoding.x.title = (
@@ -241,7 +241,6 @@ def cb_deal_types(
 ) -> ChartType:
     """
     Stacked bar chart of the investment deal types per year
-
     Args:
         funding_rounds: Dataframe with funding round data
         simpler_types: Use a simpler, Dealroom-style categorisation
@@ -288,6 +287,108 @@ def cb_top_geographies(
     """
     Plots a bar chart with stats for top_n countries
 
+    Args:
+        data: Dataframe with a columns for 'country'
+    """
+    category_label = (
+        infer_geo_label(category_column) if category_label is None else category_label
+    )
+    df = data.sort_values(value_column, ascending=False).head(top_n)
+    chart = (
+        alt.Chart(df)
+        .mark_bar(color=NESTA_COLOURS[0])
+        .encode(
+            y=alt.Y(category_column, sort="-x", title=category_label),
+            x=alt.X(value_column),
+        )
+        .configure_legend(title=None)
+    )
+    chart.encoding.x.title = (
+        process_axis_label(value_column) if value_label is None else value_label
+    )
+    chart.encoding.y.title = (
+        process_axis_label(category_column)
+        if category_label is None
+        else category_label
+    )
+    return standardise_chart(chart)
+
+
+def time_series_by_category(
+    data: pd.DataFrame,
+    value_column: str,
+    value_units: str = None,
+    time_column: str = "time_period",
+    period: str = "Y",
+    category_column: str = "geography",
+) -> ChartType:
+    """Basic time series plot"""
+    chart = (
+        alt.Chart(
+            data.assign(
+                **{time_column: convert_time_period(data[time_column], period)}
+            ),
+            width=400,
+            height=200,
+        )
+        .mark_line(point=False, strokeWidth=1.5)
+        .encode(
+            alt.X(f"{time_column}:O"),
+            alt.Y(f"{value_column}:Q"),
+            color=category_column,
+        )
+    )
+    chart.encoding.x.title = process_axis_label(time_column)
+    chart.encoding.y.title = process_axis_label(value_column, units=value_units)
+    return standardise_chart(chart)
+
+
+def magnitude_growth(
+    magnitude_growth: pd.DataFrame,
+    magnitude_label: str,
+    growth_label: str = "Growth",
+    #     text_label: str = None,
+):
+    """"""
+    return (
+        alt.Chart(
+            (
+                magnitude_growth
+                # Convert growth to fractions
+                .assign(growth_=lambda x: x.growth / 100)
+                # Reset industries index to a column
+                .reset_index()
+            ),
+            width=300,
+            height=300,
+        )
+        .mark_circle(size=80, color=NESTA_COLOURS[0])
+        .encode(
+            x=alt.X("magnitude", title=magnitude_label),
+            y=alt.Y("growth_", title=growth_label, axis=alt.Axis(format="%")),
+            tooltip=["index", "magnitude", "growth"],
+        )
+        .configure_axis(
+            gridDash=[0],
+            gridColor="white",
+        )
+    ).interactive()
+
+
+def infer_geo_label(category_column: str) -> str:
+    return category_column.split("_")[-1].capitalize()
+
+
+def cb_top_geographies(
+    data: pd.DataFrame,
+    value_column: str,
+    category_column: str = "org_country",
+    value_label: str = None,
+    category_label: str = None,
+    top_n: int = 10,
+) -> ChartType:
+    """
+    Plots a bar chart with stats for top_n countries
     Args:
         data: Dataframe with a columns for 'country'
     """

@@ -12,13 +12,13 @@ from scipy.spatial.distance import cdist
 from numpy.typing import ArrayLike
 from typing import Iterator, Union
 from pandas import DataFrame
+import os
 
 
 class QueryEmbeddings:
     """
     Helper class to interrogate embeddings and find most similar texts
     to a provided input text
-
     """
 
     def __init__(
@@ -116,6 +116,35 @@ class Vectors:
             self.vector_ids
         ), "All vector ids must be unique"
 
+        self.model_name = model_name
+        self._model = None
+        self.filename = filename
+        self.folder = folder
+        files_exist = os.path.exists(
+            folder / self.filepath_vectors(filename, model_name, folder)
+        )
+        print(files_exist)
+        if (vector_ids is None) and ((filename is None) or (files_exist is False)):
+            # Initialise empty vectors and ids
+            self.vectors = None
+            self.vector_ids = []
+        else:
+            if (vector_ids is None) and (filename is not None) and files_exist:
+                # Load from disk
+                self.load_vectors(filename, model_name, folder)
+                print(self.vectors.shape)
+                print(len(self.vector_ids))
+            else:
+                # Take the provided vectors and vector ids
+                self.vector_ids = np.array(vector_ids)
+                self.vectors = vectors
+            assert (
+                len(self.vector_ids) == self.vectors.shape[0]
+            ), "Number of vector ids does not match the number of vectors"
+            assert len(np.unique(self.vector_ids)) == len(
+                self.vector_ids
+            ), "All vector ids must be unique"
+
     def load_vectors(self, filename: str, model_name: str, folder):
         """Loads in vectors and their corresponding document ids from disk"""
         self.vector_ids = np.array(
@@ -170,11 +199,15 @@ class Vectors:
         for i, new_id in enumerate(new_document_ids):
             if force_update or (self.is_id_present(new_id) is False):
                 new_indexes.append(i)
-        if len(new_indexes) > 0:
+        if (len(new_indexes) > 0) and (self.vectors is not None):
             self.add_vectors(
                 new_document_ids=np.array(new_document_ids)[new_indexes],
                 new_vectors=self.model.encode(np.array(texts)[new_indexes]),
             )
+        else:
+            # First time
+            self.vectors = self.model.encode(np.array(texts)[new_indexes])
+            self.vector_ids = np.array(new_document_ids)[new_indexes]
 
     def add_vectors(
         self, new_document_ids: Iterator[str], new_vectors: ArrayLike
@@ -230,8 +263,10 @@ class Vectors:
         """Default filepath to the vector id file"""
         return folder / f"{filename}_{model_name}_ids.txt"
 
-    def save_vectors(self, filename, folder) -> None:
+    def save_vectors(self, filename=None, folder=None) -> None:
         """Saves vectors and the corresponding document ids locally"""
+        filename = self.filename if filename is None else filename
+        folder = self.folder if folder is None else folder
         # Save vectors
         vectors_filepath = self.filepath_vectors(filename, self.model_name, folder)
         np.save(vectors_filepath, self.vectors)
@@ -240,4 +275,4 @@ class Vectors:
         save_text_items(
             list(self.vector_ids),
             self.filepath_vector_ids(filename, self.model_name, folder),
-        ),
+        )

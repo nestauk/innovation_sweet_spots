@@ -23,4 +23,6 @@ gensim
 sentence-transformers
 git+https://github.com/nestauk/jacc-hammer.git@legacy
 tables
+pandas-profiling
+missingno
 #data_getters @ git+https://github.com/nestauk/data_getters.git

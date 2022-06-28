@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from itertools import chain
 from typing import Union
+from ast import literal_eval
 
 
 def convert_col_to_has_col(df: pd.DataFrame, col: str, drop: bool) -> pd.DataFrame:
@@ -242,7 +243,7 @@ def window_flag(
     Args:
         cb_data: Dataframe to check
         start_date: Window start date
-        end_date: Widnow end date
+        end_date: Window end date
         variable: Variable to find relevant columns. For example, if variable is
             "acquired_on", it will be used to find columns "acquired_on_1" and
             "acquired_on_2" etc
@@ -328,53 +329,15 @@ def add_n_funding_rounds_in_window(
     return cb_data
 
 
-def add_first_last_date_col_number(
-    cb_data: pd.DataFrame,
-    col_contains_string: str,
-    last: bool,
-    start_date: pd.DatetimeIndex,
-    end_date: pd.DatetimeIndex,
-    new_col: str,
-) -> pd.DataFrame:
-    """Add a new column with values of the column name number of the first or last
-    dates across columns containing specified string
-
-    Args:
-        cb_data: Dataframe containing columns with date values
-        col_contains_string: String to use to find columns containing that string
-        last: True to find column name number relating to latest date,
-            False to find column name number relating to first date
-        start_date: Start date of the time window
-        end_date: End date of the time window
-        new_col: Name of the new column
-
-    Returns:
-        cb_data with a new column containing column name number relating
-        to first or last date across specified columns
-    """
-    dates_in_window = keep_dates_in_window(
-        cb_data, col_contains_string, start_date, end_date
-    )
-    cb_data[new_col] = (
-        (
-            dates_in_window.eq(dates_in_window.max(1), axis=0)
-            if last
-            else dates_in_window.eq(dates_in_window.min(1), axis=0)
-        )
-        .dot(dates_in_window.columns)
-        .str.extract("(\d+)")
-    )
-    return cb_data
-
-
 def add_last_funding_id_in_window(
     cb_data: pd.DataFrame,
 ) -> pd.DataFrame:
     """Adds column for last funding round id in window,
-    needs col 'last_funding_round_in_window'"""
+    needs col 'n_funding_rounds'"""
     last_funding_id_in_window = []
     for _, row in cb_data.iterrows():
-        rnd = row["last_funding_round_in_window"]
+        rnd = row["n_funding_rounds"] - 1
+        rnd = np.nan if rnd == -1 else rnd
         try:
             last_funding_id_in_window.append(row[f"funding_round_id_{rnd}"])
         except:
@@ -494,7 +457,7 @@ def add_last_investment_round_info(
     """
     return (
         cb_data.merge(
-            right=cb_funding_rounds[["id", "investment_type", "raised_amount_usd"]],
+            right=cb_funding_rounds[["id", "investment_type", "raised_amount_gbp"]],
             how="left",
             left_on="last_funding_id_in_window",
             right_on="id",
@@ -503,14 +466,14 @@ def add_last_investment_round_info(
         .rename(
             columns={
                 "investment_type": "last_investment_round_type",
-                "raised_amount_usd": "last_investment_round_usd",
+                "raised_amount_gbp": "last_investment_round_gbp",
                 "id_x": "id",
             }
         )
         .fillna(
             {
                 "last_investment_round_type": "no_last_round",
-                "last_investment_round_usd": -1,
+                "last_investment_round_gbp": -1,
             }
         )
     )
@@ -519,7 +482,9 @@ def add_last_investment_round_info(
 def add_n_months_before_first_investment_in_window(
     cb_data: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Add column for number of months before first investment in the time window
+    """Add column for number of months before first investment in the time window.
+    For some companies they have received investment before the company was founded.
+    In those cases, the number of months is set to 0.
 
     Args:
         cb_data: Dataframe to add number of months before first investment to,
@@ -531,7 +496,7 @@ def add_n_months_before_first_investment_in_window(
     """
     cb_data["n_months_before_first_investment"] = n_months_delta(
         cb_data["first_funding_date_in_window"], cb_data["founded_on"]
-    )
+    ).apply(lambda x: x if x >= -1 else 0)
     return cb_data
 
 
@@ -625,14 +590,14 @@ def total_investment(
     start_date: pd.DatetimeIndex,
     end_date: pd.DatetimeIndex,
 ) -> pd.DataFrame:
-    """Produce a dataframe containing org_id and total_investment_amount_usd
+    """Produce a dataframe containing org_id and total_investment_amount_gbp
     for within the specified date range"""
     return (
         cb_funding_rounds.astype({"announced_on": "datetime64[ns]"})
         .query(f"'{start_date}' <= announced_on <= '{end_date}'")
-        .groupby("org_id")["raised_amount_usd"]
+        .groupby("org_id")["raised_amount_gbp"]
         .agg("sum")
-        .reset_index(name="total_investment_amount_usd")
+        .reset_index(name="total_investment_amount_gbp")
     )
 
 
@@ -642,11 +607,11 @@ def add_total_investment(
     start_date: pd.DatetimeIndex,
     end_date: pd.DatetimeIndex,
 ) -> pd.DataFrame:
-    "Add column to cb_data for total usd investment in the specified date range"
+    "Add column to cb_data for total gbp investment in the specified date range"
     total_invest = total_investment(cb_funding_rounds, start_date, end_date)
     return cb_data.merge(
         right=total_invest, left_on="id", right_on="org_id", how="left", validate="1:1"
-    ).fillna({"total_investment_amount_usd": -1})
+    ).fillna({"total_investment_amount_gbp": -1})
 
 
 def drop_multi_cols(
@@ -657,4 +622,312 @@ def drop_multi_cols(
         columns=cb_data.columns[
             cb_data.columns.str.contains("|".join(cols_to_drop_str_containing))
         ]
+    )
+
+
+def add_clean_job_title(cb_people: pd.DataFrame) -> pd.DataFrame:
+    """Add cleaned job title column to crunchbase people dataset"""
+    cb_people["clean_job_title"] = cb_people.featured_job_title.str.lower()
+    return cb_people
+
+
+def add_is_founder(cb_people: pd.DataFrame) -> pd.DataFrame:
+    """Add is_founder column to crunchbase people dataset"""
+    cb_people["is_founder"] = (
+        cb_people.clean_job_title.str.contains(
+            "founde"
+        )  # not a typo but quite a few founde typos in dataset
+        .fillna(-1)
+        .astype("int")
+        .replace(-1, np.nan)
+    )
+    return cb_people
+
+
+def add_is_gender(cb_people: pd.DataFrame, gender: str) -> pd.DataFrame:
+    """Add is_male_founder or is_female_founder to crunchbase people dataset"""
+    cb_people[f"is_{gender}_founder"] = np.where(
+        ((cb_people.is_founder == 1) & (cb_people.gender == gender)), 1, 0
+    )
+    return cb_people
+
+
+def person_id_degree_count(cb_degrees: pd.DataFrame) -> pd.DataFrame:
+    """Return a dataframe with cols for person_id and degree_count"""
+    return (
+        cb_degrees.groupby("person_id")["id"]
+        .agg("count")
+        .reset_index(name="degree_count")
+    )
+
+
+def add_founders(cb_data: pd.DataFrame, org_id_founders: pd.DataFrame) -> pd.DataFrame:
+    """Adds columns relating to the founders of the companies
+
+    Args:
+        cb_data: dataframe to add additional founders columns to
+        org_id_founders: dataframe to be merged, containing founders columns
+
+    Returns:
+        cb_data with additional columns for:
+            - founder_count
+            - female_founder_count
+            - male_founder_count
+            - founder_max_degrees
+            - founder_mean_degrees
+    """
+    return cb_data.merge(
+        org_id_founders, how="left", left_on="id", right_on="org_id"
+    ).fillna(
+        {
+            "founder_count": -1,
+            "male_founder_percentage": -1,
+            "founder_max_degrees": -1,
+            "founder_mean_degrees": -1,
+        }
+    )
+
+
+def add_grants(cb_data: pd.DataFrame, grants: pd.DataFrame) -> pd.DataFrame:
+    """Add grants related features to the dataset
+
+    Args:
+        cb_data: dataframe to add additional grants related columns to
+        grants: dataframe containing grants features
+
+    Returns:
+        cb_data dataframe with additional columns for:
+            - total_grant_amount_gbp
+            - n_grants
+            - first_grant_date
+            - last_grant_date
+            - has_received_ukri_grant
+            - has_received_grant
+            - last_grant_amount_gbp
+
+    """
+    return cb_data.merge(
+        right=grants, how="left", left_on="id", right_on="cb_org_id"
+    ).fillna(
+        {
+            "total_grant_amount_gbp": -1,
+            "n_grants": 0,
+            "has_received_ukri_grant": 0,
+            "has_received_grant": 0,
+            "last_grant_amount_gbp": -1,
+        }
+    )
+
+
+def add_n_months_since_last_grant(
+    cb_data: pd.DataFrame, end_date: pd.DatetimeIndex
+) -> pd.DataFrame:
+    """Add column for number of months since last grant
+
+    Args:
+        cb_data: Dataframe to add number of months since last grant to,
+            must contain column for 'last_grant_date'
+        end_date: End date of the time window
+
+    Returns:
+        Dataframe with column added for number of months since last grant
+    """
+    cb_data["n_months_since_last_grant"] = n_months_delta(
+        end_date, cb_data["last_grant_date"]
+    )
+    return cb_data
+
+
+def add_n_months_before_first_grant(
+    cb_data: pd.DataFrame,
+) -> pd.DataFrame:
+    """Add column for number of months before first grant.
+    For some companies they have received a grant before the company
+    was founded. In those cases, the number of months is set to 0.
+
+    Args:
+        cb_data: Dataframe to add number of months before first grant,
+            must contain column for 'first_grant_date' and 'founded_on'
+
+    Returns:
+        Dataframe with column added for number of months before first grant
+    """
+    cb_data["n_months_before_first_grant"] = n_months_delta(
+        cb_data["first_grant_date"], cb_data["founded_on"]
+    ).apply(lambda x: x if x >= -1 else 0)
+    return cb_data
+
+
+def remove_gtr_grants_from_cb_grants(
+    cb_grants_gbp: pd.DataFrame,
+    cb_investments: pd.DataFrame,
+    ukri_grant_providers_to_filter: list,
+) -> pd.DataFrame:
+    """Remove grants that are from UKRI from crunchbase grants
+    to avoid having a grant counted from both crunchbase and
+    gateway to research
+
+    Args:
+        cb_grants_gbp: Crunchbase grants dataframe
+        cb_investments: Crunchbase investments dataframe
+        ukri_grant_providers_to_filter: UKRI councils to find grants
+            from and filter out
+
+    Returns:
+        cb_grants_gbp but with grants from UKRI removed
+    """
+    cb_grants_gbp_w_investments = cb_grants_gbp.merge(
+        right=cb_investments,
+        how="left",
+        left_on="funding_round_id",
+        right_on="funding_round_id",
+    )
+    cb_grants_gbp_w_investments_in_gtr = cb_grants_gbp_w_investments[
+        cb_grants_gbp_w_investments.investor_name.str.contains(
+            ukri_grant_providers_to_filter
+        ).fillna(False)
+    ]
+    gtr_funding_rounds_to_drop = list(
+        cb_grants_gbp_w_investments_in_gtr.funding_round_id.drop_duplicates().values
+    )
+    return cb_grants_gbp[
+        ~cb_grants_gbp.funding_round_id.isin(gtr_funding_rounds_to_drop)
+    ].reset_index(drop=True)
+
+
+def standardise_cb_grants(cb_grants_without_gtr_grants: pd.DataFrame) -> pd.DataFrame:
+    """Standardise crunchbase grants data so that it can be
+    combined with gtr grants data"""
+    return (
+        cb_grants_without_gtr_grants.rename(
+            columns={
+                "funding_round_id": "grant_id",
+                "announced_on": "grant_date",
+                "raised_amount_gbp": "grant_amount_gbp",
+                "org_id": "cb_org_id",
+            }
+        )
+        .assign(ukri_grant=0)
+        .drop(columns="org_name")
+    )
+
+
+def explode_cb_gtr_lookup(cb_gtr_lookup: pd.DataFrame) -> pd.DataFrame:
+    """Explode crunchbase to gtr organisation lookup"""
+    # Convert gtr_org_ids type to string
+    cb_gtr_lookup["gtr_org_ids"] = cb_gtr_lookup["gtr_org_ids"].apply(literal_eval)
+    # Explode cb to gtr lookup
+    return cb_gtr_lookup.explode("gtr_org_ids").reset_index(drop=True)
+
+
+def add_gtr_project_to_cb_gtr_lookup(
+    cb_gtr_org_lookup: pd.DataFrame, gtr_grants: pd.DataFrame
+) -> pd.DataFrame:
+    """Add gtr project information to cb_gtr_org_lookup"""
+    return (
+        cb_gtr_org_lookup.merge(
+            right=gtr_grants, left_on="gtr_org_ids", right_on="gtr_org_id", how="left"
+        )
+        .dropna(subset=["gtr_org_id"])
+        .drop(columns="gtr_org_ids")
+        .drop_duplicates(subset=["project_id", "cb_org_id"])
+        .reset_index(drop=True)
+    )
+
+
+def standardise_gtr_grants(cb_gtr_lookup_projects):
+    """Standardise gtr grants data so that it can be
+    combined with crunchbase grants data"""
+    return (
+        cb_gtr_lookup_projects.rename(
+            columns={
+                "project_id": "grant_id",
+                "fund_start": "grant_date",
+                "amount": "grant_amount_gbp",
+            }
+        )
+        .assign(ukri_grant=1)
+        .drop(columns="gtr_org_id")
+    )
+
+
+def join_cb_gtr_grants(
+    cb_grants_standardised: pd.DataFrame, gtr_grants_standardised: pd.DataFrame
+) -> pd.DataFrame:
+    """Join crunchbase and gtr grants together"""
+    return pd.concat([cb_grants_standardised, gtr_grants_standardised]).reset_index(
+        drop=True
+    )
+
+
+def grants_features(combined_cb_gtr_grants: pd.DataFrame) -> pd.DataFrame:
+    """Create groupby grants features for each crunchbase organisation id"""
+    return (
+        combined_cb_gtr_grants.fillna({"grant_amount_gbp": 0})
+        .groupby("cb_org_id")
+        .agg(
+            total_grant_amount_gbp=("grant_amount_gbp", "sum"),
+            n_grants=("grant_id", "count"),
+            first_grant_date=("grant_date", "min"),
+            last_grant_date=("grant_date", "max"),
+            has_received_ukri_grant=("ukri_grant", "max"),
+        )
+        .assign(has_received_grant=1)
+        .reset_index()
+    )
+
+
+def last_grant_amount(combined_cb_gtr_grants: pd.DataFrame) -> pd.DataFrame:
+    """Calculate last grant amount received for each crunchbase organisation id"""
+    return (
+        combined_cb_gtr_grants.fillna({"grant_amount_gbp": 0})
+        .sort_values("grant_date", ascending=False)
+        .groupby("cb_org_id")
+        .head(1)
+        .rename(
+            columns={
+                "grant_date": "last_grant_date",
+                "grant_amount_gbp": "last_grant_amount_gbp",
+            }
+        )[["cb_org_id", "last_grant_amount_gbp"]]
+    )
+
+
+def gtr_projects_with_lead_orgs(
+    gtr_wrangler: classmethod,
+    gtr_lead_orgs_to_project_id_lookup: pd.DataFrame,
+    start_date: pd.DatetimeIndex,
+    end_date: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    """Use GtrWrangler to find gtr projects within the time window and
+    add funding and lead organisation information.
+
+    Note that this creates a small amount of assignments of a project to
+    more than one 'lead' gtr organisation
+
+    Args:
+        gtr_wrangler: class which can be used to get gtr project data
+            and add funding information
+        gtr_lead_orgs_to_project_id_lookup: Lookup that can be used to
+            link gtr organisations and projects
+        start_date: Window start date
+        end_date: Window end date
+
+    Returns:
+        Dataframe with columns for:
+            - project_id
+            - fund_start
+            - amount
+            - gtr_org_id
+    """
+    return (
+        gtr_wrangler.get_funding_data(gtr_wrangler.gtr_projects)
+        .query(f"'{start_date}' <= fund_start <= '{end_date}'")
+        .reset_index(drop=True)
+        .merge(
+            right=gtr_lead_orgs_to_project_id_lookup,
+            left_on="project_id",
+            right_on="project_id",
+            how="left",
+        )[["project_id", "fund_start", "amount", "gtr_org_id"]]
     )
