@@ -200,3 +200,7 @@ def process_text_disc(doc: spacy.tokens.doc.Doc) -> list:
     no_ents = [x for x in no_stops if all(x.text not in ent for ent in drop_ents)]
 
     return no_ents
+
+
+def simple_tokenizer(text: str) -> Iterator[str]:
+    return [token.strip() for token in text.split(" ") if len(token) > 0]

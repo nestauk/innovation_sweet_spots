@@ -1,11 +1,14 @@
 """
 innovation_sweet_spots.utils.cluster_analysis_utils
+
 Module for various cluster analysis (eg extracting cluster-specific keywords)
 """
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from typing import Iterator, Dict
 from collections import defaultdict
+
+# from innovation_sweet_spots.utils.text_processing_utils import simple_tokenizer
 
 
 def simple_tokenizer(text: str) -> Iterator[str]:
@@ -16,9 +19,11 @@ def cluster_texts(documents: Iterator[str], cluster_labels: Iterator) -> Dict:
     """
     Creates a large text string for each cluster, by joining up the
     text strings (documents) belonging to the same cluster
+
     Args:
         documents: A list of text strings
         cluster_labels: A list of cluster labels, indicating the membership of the text strings
+
     Returns:
         A dictionary where keys are cluster labels, and values are cluster text documents
     """
@@ -46,12 +51,14 @@ def cluster_keywords(
 ) -> Dict:
     """
     Generates keywords that characterise the cluster, using the specified Vectorizer
+
     Args:
         documents: List of (preprocessed) text documents
         cluster_labels: List of integer cluster labels
         n: Number of top keywords to return
         Vectorizer: Vectorizer object to use (eg, TfidfVectorizer, CountVectorizer)
         tokenizer: Function to use to tokenise the input documents; by default splits the document into words
+
     Returns:
         Dictionary that maps cluster integer labels to a list of keywords
     """
