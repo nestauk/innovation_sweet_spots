@@ -15,9 +15,23 @@
 #     name: python3
 # ---
 
+# %% [markdown]
+# # Fetching and updating Airtable data
+#
+
+# %% [markdown]
+# ## Import dependencies
+
 # %%
 from innovation_sweet_spots.getters import airtable
 from innovation_sweet_spots.utils import airtable_utils as au
+
+# %%
+import time
+from tqdm.notebook import tqdm
+
+# %%
+from innovation_sweet_spots import logging
 
 # %%
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
@@ -34,46 +48,133 @@ import importlib
 importlib.reload(airtable)
 importlib.reload(au)
 
-# %% [markdown]
-# # Green tech table
-#
-# - Load Airtable table
-# - Load the local list (eg, ISS pilot Crunchbase companies)
-# - Compare company lists
-#   - Which companies are on Airtable but not in this list
-#   - Suggest missing Crunchbase ids
-#   - Populate empty fields with CB data iif possible
-#   - Check if investment data can be updated
-#   - Update records on Airtable
-#   - Update local table, with a new name
-
-# %%
-import re
-
 # %%
 CB = CrunchbaseWrangler()
 
 # %%
-
-# %%
 import innovation_sweet_spots.utils.airtable_utils as au
+import innovation_sweet_spots.getters.outputs as outpt
 
 importlib.reload(airtable)
 importlib.reload(au)
 
 # %%
+RELEVANT_CB_COLUMNS = [
+    "id",
+    "cb_url",
+    "email",
+    "city",
+    "short_description",
+    "long_description",
+    "homepage_url",
+    "twitter_url",
+    "airtable_id",
+]
+
+FIELDS_TO_UPDATE = [
+    "crunchbase_id",
+    "crunchbase_url",
+    "email",
+    "city",
+    "crunchbase_description",
+    "homepage_url",
+    "twitter_url",
+    "has_investment",
+    "raised_investment_range",
+]
+
+# %% [markdown]
+# ## Fetch Airtable data
+
+# %%
 # Fetch from Airtable and update the local copy
-# t = airtable.get_greentech_table()
-# records = t.all()
+t = airtable.get_greentech_table()
+records = t.all()
+au.save_table_locally(t, airtable.AIRTABLE_PATH)
+
+# %% [markdown]
+# ## Update missing info from Airtable data
+
+# %%
+# Create a table
+airtable_df = au.table_to_dataframe(records)
+
+# Check for companies that don't have Crunchbase ID
+companies_without_crunchbase_id = airtable_df[
+    ((airtable_df.crunchbase_id == "n/a") | (airtable_df.crunchbase_id.isnull()))
+]
+
+logging.info(
+    f"There are {len(companies_without_crunchbase_id)} potentially new companies"
+)
+
+
+# %%
+# Among the new companies check those that have a Crunchbase URL
+companies_with_urls = companies_without_crunchbase_id[
+    (
+        (companies_without_crunchbase_id.crunchbase_url != "n/a")
+        & (companies_without_crunchbase_id.crunchbase_url.isnull() == False)
+    )
+]
+
+# Fetch company data for the new companies
+company_data = CB.cb_organisations.query(
+    "cb_url in @companies_with_urls.crunchbase_url.to_list()"
+).merge(
+    airtable_df[["crunchbase_url", "airtable_id"]],
+    left_on="cb_url",
+    right_on="crunchbase_url",
+    how="left",
+)
+
+logging.info(f"Updating data for {len(company_data)} companies")
+
+# %%
+company_funds = (
+    CB.get_funding_rounds(company_data)
+    .groupby("org_id", as_index=False)
+    .agg(raised_amount_gbp=("raised_amount_gbp", "sum"))
+)
+
+# %%
+importlib.reload(au)
+
+# %%
+company_data_to_update = au.get_company_data_to_update(company_data, company_funds)
+
+# %%
+au.dict_from_dataframe(company_data_to_update, ["email"])
+
+# %% [markdown]
+# ## Update airtable records
+
+# %%
+# updates = au.dict_from_dataframe(company_data_to_update, FIELDS_TO_UPDATE)
+# updates[0:3]
+
+# %%
+for update in tqdm(updates, total=len(updates)):
+    t.update(update["id"], update["fields"])
+    time.sleep(0.25)
+
+# %% [markdown]
+# ## Get the updated table
+
+# %%
+# Fetch from Airtable and update the local copy
+t = airtable.get_greentech_table()
+records = t.all()
 au.save_table_locally(t, airtable.AIRTABLE_PATH)
 
 # %%
 
 # %%
-# Create a table
-df = au.table_to_dataframe(records)
 
 # %%
+importlib.reload(outpt)
+green_tech_df = outpt.get_green_tech_companies()
+green_tech_df.head(5)
 
 # %%
 
