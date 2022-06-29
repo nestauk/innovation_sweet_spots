@@ -8,23 +8,22 @@ from innovation_sweet_spots import logging
 import pyairtable
 from pyairtable.api.table import Table
 
-importlib.reload(airtable)
 import pandas as pd
 from os import PathLike
 from typing import Iterator, Dict, Union
 
 
-def get_ids(table: Union[Dict, Table]) -> Iterator[str]:
+def get_ids(records: Union[Dict, Table]) -> Iterator[str]:
     """Produces a list of airtable record ids"""
     return [record["id"] for record in records]
 
 
-def get_fields(table: Union[Dict, Table]) -> Iterator[Dict]:
+def get_fields(records: Union[Dict, Table]) -> Iterator[Dict]:
     """Produces a list of airtable record fields"""
     return [record["fields"] for record in records]
 
 
-def get_created_time(table: Union[Dict, Table]) -> Iterator:
+def get_created_time(records: Union[Dict, Table]) -> Iterator:
     """Produces a list of airtable record creation times"""
     return [record["createdTime"] for record in records]
 
@@ -44,14 +43,14 @@ def dict_from_dataframe(
     dataframe: pd.DataFrame, columns: Iterator[str]
 ) -> Iterator[Dict]:
     """Generates a dictionary detailing the columns (fields)"""
-    records = df[columns].to_dict(orient="records")
-    ids = df.airtable_id.to_list()
+    records = dataframe[columns].to_dict(orient="records")
+    ids = dataframe.airtable_id.to_list()
     return [{"id": ids[i], "fields": record} for i, record in enumerate(records)]
 
 
 def table_filename(table: Table):
     """Generate table filename"""
-    return f"tableId_{t.base_id}_tableName_{t.table_name}.csv"
+    return f"tableId_{table.base_id}_tableName_{table.table_name}.csv"
 
 
 def save_table_locally(table: Union[Dict, Table], folder: PathLike):
