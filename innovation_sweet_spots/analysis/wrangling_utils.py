@@ -1082,6 +1082,30 @@ class DealroomWrangler:
         """
         return column_name.split("(")[0].strip()
 
+    def get_ids_in_industry(self, industry: str):
+        """Get company ids in a subindustry"""
+        return self.company_industries.query("`INDUSTRIES` == @industry").id.to_list()
+
+    def get_ids_in_subindustry(self, subindustry: str):
+        """Get company ids in a subindustry"""
+        return self.company_subindustries.query(
+            "`SUB INDUSTRIES` == @subindustry"
+        ).id.to_list()
+
+    def get_companies_by_industry(self, industry: str):
+        """Get companies that are in the specific subindustry"""
+        ids_in_industry = self.get_ids_in_industry(industry)
+        return self.company_data.query("id in @ids_in_industry").assign(
+            industry=industry
+        )
+
+    def get_rounds_by_industry(self, industry: str):
+        """Get investment rounds for companies in the specific subindustry"""
+        ids_in_industry = self.get_ids_in_industry(industry)
+        return self.funding_rounds.query("id in @ids_in_industry").assign(
+            industry=industry
+        )
+
     def get_ids_in_subindustry(self, subindustry: str):
         """Get company ids in a subindustry"""
         return self.company_subindustries.query(
@@ -1102,15 +1126,24 @@ class DealroomWrangler:
             subindustry=subindustry
         )
 
-    def get_ids_in_industry(self, industry: str):
-        """Get company ids in a subindustry"""
-        return self.company_industries.query("`INDUSTRIES` == @industry").id.to_list()
+    def get_ids_by_labels(self, label: str, label_type: str):
+        """Get company ids corresponding to a given label"""
+        return self.company_labels.query(
+            "`Category` == @label and `label_type` == @label_type"
+        ).id.to_list()
 
-    def get_companies_by_industry(self, industry: str):
-        """Get companies that are in the specific subindustry"""
-        ids_in_industry = self.get_ids_in_industry(industry)
-        return self.company_data.query("id in @ids_in_industry").assign(
-            industry=industry
+    def get_companies_by_labels(self, label: str, label_type: str):
+        """Get companies that have the specific label"""
+        ids = self.get_ids_by_labels(label, label_type)
+        return self.company_data.query("id in @ids").assign(
+            Category=label, label_type=label_type
+        )
+
+    def get_rounds_by_labels(self, label: str, label_type: str):
+        """Get investment rounds for companies have the specific label"""
+        ids = self.get_ids_by_labels(label, label_type)
+        return self.funding_rounds.query("id in @ids").assign(
+            Category=label, label_type=label_type
         )
 
     @property
@@ -1152,13 +1185,6 @@ class DealroomWrangler:
         company_labels = pd.concat([sub, ind, tags], ignore_index=True)
         company_labels = company_labels[-company_labels.Category.isnull()]
         return company_labels
-
-    def get_rounds_by_industry(self, industry: str):
-        """Get investment rounds for companies in the specific subindustry"""
-        ids_in_industry = self.get_ids_in_industry(industry)
-        return self.funding_rounds.query("id in @ids_in_industry").assign(
-            industry=industry
-        )
 
     def explode_timeseries(self, column_name: str) -> pd.DataFrame:
         """

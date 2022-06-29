@@ -91,10 +91,10 @@ category_counts = (
 category_counts[category_counts.counts > 50]
 
 # %%
-from itables import init_notebook_mode
-from itables import show
+# from itables import init_notebook_mode
+# from itables import show
 
-init_notebook_mode(all_interactive=False)
+# init_notebook_mode(all_interactive=False)
 
 # %%
 health_Weight = [
@@ -124,6 +124,136 @@ health_Comorbid = [
 health_Sports = [
     "fitness",
 ]
+
+# %% [markdown]
+# # User defined categories
+
+# %%
+# Major category > Minor category > [dealroom_label, label_type]
+# The minor category that has the same name as major category is a 'general' category
+taxonomy = {
+    "health and food": {
+        "health and food": [
+            "health",
+            "personal health",
+        ],
+        "diet": [
+            "diet",
+            "dietary supplements",
+            "weight management",
+        ],
+        "nutrition": [
+            "nutrition",
+            "nutrition solution",
+            "superfood",
+            "healthy nutrition",
+            "sports nutrition",
+            "probiotics",
+        ],
+        "health issues": [
+            "obesity",
+            "diabetes",
+            "disease",
+            "allergies",
+            "chronic disease",
+            "gastroenterology",
+        ],
+        "health issues (other)": [
+            "oncology",
+            "immune system",
+            "neurology",
+            "mental health",
+        ],
+        "medicine and pharma": [
+            "medical",
+            "therapeutics",
+            "patient care",
+            "drug development",
+        ],
+    },
+}
+
+
+# %%
+def create_taxonomy_dataframe(
+    taxonomy: pd.DataFrame, DR: wu.DealroomWrangler = None
+) -> pd.DataFrame:
+    """
+    Create a taxonomy dataframe from a dictionary
+    """
+    taxonomy_df = []
+    for major in taxonomy.keys():
+        for minor in taxonomy[major].keys():
+            for label in taxonomy[major][minor]:
+                taxonomy_df.append([major, minor, label])
+    taxonomy_df = pd.DataFrame(taxonomy_df, columns=["Major", "Minor", "Category"])
+
+    if DR is not None:
+        # Number of companies for each label (NB: also accounts for multiple labels of different types with the same name)
+        category_counts = (
+            DR.company_labels.groupby(["Category", "label_type"], as_index=False)
+            .agg(counts=("id", "count"))
+            .sort_values("counts", ascending=False)
+        )
+        taxonomy_df = taxonomy_df.merge(
+            category_counts[["Category", "label_type", "counts"]]
+        )
+    return taxonomy_df
+
+
+# %%
+taxonomy_df = create_taxonomy_dataframe(taxonomy, DR)
+
+# %%
+taxonomy_df.head(4)
+
+# %% [markdown]
+# ## Plot some graphs
+
+# %%
+import itertools
+
+# %%
+# Initialise a Dealroom wrangler instance
+importlib.reload(wu)
+DR = wu.DealroomWrangler()
+
+# %%
+# DR.get_ids_by_labels(row.Category, row.label_type)
+
+# %%
+ind_ts = []
+for minor in taxonomy_df.Minor.unique():
+    ids = [
+        DR.get_ids_by_labels(row.Category, row.label_type)
+        for i, row in taxonomy_df.query("Minor == @minor").iterrows()
+    ]
+    # Flatten
+    ids = set(itertools.chain(*ids))
+    ind_ts.append(
+        au.cb_get_all_timeseries(
+            DR.company_data.query("id in @ids"),
+            (
+                DR.funding_rounds.query("id in @ids").query(
+                    "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES"
+                )
+            ),
+            period="year",
+            min_year=2010,
+            max_year=2022,
+        )
+        .assign(year=lambda df: df.time_period.dt.year)
+        .assign(Category=minor)
+    )
+ind_ts = pd.concat(ind_ts, ignore_index=True)
+
+# %%
+ind_ts
+
+# %%
+
+# %% [markdown]
+# # Segmenting the categories
 
 # %%
 clusters = cluster_analysis_utils.hdbscan_clustering(v_labels.vectors)
@@ -327,48 +457,48 @@ df_viz = (
 alt.data_transformers.disable_max_rows()
 
 # %%
-# Visualise using altair
-fig = (
-    alt.Chart(df_viz, width=1000, height=1000)
-    .mark_circle(size=20, color=pu.NESTA_COLOURS[1])
-    .encode(
-        x=alt.X("x", axis=None),
-        y=alt.Y("y", axis=None),
-        tooltip=list(df_viz.columns),
-        #         color="Primary Category:N",
-        color="in_category:N",
-        href="WEBSITE",
-        #         size="Hours per Week",
-    )
-)
-
-# text = (
-#     alt.Chart(centroids)
-#     .mark_text(font=pu.FONT)
-#     .encode(x=alt.X("x_c:Q"), y=alt.Y("y_c:Q"), text=alt.Text("keywords"))
+# # Visualise using altair
+# fig = (
+#     alt.Chart(df_viz, width=1000, height=1000)
+#     .mark_circle(size=20, color=pu.NESTA_COLOURS[1])
+#     .encode(
+#         x=alt.X("x", axis=None),
+#         y=alt.Y("y", axis=None),
+#         tooltip=list(df_viz.columns),
+#         #         color="Primary Category:N",
+#         color="in_category:N",
+#         href="WEBSITE",
+#         #         size="Hours per Week",
+#     )
 # )
 
-fig_final = (
-    (fig)
-    .configure_axis(
-        # gridDash=[1, 7],
-        gridColor="white",
-    )
-    .configure_view(strokeWidth=0, strokeOpacity=0)
-    .properties(
-        title={
-            "anchor": "start",
-            "text": ["Landscape of companies"],
-            "subtitle": "",
-            #             [
-            #                 "Each circle is a course; courses with similar titles will be closer on this map",
-            #                 "Press Shift and click on a circle to go the course webpage",
-            #             ],
-            "subtitleFont": pu.FONT,
-        },
-    )
-    .interactive()
-)
+# # text = (
+# #     alt.Chart(centroids)
+# #     .mark_text(font=pu.FONT)
+# #     .encode(x=alt.X("x_c:Q"), y=alt.Y("y_c:Q"), text=alt.Text("keywords"))
+# # )
+
+# fig_final = (
+#     (fig)
+#     .configure_axis(
+#         # gridDash=[1, 7],
+#         gridColor="white",
+#     )
+#     .configure_view(strokeWidth=0, strokeOpacity=0)
+#     .properties(
+#         title={
+#             "anchor": "start",
+#             "text": ["Landscape of companies"],
+#             "subtitle": "",
+#             #             [
+#             #                 "Each circle is a course; courses with similar titles will be closer on this map",
+#             #                 "Press Shift and click on a circle to go the course webpage",
+#             #             ],
+#             "subtitleFont": pu.FONT,
+#         },
+#     )
+#     .interactive()
+# )
 
 fig_final
 
