@@ -1,7 +1,9 @@
 """
-Metaflow to tokenise Crunchbase company descriptions.
+Metaflow to tokenise Crunchbase company descriptions
 NB: Takes about 2hrs for 1.5M companies
 
+Usage (running from the terminal):
+python innovation_sweet_spots/pipeline/preprocessing/flow_tokenise_cb.py run --test-mode False
 """
 from metaflow import FlowSpec, Parameter, step
 from innovation_sweet_spots import PROJECT_DIR, logging
@@ -16,7 +18,7 @@ THRESH = 0.35
 
 # Outputs parameters
 OUTPUT_DIR = PROJECT_DIR / "outputs/preprocessed"
-OUTPUT_NAME = "cb_descriptions_v2021"
+OUTPUT_NAME = "cb_descriptions_v2022"
 
 
 class Tokeniser(FlowSpec):

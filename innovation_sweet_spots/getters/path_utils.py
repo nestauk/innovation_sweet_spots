@@ -11,6 +11,7 @@ from innovation_sweet_spots import PROJECT_DIR
 INPUTS_PATH = PROJECT_DIR / "inputs/data/"
 GTR_PATH = INPUTS_PATH / "gtr"
 CB_PATH = INPUTS_PATH / "cb"
+CB_GTR_LINK_PATH = INPUTS_PATH / "cb_gtr_link"
 HANSARD_PATH = INPUTS_PATH / "hansard"
 GUARDIAN_PATH = INPUTS_PATH / "guardian"
 DEALROOM_PATH = INPUTS_PATH / "dealroom"

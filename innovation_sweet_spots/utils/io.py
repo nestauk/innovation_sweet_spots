@@ -9,6 +9,7 @@ import pickle
 import json
 import os
 import pandas as pd
+from zipfile import ZipFile
 
 PathLike = TypeVar("PathLike", str, pathlib.Path, None)
 
@@ -94,3 +95,27 @@ def combine_tables_from_folder(
     return pd.concat(
         [pd.read_csv(str(folder / file)) for file in csv_files]
     ).drop_duplicates(deduplicate_by)
+
+
+def download_file(url: str, fpath: PathLike):
+    """Downloads a file from url and unzips (if archived) in the local fpath"""
+    filename = url.split("/")[-1]
+    with BytesIO() as fileobj:
+        stream_to_file(url, fileobj)
+        extract_to_disk = (
+            extract_from_zip
+            if filename.endswith(".xxx")
+            else (lambda obj, path: bytesio_to_file(obj, path / filename))
+        )
+        extract_to_disk(fileobj, fpath)
+
+
+def unzip_files(
+    path_to_zip_archive: PathLike, extract_path: PathLike, delete: bool = False
+):
+    """Extracts the zip file and optionally deletes it"""
+    logging.info(f"Extracting the archive {path_to_zip_archive}")
+    with ZipFile(path_to_zip_archive, "r") as zip_ref:
+        zip_ref.extractall(extract_path)
+    if delete:
+        os.remove(path_to_zip_archive)

@@ -215,3 +215,11 @@ def clean_text_minimal(text, keep_punct=True):
             )
     else:
         return "sentence is blank"
+
+
+def remove_non_alphanumeric(text: str) -> str:
+    return re.sub(r"[^0-9a-zA-Z ]+", "", text)
+
+
+def remove_non_alphabet(text: str) -> str:
+    return " ".join([t.strip() for t in re.sub(r"[^a-zA-Z ]+", "", text).split()])

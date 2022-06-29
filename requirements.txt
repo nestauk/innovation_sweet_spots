@@ -22,4 +22,6 @@ textacy
 gensim
 sentence-transformers
 pyairtable
+pandas-profiling
+missingno
 #data_getters @ git+https://github.com/nestauk/data_getters.git
