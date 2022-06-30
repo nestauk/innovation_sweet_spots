@@ -102,6 +102,15 @@ def investment_amount_to_range(amount: float, return_na: bool = True) -> str:
         return "n/a"
 
 
+def get_lowest_range(investment_range: str):
+    if investment_range == "n/a":
+        return -1
+    elif investment_range == "250+":
+        return 251
+    else:
+        return int(investment_range.split("-")[0])
+
+
 def update_investment_range_field():
     pass
 
