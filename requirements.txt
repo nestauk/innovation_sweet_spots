@@ -21,8 +21,7 @@ beautifulsoup4
 textacy
 gensim
 sentence-transformers
-git+https://github.com/nestauk/jacc-hammer.git@legacy
-tables
+pyairtable
 pandas-profiling
 missingno
 #data_getters @ git+https://github.com/nestauk/data_getters.git
