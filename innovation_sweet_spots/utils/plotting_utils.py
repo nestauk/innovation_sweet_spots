@@ -28,6 +28,9 @@ NESTA_COLOURS = [
     "#FFFFFF",
     "#000000",
 ]
+FONTSIZE_NORMAL = 13
+FONTSIZE_TITLE = 14
+FONTSIZE_SUBTITLE = 13
 
 # Investment deal categories
 CURRENCY = "£"
@@ -70,6 +73,34 @@ def nestafont():
             },
         }
     }
+
+
+def configure_titles(fig, chart_title: str, chart_subtitle: str):
+    return fig.properties(
+        title={
+            "anchor": "start",
+            "text": chart_title,
+            "subtitle": chart_subtitle,
+            "subtitleFont": FONT,
+            "subtitleFontSize": FONTSIZE_SUBTITLE,
+        },
+    )
+
+
+def configure_axes(fig):
+    return (
+        fig.configure_axis(
+            gridDash=[1, 7],
+            gridColor="grey",
+            labelFontSize=FONTSIZE_NORMAL,
+            titleFontSize=FONTSIZE_NORMAL,
+        )
+        .configure_legend(
+            titleFontSize=FONTSIZE_NORMAL,
+            labelFontSize=FONTSIZE_NORMAL,
+        )
+        .configure_view(strokeWidth=0)
+    )
 
 
 alt.themes.register("nestafont", nestafont)

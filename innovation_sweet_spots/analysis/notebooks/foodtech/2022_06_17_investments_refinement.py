@@ -30,6 +30,9 @@ import pandas as pd
 COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
 
 # %%
+import numpy as np
+
+# %%
 # Functionality for saving charts
 import innovation_sweet_spots.utils.altair_save_utils as alt_save
 
@@ -126,16 +129,20 @@ health_Sports = [
 ]
 
 # %% [markdown]
-# # User defined categories
+# ## User defined taxonomy
 
 # %%
 # Major category > Minor category > [dealroom_label, label_type]
 # The minor category that has the same name as major category is a 'general' category
 taxonomy = {
     "health and food": {
-        "health and food": [
+        "health (general)": [
             "health",
             "personal health",
+            "health care",
+            "wellness",
+            "healthcare",
+            "health and wellness",
         ],
         "diet": [
             "diet",
@@ -166,9 +173,98 @@ taxonomy = {
         ],
         "medicine and pharma": [
             "medical",
+            "pharmaceutical",
             "therapeutics",
             "patient care",
             "drug development",
+        ],
+        "health tech": [
+            "health platform",
+            "medical devices",
+            "medical device",
+            "tech for patients",
+            "digital healthcare",
+            "health diagnostics",
+            "health information",
+            "medical technology",
+            "healthtech",
+            "digital health",
+            "digital therapeutics",
+        ],
+    },
+    "innovative food": {
+        "alt protein": [
+            "enabler of alternative proteins",
+            "alternative protein",
+            "meat substitute",
+            "dairy substitute",
+        ],
+        "taste": [
+            "taste",
+            "flavor",
+        ],
+        "fermentation": ["fermentation"],
+        "vegan": ["vegan"],
+        "plant-based": ["plant-based"],
+    },
+    "logistics": {
+        "logistics (general)": [
+            "food logistics and delivery",
+            "logistics and delivery",
+            "logistic",
+            "logistics",
+            "logistics tech",
+            "logistics solutions",
+            "freight",
+            "warehousing",
+            "fleet management",
+            "order management",
+        ],
+        "supply chain": [
+            "supply chain management",
+        ],
+        "delivery": [
+            "delivery",
+            "food delivery platform",
+            "food delivery service",
+            "last-mile delivery",
+            "shipping",
+        ],
+        "packaging": [
+            "packaging and containers",
+            "packaging",
+            "sustainable packaging",
+            "ecological packaging",
+            "packaging solutions",
+            "food packaging",
+        ],
+        "storage": [
+            "storage",
+        ],
+        "meal kits": [
+            "subscription boxes",
+            "meal kits",
+        ],
+    },
+    "cooking and catering": {
+        "kitchen and cooking (general)": [
+            "kitchen and cooking tech",
+        ],
+        "kitchen": [
+            "kitchen",
+            "dark kitchen",
+        ],
+        "restaurants and catering": [
+            "catering",
+            "restaurant tech",
+            "restaurants management",
+            "restaurant reservation",
+        ],
+        "cooking": [
+            "cooking tech",
+            "cooking",
+            "chef",
+            "recipes" "cook recipes",
         ],
     },
 }
@@ -205,13 +301,313 @@ def create_taxonomy_dataframe(
 taxonomy_df = create_taxonomy_dataframe(taxonomy, DR)
 
 # %%
-taxonomy_df.head(4)
+taxonomy_df
 
 # %% [markdown]
-# ## Plot some graphs
+# ## Helper functions
 
 # %%
+from collections import defaultdict
 import itertools
+
+
+# %%
+def get_category_ids(taxonomy_df, DR, column="Category"):
+    category_ids = defaultdict(set)
+    for category in taxonomy_df[column].unique():
+        ids = [
+            DR.get_ids_by_labels(row.Category, row.label_type)
+            for i, row in taxonomy_df.query(f"`{column}` == @category").iterrows()
+        ]
+        ids = set(itertools.chain(*ids))
+        category_ids[category] = ids
+    return category_ids
+
+
+# %%
+def get_category_ts(category_ids, DR):
+    ind_ts = []
+    for category in category_ids:
+        ids = category_ids[category]
+        ind_ts.append(
+            au.cb_get_all_timeseries(
+                DR.company_data.query("id in @ids"),
+                (
+                    DR.funding_rounds.query("id in @ids").query(
+                        "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES"
+                    )
+                ),
+                period="year",
+                min_year=2010,
+                max_year=2022,
+            )
+            .assign(year=lambda df: df.time_period.dt.year)
+            .assign(Category=category)
+        )
+    return pd.concat(ind_ts, ignore_index=True)
+
+
+# %%
+def get_company_counts(category_ids: dict):
+    return pd.DataFrame(
+        [(key, len(np.unique(list(category_ids[key])))) for key in category_ids],
+        columns=["Category", "Number of companies"],
+    )
+
+
+# %%
+def get_deal_counts(category_ids: dict):
+    category_deal_counts = []
+    for key in category_ids:
+        ids = category_ids[key]
+        deals = DR.funding_rounds.query("id in @ids").query(
+            "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES"
+        )
+        category_deal_counts.append((key, len(deals)))
+    return pd.DataFrame(category_deal_counts, columns=["Category", "Number of deals"])
+
+
+# %%
+def get_trends(taxonomy_df, taxonomy_level, DR):
+    category_ids = get_category_ids(taxonomy_df, DR, taxonomy_level)
+    company_counts = get_company_counts(category_ids)
+    category_ts = get_category_ts(category_ids, DR)
+
+    values_title_ = "raised_amount_gbp_total"
+    values_title = "Growth"
+    category_title = "Category"
+    colour_title = category_title
+    horizontal_title = "year"
+
+    if taxonomy_level == "Category":
+        tax_levels = ["Category", "Minor", "Major"]
+    if taxonomy_level == "Minor":
+        tax_levels = ["Minor", "Major"]
+    if taxonomy_level == "Major":
+        tax_levels = ["Major"]
+
+    return (
+        utils.get_magnitude_vs_growth(
+            category_ts,
+            value_column=values_title_,
+            time_column=horizontal_title,
+            category_column=category_title,
+        )
+        .assign(growth=lambda df: df.Growth / 100)
+        .merge(get_deal_counts(category_ids), on="Category")
+        .merge(company_counts, on="Category")
+        .merge(
+            taxonomy_df[tax_levels].drop_duplicates(taxonomy_level),
+            how="left",
+            left_on="Category",
+            right_on=taxonomy_level,
+        )
+    )
+
+
+# %%
+def fig_growth_vs_magnitude(
+    magnitude_vs_growth,
+    colour_field,
+    text_field,
+    legend=alt.Legend(),
+):
+    title_text = "Foodtech trends (2017-2021)"
+    subtitle_text = [
+        "Data: Dealroom. Showing data on early stage deals (eg, series funding)",
+        "Late stage deals, such as IPOs, acquisitions, and debt not included.",
+    ]
+
+    fig = (
+        alt.Chart(
+            magnitude_vs_growth,
+            width=400,
+            height=400,
+        )
+        .mark_circle(size=50)
+        .encode(
+            x=alt.X(
+                "Magnitude:Q",
+                axis=alt.Axis(title=f"Average yearly raised amount (million GBP)"),
+                # scale=alt.Scale(type="linear"),
+                scale=alt.Scale(type="log"),
+            ),
+            y=alt.Y(
+                "growth:Q",
+                axis=alt.Axis(title="Growth", format="%"),
+                # axis=alt.Axis(
+                #     title=f"Growth between {start_year} and {end_year} measured by number of reviews"
+                # ),
+                # scale=alt.Scale(domain=(-.100, .300)),
+                #             scale=alt.Scale(type="log", domain=(.01, 12)),
+            ),
+            #         size="Number of companies:Q",
+            color=alt.Color(f"{colour_field}:N", legend=legend),
+            tooltip=[
+                "Category",
+                alt.Tooltip(
+                    "Magnitude", title=f"Average yearly raised amount (million GBP)"
+                ),
+                alt.Tooltip("growth", title="Growth", format=".0%"),
+            ],
+        )
+        .properties(
+            title={
+                "anchor": "start",
+                "text": title_text,
+                "subtitle": subtitle_text,
+                "subtitleFont": pu.FONT,
+            },
+        )
+    )
+
+    text = fig.mark_text(align="left", baseline="middle", font=pu.FONT, dx=7).encode(
+        text=text_field
+    )
+
+    fig_final = (
+        (fig + text)
+        .configure_axis(
+            grid=False,
+            gridDash=[1, 7],
+            gridColor="white",
+            labelFontSize=pu.FONTSIZE_NORMAL,
+            titleFontSize=pu.FONTSIZE_NORMAL,
+        )
+        .configure_legend(
+            titleFontSize=pu.FONTSIZE_NORMAL,
+            labelFontSize=pu.FONTSIZE_NORMAL,
+        )
+        .configure_view(strokeWidth=0)
+    )
+
+    return fig_final
+
+
+# %%
+def fig_category_growth(
+    magnitude_vs_growth_filtered,
+    colour_field,
+):
+    """ """
+    fig = (
+        alt.Chart(
+            (
+                magnitude_vs_growth_filtered.assign(
+                    Increase=lambda df: df.growth > 0
+                ).assign(Magnitude_log=lambda df: np.log10(df.Magnitude))
+            ),
+            width=300,
+            height=450,
+        )
+        .mark_circle(color=pu.NESTA_COLOURS[0], opacity=1)
+        .encode(
+            x=alt.X(
+                "growth:Q",
+                axis=alt.Axis(
+                    format="%",
+                    title="Growth",
+                    labelAlign="center",
+                    labelExpr="datum.value < -1 ? null : datum.label",
+                ),
+                #             scale=alt.Scale(domain=(-1, 37)),
+            ),
+            y=alt.Y(
+                "Category:N",
+                sort="-x",
+                axis=alt.Axis(title="Category"),
+            ),
+            size=alt.Size(
+                "Magnitude",
+                title="Yearly investment (million GBP)",
+                legend=alt.Legend(orient="top"),
+                scale=alt.Scale(domain=[100, 4000]),
+            ),
+            color=alt.Color(
+                colour_field,
+            ),
+            # size="cluster_size:Q",
+            #         color=alt.Color(f"{colour_title}:N", legend=None),
+            tooltip=[
+                alt.Tooltip("Category:N", title="Category"),
+                alt.Tooltip(
+                    "Magnitude:Q",
+                    format=",.3f",
+                    title="Average yearly investment (million GBP)",
+                ),
+                "Number of companies",
+                "Number of deals",
+                alt.Tooltip("growth:Q", format=",.0%", title="Growth"),
+            ],
+        )
+    )
+
+    # text = fig.mark_text(align="left", baseline="middle", font=pu.FONT, dx=7).encode(
+    #     text='text_label:N'
+    # )
+
+    # fig_final = (
+    #     (fig)
+    #     .configure_axis(
+    #         gridDash=[1, 7],
+    #         gridColor="grey",
+    #         labelFontSize=pu.FONTSIZE_NORMAL,
+    #         titleFontSize=pu.FONTSIZE_NORMAL,
+    #     )
+    #     .configure_legend(
+    #         labelFontSize=pu.FONTSIZE_NORMAL - 1,
+    #         titleFontSize=pu.FONTSIZE_NORMAL - 1,
+    #     )
+    #     .configure_view(strokeWidth=0)
+    #     #     .interactive()
+    # )
+
+    return pu.configure_titles(pu.configure_axes(fig), "", "")
+
+
+# %%
+def fig_size_vs_magnitude(
+    magnitude_vs_growth_filtered,
+    colour_field,
+):
+    fig = (
+        alt.Chart(
+            magnitude_vs_growth_filtered,
+            width=500,
+            height=450,
+        )
+        .mark_circle(color=pu.NESTA_COLOURS[0], opacity=1, size=50)
+        .encode(
+            x=alt.X(
+                "Number of companies:Q",
+            ),
+            y=alt.Y(
+                "Magnitude:Q",
+                axis=alt.Axis(title=f"Average yearly raised amount (million GBP)"),
+                scale=alt.Scale(type="log"),
+            ),
+            color=alt.Color(colour_field),
+            # size="cluster_size:Q",
+            #         color=alt.Color(f"{colour_title}:N", legend=None),
+            tooltip=[
+                alt.Tooltip("Category:N", title="Category"),
+                alt.Tooltip(
+                    "Magnitude:Q",
+                    format=",.3f",
+                    title="Average yearly investment (million GBP)",
+                ),
+                alt.Tooltip("growth:Q", format=",.0%", title="Growth"),
+                "Number of companies",
+                "Number of deals",
+            ],
+        )
+    )
+
+    return pu.configure_titles(pu.configure_axes(fig), "", "")
+
+
+# %% [markdown]
+# ## Minor categories (medium granularity)
 
 # %%
 # Initialise a Dealroom wrangler instance
@@ -219,36 +615,60 @@ importlib.reload(wu)
 DR = wu.DealroomWrangler()
 
 # %%
-# DR.get_ids_by_labels(row.Category, row.label_type)
+magnitude_vs_growth = get_trends(taxonomy_df, "Minor", DR)
+magnitude_vs_growth
 
 # %%
-ind_ts = []
-for minor in taxonomy_df.Minor.unique():
-    ids = [
-        DR.get_ids_by_labels(row.Category, row.label_type)
-        for i, row in taxonomy_df.query("Minor == @minor").iterrows()
-    ]
-    # Flatten
-    ids = set(itertools.chain(*ids))
-    ind_ts.append(
-        au.cb_get_all_timeseries(
-            DR.company_data.query("id in @ids"),
-            (
-                DR.funding_rounds.query("id in @ids").query(
-                    "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES"
-                )
-            ),
-            period="year",
-            min_year=2010,
-            max_year=2022,
-        )
-        .assign(year=lambda df: df.time_period.dt.year)
-        .assign(Category=minor)
-    )
-ind_ts = pd.concat(ind_ts, ignore_index=True)
+fig_growth_vs_magnitude(
+    magnitude_vs_growth, colour_field="Major", text_field="Minor"
+).interactive()
 
 # %%
-ind_ts
+fig_category_growth(magnitude_vs_growth, colour_field="Major")
+
+# %%
+fig_size_vs_magnitude(magnitude_vs_growth, colour_field="Major")
+
+# %%
+# category='meal kits'
+# pu.cb_investments_barplot(
+#     category_ts.query("Category == @category"),
+#     y_column="raised_amount_gbp_total",
+#     y_label="Raised amount (million GBP)",
+#     x_label="Year",
+# )
+
+# %% [markdown]
+# ## Tags (most granular categories)
+
+# %%
+magnitude_vs_growth = get_trends(taxonomy_df, "Category", DR)
+
+# %%
+magnitude_vs_growth_filtered = magnitude_vs_growth.query(
+    "`Number of companies` > 10"
+).query("`Number of deals` > 10")
+
+# %%
+fig_growth_vs_magnitude(
+    magnitude_vs_growth_filtered,
+    colour_field="Minor",
+    text_field="Category",
+).interactive()
+
+
+# %%
+
+# %%
+
+# %%
+category = "meal kits"
+pu.cb_investments_barplot(
+    category_ts.query("Category == @category"),
+    y_column="raised_amount_gbp_total",
+    y_label="Raised amount (million GBP)",
+    x_label="Year",
+)
 
 # %%
 
