@@ -8,7 +8,7 @@ EARLY_DEAL_TYPES = [
     "EARLY VC",
     "SERIES A",
     "SEED",
-    "GRANT",
+    # "GRANT",
     #     '-',
     #     np.nan,
     #     'ACQUISITION',

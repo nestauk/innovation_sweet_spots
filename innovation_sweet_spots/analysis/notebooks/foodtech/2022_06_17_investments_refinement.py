@@ -30,6 +30,9 @@ import pandas as pd
 COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
 
 # %%
+from innovation_sweet_spots import PROJECT_DIR
+
+# %%
 import numpy as np
 
 # %%
@@ -40,6 +43,8 @@ AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
 
 # %%
 # Initialise a Dealroom wrangler instance
+import importlib
+
 importlib.reload(wu)
 DR = wu.DealroomWrangler()
 
@@ -76,60 +81,20 @@ DR.company_data.query("id in @ids")[["NAME", "TAGLINE", "WEBSITE"]]
 
 # %%
 i = 0
-df = query.find_most_similar("restaurant tech").merge(labels).iloc[i : i + 20]
+df = query.find_most_similar("retail").merge(labels).iloc[i : i + 20]
 df
-
-# %%
-df.Category.to_list()
-
-# %%
-category_counts = (
-    DR.company_labels.groupby(["Category", "label_type"], as_index=False)
-    .agg(counts=("id", "count"))
-    .sort_values("counts", ascending=False)
-)
-
-
-# %%
-category_counts[category_counts.counts > 50]
-
-# %%
-# from itables import init_notebook_mode
-# from itables import show
-
-# init_notebook_mode(all_interactive=False)
-
-# %%
-health_Weight = [
-    "obesity",
-    "metabolism",
-    "diet",
-    "nutrition",
-    "weight management",
-    "healthy nutrition",
-    "healthy shake",
-    "dietary guidance",
-    "diet personalization",
-    "nutrition tracking",
-    "nutrition solution",
-    "macronutrients",
-    "micronutrients",
-    "health supplements",
-    "medical food",
-]
-
-health_Comorbid = [
-    "diabetes",
-    "chronic disease",
-    "health issues",
-]
-
-health_Sports = [
-    "fitness",
-]
 
 # %% [markdown]
 # ## User defined taxonomy
+
+# %%
+# ids = DR.get_companies_by_labels("in-store retail & restaurant tech", "SUB INDUSTRIES").id.to_list()
+# DR.company_labels.query('id in @ids').groupby(['Category', 'label_type']).count().sort_values('id').tail(30)
+
+# %%
+label_clusters = pd.read_csv(
+    PROJECT_DIR / "outputs/foodtech/interim/dealroom_labels.csv"
+)
 
 # %%
 # Major category > Minor category > [dealroom_label, label_type]
@@ -148,10 +113,12 @@ taxonomy = {
             "diet",
             "dietary supplements",
             "weight management",
+            "diet personalization",
         ],
         "nutrition": [
             "nutrition",
             "nutrition solution",
+            "nutrition tracking",
             "superfood",
             "healthy nutrition",
             "sports nutrition",
@@ -164,6 +131,7 @@ taxonomy = {
             "allergies",
             "chronic disease",
             "gastroenterology",
+            "cardiology",
         ],
         "health issues (other)": [
             "oncology",
@@ -193,6 +161,9 @@ taxonomy = {
         ],
     },
     "innovative food": {
+        "innovative food": [
+            "innovative food",
+        ],
         "alt protein": [
             "enabler of alternative proteins",
             "alternative protein",
@@ -206,11 +177,45 @@ taxonomy = {
         "fermentation": ["fermentation"],
         "vegan": ["vegan"],
         "plant-based": ["plant-based"],
+        "insect": ["insect"],
+        "algae and seafood": [
+            "algae",
+            "seafood",
+            "seafood substitute",
+        ],
+        "oleaginous": ["oleaginous"],
+        "dairy": [
+            "dairy",
+            "alternative dairy",
+        ],
+    },
+    "biotech": {
+        "biotech": [
+            "biotech",
+            "biotech and pharma",
+            "biotechnology",
+            "biotechnology in food",
+            "microbiology",
+            "enzymes",
+            "laboratories",
+            "molecular",
+            "synthetic biology",
+            "bioreactors",
+            "mycelium technology",
+        ],
+        "genomics": [
+            "genetics",
+            "gmo",
+            "genomics",
+            "dna",
+            "genome engineering",
+            "crispr",
+        ],
     },
     "logistics": {
         "logistics (general)": [
-            "food logistics and delivery",
-            "logistics and delivery",
+            "food logistics & delivery",
+            "logistics & delivery",
             "logistic",
             "logistics",
             "logistics tech",
@@ -248,7 +253,7 @@ taxonomy = {
     },
     "cooking and catering": {
         "kitchen and cooking (general)": [
-            "kitchen and cooking tech",
+            "kitchen & cooking tech",
         ],
         "kitchen": [
             "kitchen",
@@ -264,10 +269,110 @@ taxonomy = {
             "cooking tech",
             "cooking",
             "chef",
-            "recipes" "cook recipes",
+            "recipes",
+            "cook recipes",
+            "gastronomy",
+        ],
+    },
+    "retail and sales": {
+        "retail (general)": [
+            "retail",
+            "shopping",
+            "consumer goods",
+            "point of sale",
+            "group buying",
+            "supermarket",
+            "in-store retail tech",
+            "retail tech",
+            "crm & sales",
+            "procurement",
+            "b2b sales",
+        ],
+        "wholesale": [
+            "wholesale",
+        ],
+        "online marketplace": [
+            "ecommerce solutions",
+            "merchant tools",
+            "b2b online marketplace",
+            "mobile commerce",
+            "mobile shopping",
+            "ecommerce sites",
+        ],
+        "payments": [
+            "payment",
+            "pay per result",
+            "payments",
+            "deal comparison",
+            "price comparison",
+            "loyalty program",
+            "discount",
+            "invoicing",
+            "pricing",
+            "auction",
+            "mobile payment",
+            "billing",
+        ],
+        "marketing": [
+            "branding",
+            "marketing",
+        ],
+    },
+    "agriculture": {
+        "agriculture (general)": [
+            "farming",
+            "crop",
+            "horticulture",
+            "harvesting",
+            "cultivation",
+            "bees and pollination",
+            "fertilizer",
+        ],
+        "crop protection": [
+            "crop protection",
+            "pesticides",
+            "pest control",
+        ],
+        "agritech": [
+            "agritech",
+            "novel farming",
+            "vertical farming",
+            "precision agriculture",
+            "agricultural equipment",
+            "hydroponics",
+            "fertigation",
+            "greenhouse",
+            "regenerative agriculture",
+        ],
+    },
+    "food waste": {
+        "food waste": [
+            "food waste",
+            "waste solution",
+            "waste reduction",
+            "waste management",
+        ]
+    },
+    "in-store retail & restaurant tech": {
+        "in-store retail & restaurant tech": [
+            "in-store retail & restaurant tech",
         ],
     },
 }
+
+# %%
+rejected_tags = [
+    "pet food",
+    "pet care",
+    "pet",
+    "veterinary",
+]
+
+# %%
+technology_clusters = [12, 13, 14, 15, 18, 19, 20]
+technology_tags = label_clusters.query(
+    "cluster in @technology_clusters"
+).Category.to_list()
 
 
 # %%
@@ -303,8 +408,14 @@ taxonomy_df = create_taxonomy_dataframe(taxonomy, DR)
 # %%
 taxonomy_df
 
+# %%
+taxonomy_df.to_csv("taxonomy.csv", index=False)
+
 # %% [markdown]
 # ## Helper functions
+
+# %% [markdown]
+# ### Functions
 
 # %%
 from collections import defaultdict
@@ -312,20 +423,27 @@ import itertools
 
 
 # %%
-def get_category_ids(taxonomy_df, DR, column="Category"):
+def get_category_ids(taxonomy_df, rejected_tags, DR, column="Category"):
     category_ids = defaultdict(set)
+
+    rejected_ids = [
+        DR.get_ids_by_labels(row.Category, row.label_type)
+        for i, row in DR.labels.query("Category in @rejected_tags").iterrows()
+    ]
+    rejected_ids = set(itertools.chain(*rejected_ids))
+
     for category in taxonomy_df[column].unique():
         ids = [
             DR.get_ids_by_labels(row.Category, row.label_type)
             for i, row in taxonomy_df.query(f"`{column}` == @category").iterrows()
         ]
-        ids = set(itertools.chain(*ids))
+        ids = set(itertools.chain(*ids)).difference(rejected_ids)
         category_ids[category] = ids
     return category_ids
 
 
 # %%
-def get_category_ts(category_ids, DR):
+def get_category_ts(category_ids, DR, deal_type=utils.EARLY_DEAL_TYPES):
     ind_ts = []
     for category in category_ids:
         ids = category_ids[category]
@@ -334,7 +452,7 @@ def get_category_ts(category_ids, DR):
                 DR.company_data.query("id in @ids"),
                 (
                     DR.funding_rounds.query("id in @ids").query(
-                        "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES"
+                        "`EACH ROUND TYPE` in @deal_type"
                     )
                 ),
                 period="year",
@@ -368,10 +486,12 @@ def get_deal_counts(category_ids: dict):
 
 
 # %%
-def get_trends(taxonomy_df, taxonomy_level, DR):
-    category_ids = get_category_ids(taxonomy_df, DR, taxonomy_level)
+def get_trends(
+    taxonomy_df, rejected_tags, taxonomy_level, DR, deal_type=utils.EARLY_DEAL_TYPES
+):
+    category_ids = get_category_ids(taxonomy_df, rejected_tags, DR, taxonomy_level)
     company_counts = get_company_counts(category_ids)
-    category_ts = get_category_ts(category_ids, DR)
+    category_ts = get_category_ts(category_ids, DR, deal_type)
 
     values_title_ = "raised_amount_gbp_total"
     values_title = "Growth"
@@ -406,11 +526,94 @@ def get_trends(taxonomy_df, taxonomy_level, DR):
 
 
 # %%
+def get_deal_counts(category_ids: dict, deal_type=utils.EARLY_DEAL_TYPES):
+    category_deal_counts = []
+    for key in category_ids:
+        ids = category_ids[key]
+        deals = DR.funding_rounds.query("id in @ids").query(
+            "`EACH ROUND TYPE` in @deal_type"
+        )
+        category_deal_counts.append((key, len(deals)))
+    return pd.DataFrame(category_deal_counts, columns=["Category", "Number of deals"])
+
+
+# %% [markdown]
+# Check deal types:
+# - Early vs mature
+# - "Large" vs "small"
+
+# %%
+importlib.reload(utils)
+
+# %%
+category_ids = get_category_ids(taxonomy_df, rejected_tags, DR, column="Minor")
+# ids = category_ids['logistics']
+
+# %%
+early_vs_late_deals = pd.concat(
+    [
+        (
+            get_category_ts(category_ids, DR, deal_type=utils.EARLY_DEAL_TYPES).assign(
+                deal_type="early"
+            )
+        ),
+        (
+            get_category_ts(category_ids, DR, deal_type=utils.LATE_DEAL_TYPES).assign(
+                deal_type="late"
+            )
+        ),
+    ],
+    ignore_index=True,
+)
+
+# %%
+early_vs_late_deals_5y = (
+    early_vs_late_deals.query("year >= 2017 and year < 2022")
+    .groupby(["Category", "deal_type"], as_index=False)
+    .agg(no_of_rounds=("no_of_rounds", "sum"))
+)
+total_deals = early_vs_late_deals_5y.groupby("Category", as_index=False).agg(
+    total_no_of_rounds=("no_of_rounds", "sum")
+)
+early_vs_late_deals_5y = early_vs_late_deals_5y.merge(total_deals).assign(
+    fraction=lambda df: df["no_of_rounds"] / df["total_no_of_rounds"]
+)
+
+# %%
+alt.Chart((early_vs_late_deals_5y.query("deal_type=='late'")),).mark_bar().encode(
+    # x=alt.X('no_of_rounds:Q'),
+    x=alt.X("fraction:Q"),
+    y=alt.Y("Category:N", sort="-x"),
+    # color='deal_type',
+    tooltip=["deal_type", "no_of_rounds"],
+)
+
+# %%
+
+# %%
+cat = "diet"
+alt.Chart((early_vs_late_deals.query("Category==@cat")),).mark_bar().encode(
+    x=alt.X("year:O"),
+    y=alt.Y("sum(no_of_rounds):Q", stack="normalize"),
+    color="deal_type",
+    tooltip=["deal_type", "no_of_rounds"],
+)
+
+# %%
+alt
+early_vs_late_deals
+
+
+# %% [markdown]
+# ### Figure functions
+
+# %%
 def fig_growth_vs_magnitude(
     magnitude_vs_growth,
     colour_field,
     text_field,
     legend=alt.Legend(),
+    horizontal_scale="log",
 ):
     title_text = "Foodtech trends (2017-2021)"
     subtitle_text = [
@@ -430,7 +633,7 @@ def fig_growth_vs_magnitude(
                 "Magnitude:Q",
                 axis=alt.Axis(title=f"Average yearly raised amount (million GBP)"),
                 # scale=alt.Scale(type="linear"),
-                scale=alt.Scale(type="log"),
+                scale=alt.Scale(type=horizontal_scale),
             ),
             y=alt.Y(
                 "growth:Q",
@@ -488,6 +691,8 @@ def fig_growth_vs_magnitude(
 def fig_category_growth(
     magnitude_vs_growth_filtered,
     colour_field,
+    text_field,
+    height=500,
 ):
     """ """
     fig = (
@@ -498,7 +703,7 @@ def fig_category_growth(
                 ).assign(Magnitude_log=lambda df: np.log10(df.Magnitude))
             ),
             width=300,
-            height=450,
+            height=height,
         )
         .mark_circle(color=pu.NESTA_COLOURS[0], opacity=1)
         .encode(
@@ -515,7 +720,7 @@ def fig_category_growth(
             y=alt.Y(
                 "Category:N",
                 sort="-x",
-                axis=alt.Axis(title="Category"),
+                axis=alt.Axis(title="Category", labels=False),
             ),
             size=alt.Size(
                 "Magnitude",
@@ -542,12 +747,22 @@ def fig_category_growth(
         )
     )
 
+    text = (
+        alt.Chart(magnitude_vs_growth_filtered)
+        .mark_text(align="left", baseline="middle", font=pu.FONT, dx=7)
+        .encode(
+            text=text_field,
+            x="growth:Q",
+            y=alt.Y("Category:N", sort="-x"),
+        )
+    )
+
     # text = fig.mark_text(align="left", baseline="middle", font=pu.FONT, dx=7).encode(
     #     text='text_label:N'
     # )
 
     # fig_final = (
-    #     (fig)
+    #     (fig + text)
     #     .configure_axis(
     #         gridDash=[1, 7],
     #         gridColor="grey",
@@ -562,13 +777,14 @@ def fig_category_growth(
     #     #     .interactive()
     # )
 
-    return pu.configure_titles(pu.configure_axes(fig), "", "")
+    return pu.configure_titles(pu.configure_axes((fig + text)), "", "")
 
 
 # %%
 def fig_size_vs_magnitude(
     magnitude_vs_growth_filtered,
     colour_field,
+    horizontal_scale="log",
 ):
     fig = (
         alt.Chart(
@@ -584,7 +800,7 @@ def fig_size_vs_magnitude(
             y=alt.Y(
                 "Magnitude:Q",
                 axis=alt.Axis(title=f"Average yearly raised amount (million GBP)"),
-                scale=alt.Scale(type="log"),
+                scale=alt.Scale(type=horizontal_scale),
             ),
             color=alt.Color(colour_field),
             # size="cluster_size:Q",
@@ -607,7 +823,7 @@ def fig_size_vs_magnitude(
 
 
 # %% [markdown]
-# ## Minor categories (medium granularity)
+# ## Major categories
 
 # %%
 # Initialise a Dealroom wrangler instance
@@ -615,7 +831,63 @@ importlib.reload(wu)
 DR = wu.DealroomWrangler()
 
 # %%
-magnitude_vs_growth = get_trends(taxonomy_df, "Minor", DR)
+magnitude_vs_growth = get_trends(taxonomy_df, rejected_tags, "Major", DR)
+magnitude_vs_growth
+
+# %%
+fig_growth_vs_magnitude(
+    magnitude_vs_growth,
+    colour_field="Major",
+    text_field="Major",
+    horizontal_scale="linear",
+).interactive()
+
+# %%
+fig_category_growth(
+    magnitude_vs_growth, colour_field="Major", text_field="Major", height=300
+)
+
+# %%
+category_ids = get_category_ids(taxonomy_df, rejected_tags, DR, "Major")
+category_ts = get_category_ts(category_ids, DR)
+
+# %%
+category_ts.head(2)
+
+# %%
+utils.get_estimates(
+    category_ts,
+    value_column="raised_amount_gbp_total",
+    time_column="year",
+    category_column="Category",
+    estimate_function=au.growth,
+    year_start=2020,
+    year_end=2021,
+)
+
+# %%
+magnitude_vs_growth_late = get_trends(
+    taxonomy_df, rejected_tags, "Major", DR, deal_type=utils.LATE_DEAL_TYPES
+)
+
+# %%
+fig_growth_vs_magnitude(
+    magnitude_vs_growth_late,
+    colour_field="Major",
+    text_field="Major",
+    horizontal_scale="log",
+).interactive()
+
+# %%
+fig_category_growth(
+    magnitude_vs_growth_late, colour_field="Major", text_field="Major", height=300
+)
+
+# %% [markdown]
+# ## Minor categories (medium granularity)
+
+# %%
+magnitude_vs_growth = get_trends(taxonomy_df, rejected_tags, "Minor", DR)
 magnitude_vs_growth
 
 # %%
@@ -624,10 +896,28 @@ fig_growth_vs_magnitude(
 ).interactive()
 
 # %%
-fig_category_growth(magnitude_vs_growth, colour_field="Major")
+fig_category_growth(magnitude_vs_growth, colour_field="Major", text_field="Minor")
 
 # %%
-fig_size_vs_magnitude(magnitude_vs_growth, colour_field="Major")
+# fig_size_vs_magnitude(magnitude_vs_growth, colour_field="Major")
+
+# %%
+category_ids = get_category_ids(taxonomy_df, rejected_tags, DR, "Minor")
+category_ts = get_category_ts(category_ids, DR)
+
+# %%
+utils.get_estimates(
+    category_ts,
+    value_column="raised_amount_gbp_total",
+    time_column="year",
+    category_column="Category",
+    estimate_function=au.growth,
+    year_start=2020,
+    year_end=2021,
+)
+
+# %% [markdown]
+# ### Technology presence
 
 # %%
 # category='meal kits'
@@ -642,12 +932,17 @@ fig_size_vs_magnitude(magnitude_vs_growth, colour_field="Major")
 # ## Tags (most granular categories)
 
 # %%
-magnitude_vs_growth = get_trends(taxonomy_df, "Category", DR)
+magnitude_vs_growth_granular = get_trends(taxonomy_df, rejected_tags, "Category", DR)
 
 # %%
-magnitude_vs_growth_filtered = magnitude_vs_growth.query(
-    "`Number of companies` > 10"
-).query("`Number of deals` > 10")
+removed = ["enzymes"]
+# removed = []
+
+magnitude_vs_growth_filtered = (
+    magnitude_vs_growth_granular.query("`Number of companies` > 20")
+    .query("`Number of deals` > 20")
+    .query("Category not in @removed")
+)
 
 # %%
 fig_growth_vs_magnitude(
@@ -658,19 +953,35 @@ fig_growth_vs_magnitude(
 
 
 # %%
-
-# %%
-
-# %%
-category = "meal kits"
-pu.cb_investments_barplot(
-    category_ts.query("Category == @category"),
-    y_column="raised_amount_gbp_total",
-    y_label="Raised amount (million GBP)",
-    x_label="Year",
+fig_category_growth(
+    magnitude_vs_growth_filtered, colour_field="Major", text_field="Category"
 )
 
 # %%
+ids = get_category_ids(taxonomy_df, rejected_tags, DR, column="Minor")
+
+# %%
+# cat = list(ids.keys())[16]
+# print(cat)
+# ids_ = ids[cat]
+# (
+#     DR.company_labels.query("id in @ids_")
+#     .query("Category in @technology_tags")
+#     .groupby('Category', as_index=False).agg(counts=('id', 'count'))
+#     .sort_values('counts', ascending=False)
+# ).head(10)
+
+# %%
+# DR.get_companies_by_labels('arts & culture', 'TAGS')
+
+# %%
+# category = "meal kits"
+# pu.cb_investments_barplot(
+#     category_ts.query("Category == @category"),
+#     y_column="raised_amount_gbp_total",
+#     y_label="Raised amount (million GBP)",
+#     x_label="Year",
+# )
 
 # %% [markdown]
 # # Segmenting the categories
@@ -842,6 +1153,12 @@ chosen_cat = DR.company_labels.query("Category in @health_Weight").id.to_list()
 #     .groupby("id")["Category"].apply(list)
 # )
 
+# %% [markdown]
+# ### Inspect companies using embeddings
+
+# %%
+alt.data_transformers.disable_max_rows()
+
 # %%
 importlib.reload(dlr)
 v_vectors = dlr.get_company_embeddings(
@@ -860,66 +1177,90 @@ reducer_low_dim = umap.UMAP(
 embedding = reducer_low_dim.fit_transform(v_vectors.vectors)
 
 # %%
+category_ids_major = get_category_ids(taxonomy_df, rejected_tags, DR, "Major")
+category_ids_minor = get_category_ids(taxonomy_df, rejected_tags, DR, "Minor")
+
+# %%
+list(category_ids_major.keys())
+
+# %% [markdown]
+# ## Select a category
+
+# %%
+major_category = "logistics"
+ids = category_ids_major[major_category]
+minor_categories = list(taxonomy[major_category].keys())
+
+# %%
 df_viz = (
-    DR.company_data[["id", "NAME", "TAGLINE", "WEBSITE"]]
+    DR.company_data[["id", "NAME", "TAGLINE", "WEBSITE", "TOTAL FUNDING (EUR M)"]]
     .copy()
     .assign(x=embedding[:, 0])
     .assign(y=embedding[:, 1])
+    .assign(minor="n/a")
+    .query("`TOTAL FUNDING (EUR M)` > 0")
+    .query("id in @ids")
+    .copy()
     .merge(
         pd.DataFrame(
             DR.company_labels.groupby("id")["Category"].apply(list)
         ).reset_index()
     )
-    .assign(in_category=lambda df: df.id.isin(chosen_cat))
 )
 
-# %%
-alt.data_transformers.disable_max_rows()
+for cat in minor_categories:
+    df_viz.loc[df_viz.id.isin(category_ids_minor[cat]), "minor"] = cat
 
 # %%
-# # Visualise using altair
-# fig = (
-#     alt.Chart(df_viz, width=1000, height=1000)
-#     .mark_circle(size=20, color=pu.NESTA_COLOURS[1])
-#     .encode(
-#         x=alt.X("x", axis=None),
-#         y=alt.Y("y", axis=None),
-#         tooltip=list(df_viz.columns),
-#         #         color="Primary Category:N",
-#         color="in_category:N",
-#         href="WEBSITE",
-#         #         size="Hours per Week",
-#     )
-# )
+dd
 
-# # text = (
-# #     alt.Chart(centroids)
-# #     .mark_text(font=pu.FONT)
-# #     .encode(x=alt.X("x_c:Q"), y=alt.Y("y_c:Q"), text=alt.Text("keywords"))
-# # )
+# %%
+len(DR.company_data.query("id in @ids"))
 
-# fig_final = (
-#     (fig)
-#     .configure_axis(
-#         # gridDash=[1, 7],
-#         gridColor="white",
-#     )
-#     .configure_view(strokeWidth=0, strokeOpacity=0)
-#     .properties(
-#         title={
-#             "anchor": "start",
-#             "text": ["Landscape of companies"],
-#             "subtitle": "",
-#             #             [
-#             #                 "Each circle is a course; courses with similar titles will be closer on this map",
-#             #                 "Press Shift and click on a circle to go the course webpage",
-#             #             ],
-#             "subtitleFont": pu.FONT,
-#         },
-#     )
-#     .interactive()
-# )
+# %%
+len(DR.company_data.query("`TOTAL FUNDING (EUR M)` > 0").query("id in @ids"))
+
+# %%
+# df_viz
+
+# %%
+# Visualise using altair
+fig = (
+    alt.Chart(df_viz, width=500, height=500)
+    .mark_circle(size=40)
+    .encode(
+        x=alt.X("x", axis=None),
+        y=alt.Y("y", axis=None),
+        tooltip=list(df_viz.columns),
+        color="minor:N",
+        href="WEBSITE",
+        size=alt.Size("TOTAL FUNDING (EUR M)", scale=alt.Scale(range=[20, 2000])),
+    )
+)
+fig_final = (
+    (fig)
+    .configure_axis(
+        gridColor="white",
+    )
+    .configure_view(strokeWidth=0, strokeOpacity=0)
+    .properties(
+        title={
+            "anchor": "start",
+            "text": ["Landscape of companies"],
+            "subtitle": "",
+            #             [
+            #                 "Each circle is a course; courses with similar titles will be closer on this map",
+            #                 "Press Shift and click on a circle to go the course webpage",
+            #             ],
+            "subtitleFont": pu.FONT,
+        },
+    )
+    .interactive()
+)
 
 fig_final
+
+# %%
+AltairSaver.save(fig_final, f"foodtech_companies_{major_category}", filetypes=["html"])
 
 # %%
