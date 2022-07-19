@@ -52,17 +52,6 @@ DR = wu.DealroomWrangler()
 len(DR.company_data)
 
 # %% [markdown]
-# ## Deal types
-
-# %%
-for d in sorted(utils.EARLY_DEAL_TYPES):
-    print(d)
-
-# %%
-for d in sorted(utils.LATE_DEAL_TYPES):
-    print(d)
-
-# %% [markdown]
 # ## Explore label embeddings
 
 # %%
@@ -667,7 +656,7 @@ technology_tags = (
 )
 
 # %%
-# technology_tags
+technology_tags
 
 # %% [markdown]
 # #### create taxonomy dataframe
@@ -809,10 +798,10 @@ for company_id in tqdm(companies_to_check, total=len(companies_to_check)):
 
 
 # %%
-DR.company_data[DR.company_data.NAME.str.contains("Bolt")]
+DR.company_data[DR.company_data.NAME.str.contains("Uber")]
 
 # %%
-company_to_taxonomy_dict["26411"]
+company_to_taxonomy_dict["31657"]
 
 # %% [markdown]
 # #### Special assignments
@@ -2288,7 +2277,7 @@ AltairSaver.save(fig, f"vJuly18_countries_major_early", filetypes=["html", "png"
     .query("announced_on >= '2017-01-01' and announced_on < '2022-01-01'")
     .merge(DR.company_data[["id", "NAME", "PROFILE URL", "country"]])
     .query("Category=='logistics'")
-    # .query("country=='United Kingdom'")
+    .query("country=='United Kingdom'")
     .groupby(["NAME", "PROFILE URL"], as_index=False)
     .sum()
     .sort_values("raised_amount_gbp", ascending=False)
@@ -2448,7 +2437,7 @@ comp_names_ = [
 
 
 # %%
-dfs[2].query("`EACH ROUND TYPE` == 'ACQUISITION'")[["NAME"]]
+dfs[0]
 
 # %%
 pd.DataFrame(

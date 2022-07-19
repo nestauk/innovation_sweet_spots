@@ -56,6 +56,33 @@ DEAL_CATEGORIES_ = [
 ]
 
 
+def configure_plots(fig, chart_title: str = "", chart_subtitle: str = ""):
+    """Add titles, subtitles and configure font sizes"""
+    return (
+        fig.properties(
+            title={
+                "anchor": "start",
+                "text": chart_title,
+                "fontSize": FONTSIZE_TITLE,
+                "subtitle": chart_subtitle,
+                "subtitleFont": FONT,
+                "subtitleFontSize": FONTSIZE_NORMAL,
+            },
+        )
+        .configure_axis(
+            gridDash=[1, 7],
+            gridColor="grey",
+            labelFontSize=FONTSIZE_NORMAL,
+            titleFontSize=FONTSIZE_NORMAL,
+        )
+        .configure_legend(
+            titleFontSize=FONTSIZE_NORMAL,
+            labelFontSize=FONTSIZE_NORMAL,
+        )
+        .configure_view(strokeWidth=0)
+    )
+
+
 def nestafont():
     """Define Nesta fonts"""
     return {

@@ -155,3 +155,32 @@ def get_magnitude_vs_growth(
     ).rename(columns={value_column: "Magnitude"})
 
     return df_growth.merge(df_magnitude, on=category_column)
+
+
+def deal_amount_to_range(
+    amount: float, currency: str = "£", categories: bool = True
+) -> str:
+    """
+    Convert amounts to range in millions
+    Args:
+        amount: Investment amount (in GBP thousands)
+        categories: If True, adding indicative deal categories
+        currency: Currency symbol
+    """
+    amount /= 1e3
+    if (amount >= 0.001) and (amount < 1):
+        return f"{currency}0-1M" if not categories else f"{currency}0-1M"
+    elif (amount >= 1) and (amount < 4):
+        return f"{currency}1-4M" if not categories else f"{currency}1-4M"
+    elif (amount >= 4) and (amount < 15):
+        return f"{currency}4-15M" if not categories else f"{currency}4-15M"
+    elif (amount >= 15) and (amount < 40):
+        return f"{currency}15-40M" if not categories else f"{currency}15-40M"
+    elif (amount >= 40) and (amount < 100):
+        return f"{currency}40-100M" if not categories else f"{currency}40-100M"
+    elif (amount >= 100) and (amount < 250):
+        return f"{currency}100-250M"
+    elif amount >= 250:
+        return f"{currency}250+"
+    else:
+        return "n/a"

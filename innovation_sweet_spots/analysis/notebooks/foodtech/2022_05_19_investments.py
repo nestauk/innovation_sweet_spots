@@ -25,6 +25,8 @@ import innovation_sweet_spots.analysis.analysis_utils as au
 from innovation_sweet_spots.utils import plotting_utils as pu
 import utils
 
+import importlib
+
 importlib.reload(wu)
 import altair as alt
 import pandas as pd
@@ -384,23 +386,20 @@ import pandas as pd
 # %%
 # def fetch_company_labels(c)
 label = "SUB INDUSTRIES"
-sub = DR.company_subindustries.rename(columns={label: "Category"}).assign(
-    label="sub_industry"
-)
+sub = DR.company_subindustries.rename(columns={label: "Category"})
 
 label = "INDUSTRIES"
-ind = DR.company_industries.rename(columns={label: "Category"}).assign(label="industry")
-
+ind = DR.company_industries.rename(columns={label: "Category"})
 
 label = "TAGS"
-tags = DR.company_tags.rename(columns={label: "Category"}).assign(label="tag")
+tags = DR.company_tags.rename(columns={label: "Category"})
 
 company_labels = pd.concat([sub, ind, tags], ignore_index=True)
 company_labels = company_labels[-company_labels.Category.isnull()]
 
 
 # %%
-company_labels.sample(3)
+company_labels.head(3)
 
 # %% [markdown]
 # ## Country performance
@@ -472,30 +471,18 @@ def clean_text(text):
 
 
 # %%
-importlib.reload(tcu)
-tcu.clean_dealroom_labels
-
-# %%
-importlib.reload(wu)
-DR = wu.DealroomWrangler()
-
-# %%
-company_labels_ = DR.company_labels.copy().assign(
-    Category=lambda df: df.Category.apply(tcu.clean_dealroom_labels)
+company_labels_ = company_labels.copy().assign(
+    Category=lambda df: df.Category.apply(clean_text)
 )
 
 # %%
 company_labels_list = company_labels_.groupby("id")["Category"].apply(list)
 
-
 # %%
 company_labels_list.head(2)
 
 # %%
-## Label embeddings
-
-# %%
-labels_unique = DR.labels.Category.to_list()
+labels_unique = list(company_labels_.Category.unique())
 
 # %%
 len(labels_unique)
