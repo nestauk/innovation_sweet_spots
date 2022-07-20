@@ -1,6 +1,6 @@
 # Mapping parenting tech: Venture capital trends
 
-Analysis scripts and notebooks, developed for Nesta's [Mapping parenting technologies project](https://www.nesta.org.uk/project/mapping-parenting-technology/).
+Analysis scripts and notebooks, developed for Nesta's [Mapping parenting technologies project](https://www.nesta.org.uk/project/mapping-parenting-technology/). This analysis re-used code developed for Nesta's [Innovation Sweet Spots](https://www.nesta.org.uk/feature/innovation-sweet-spots/) project, which is why it is located in this repo.
 
 To learn about innovation trends around digital technologies for parenting and early years education (for 0-5 year olds), we used [Crunchbase](https://crunchbase.com/) business information platform to analyse companies and venture capital investments in this space. The final list of the identified early years education and parenting company names can be found [here](https://docs.google.com/spreadsheets/d/1KELT0mLeMC565blGOxHj7soLx4qK6pzdUx7xqjNy29k/edit#gid=2002056421).
 
@@ -17,7 +17,7 @@ _In addition, for this project we also analysed trends around children and paren
 
 The _deprecated/_ folder contains notebooks with interim data explorations, and can be avoided.
 
-## Methdology
+## Methdology
 
 ### Identification of companies by industries and keywords
 
@@ -119,7 +119,7 @@ For the digital technology analysis, we again used Crunchbase industry labels. W
 
 ```
 
-### Caveats
+## Caveats
 
 It is important to note that the analysis largely relies on the company labels on Crunchbase, which we do not expect to be fully complete. For the digital technology categories, the growth estimates might also be influenced by popularity and maturity of the technologies. For example, categories like 'internet’ or ‘information technology’ are likely becoming redundant as most companies depend on these technologies and they do not serve as reliable differentiators anymore.
 
