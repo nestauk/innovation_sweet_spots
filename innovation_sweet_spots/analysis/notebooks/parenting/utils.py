@@ -1,14 +1,54 @@
 """
 innovation_sweet_spots.analysis.notebooks.parenting.utils
 
-Helper module for analysing parenting companies
+Helper module for analysing parenting and early years companies
 """
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
+from innovation_sweet_spots.analysis.query_categories import query_cb_categories
 import innovation_sweet_spots.analysis.analysis_utils as au
 from typing import Iterator
 import pandas as pd
 
 CB = CrunchbaseWrangler()
+
+
+def save_data_table(table: pd.DataFrame, filename: str, folder):
+    """Helper function to save table data underpinning figures"""
+    table.to_csv(folder / f"{filename}.csv", index=False)
+
+
+def select_by_role(cb_orgs: pd.DataFrame, role: str):
+    """
+    Select companies that have the specified role.
+    Roles can be 'investor', 'company', or 'both'
+    """
+    all_roles = cb_orgs.roles.copy().fillna("")
+    if role != "both":
+        return cb_orgs[all_roles.str.contains(role)]
+    else:
+        return cb_orgs[
+            all_roles.str.contains("investor") & all_roles.str.contains("company")
+        ]
+
+
+def query_keywords(keywords: Iterator[str], CbWrangler: CrunchbaseWrangler) -> set:
+    """Helper wrapper function for querying companies by keywords"""
+    return set(
+        query_cb_categories(
+            keywords, CbWrangler, return_only_matches=True, verbose=False
+        ).id.to_list()
+    )
+
+
+def select_companies_with_funds(
+    company_ids, CbWrangler: CrunchbaseWrangler
+) -> pd.DataFrame:
+    """Helper wrapper function to select only companies with data on investment deals"""
+    return (
+        CbWrangler.cb_organisations.query("id in @company_ids")
+        .pipe(select_by_role, "company")
+        .pipe(au.get_companies_with_funds)
+    )
 
 
 def add_space_in_front(list_of_term_lists: Iterator[Iterator[str]]):
@@ -130,11 +170,6 @@ EXCLUDE_FROM_DIGITAL = [
     "usability testing",
 ]
 
-# Additional industries to add to the digital industry list
-# EXTRA_INDUSTRIES = [
-#     "toys",
-# ]
-
 # Digital industries
 DIGITAL_INDUSTRIES = [
     i
@@ -203,16 +238,9 @@ ALL_LEARNING_TERMS = LEARNING_TERMS + PRESCHOOL_TERMS
 EARLY_STAGE_DEALS = [
     "angel",
     "convertible_note",
-    #     "corporate_round",
-    #     "debt_financing",
     "equity_crowdfunding",
-    #     "grant",
     "non_equity_assistance",
-    #     "post_ipo_debt",
-    #     "post_ipo_equity",
-    #     "post_ipo_secondary",
     "pre_seed",
-    #     "private_equity",
     "product_crowdfunding",
     "secondary_market",
     "seed",
@@ -222,30 +250,14 @@ EARLY_STAGE_DEALS = [
     "series_d",
     "series_e",
     "series_unknown",
-    #     "undisclosed",
 ]
 
 LATE_STAGE_DEALS = [
-    #     "angel",
-    #     "convertible_note",
     "corporate_round",
     "debt_financing",
-    #     "equity_crowdfunding",
-    #     "grant",
-    #     "non_equity_assistance",
     "post_ipo_debt",
     "post_ipo_equity",
     "post_ipo_secondary",
-    #     "pre_seed",
     "private_equity",
-    #     "product_crowdfunding",
-    #     "secondary_market",
-    #     "seed",
-    #     "series_a",
-    #     "series_b",
-    #     "series_c",
-    #     "series_d",
-    #     "series_e",
-    #     "series_unknown",
     "undisclosed",
 ]

@@ -534,7 +534,6 @@ def investments_by_industry_ts(
     cb_orgs: pd.DataFrame,
     industries: Iterator[str],
     cb_wrangler: CrunchbaseWrangler,
-    value_column: str,
     min_year: int,
     max_year: int,
     use_industry_groups: bool = False,
