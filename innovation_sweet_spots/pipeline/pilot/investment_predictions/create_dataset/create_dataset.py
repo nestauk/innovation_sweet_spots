@@ -5,11 +5,10 @@ used for predicting future investment sucess for companies.
 Run the following command in the terminal to see the options for creating the dataset:
 python innovation_sweet_spots/pipeline/pilot/investment_predictions/create_dataset/create_dataset.py --help
 
-On an M1 macbook it takes ~8 mins 30 secs to run on the full dataset and ~2 mins 30 secs to run in test mode.
+On an M1 macbook it takes ~14 mins to run on the full dataset and ~1 mins 30 secs to run in test mode.
 """
 import typer
 from innovation_sweet_spots import PROJECT_DIR
-from innovation_sweet_spots.getters import crunchbase
 from innovation_sweet_spots.getters.crunchbase import (
     get_crunchbase_funding_rounds,
     get_crunchbase_ipos,
@@ -21,6 +20,7 @@ from innovation_sweet_spots.getters.crunchbase import (
     get_crunchbase_gtr_lookup,
 )
 from innovation_sweet_spots.getters.gtr import get_link_table
+from innovation_sweet_spots.getters.crunchbase_beis import get_crunchbase_beis
 from innovation_sweet_spots.pipeline.pilot.investment_predictions.create_dataset import (
     utils,
 )
@@ -29,9 +29,6 @@ from innovation_sweet_spots.analysis.wrangling_utils import (
     CrunchbaseWrangler,
     GtrWrangler,
 )
-
-# Adjust the Crunchbase data snapshot path (ideally, should adapt the code to accommodate the newest snapshot)
-crunchbase.CB_PATH = crunchbase.CB_PATH.parents[0] / "cb_2021"
 
 KEEP_COLS = [
     "id",
@@ -100,8 +97,8 @@ UKRI_GRANT_PROVIDERS_TO_FILTER = (
 
 
 def create_dataset(
-    window_start_date: str = "01/01/2010",
-    window_end_date: str = "01/01/2018",
+    window_start_date: str = "01/01/2011",
+    window_end_date: str = "01/01/2019",
     industries_or_groups: str = "groups",
     test: bool = False,
 ):
@@ -128,14 +125,13 @@ def create_dataset(
     cb_wrangler = CrunchbaseWrangler()
 
     # Load datasets
+    nrows = 20_000 if test else None
     cb_orgs = (
-        get_crunchbase_orgs()
+        get_crunchbase_orgs(nrows)
         .query("country_code == 'GBR'")
         .assign(founded_on=lambda x: pd.to_datetime(x.founded_on, errors="coerce"))
-        .reset_index()
+        .reset_index(drop=True)
     )
-    if test:
-        cb_orgs = cb_orgs.head(2000)
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
     cb_funding_rounds_grants = get_crunchbase_funding_rounds().assign(
@@ -145,6 +141,8 @@ def create_dataset(
     cb_investments = get_crunchbase_investments()
     cb_people = get_crunchbase_people()
     cb_degrees = get_crunchbase_degrees()
+    cb_beis = get_crunchbase_beis(window_end_date.year)
+    cb_beis_processed = utils.process_cb_beis(cb_beis)
 
     # Convert funding amounts to GBP
     cb_funding_rounds_grants_gbp = cb_wrangler.convert_deal_currency_to_gbp(
@@ -245,19 +243,7 @@ def create_dataset(
         cb_orgs = cb_orgs.pipe(utils.add_group_dummies, industry_to_group_map)
 
     # Add founder info to people info
-    cb_people = (
-        cb_people.pipe(utils.add_clean_job_title)
-        .pipe(utils.add_is_founder)
-        .pipe(utils.add_is_gender, gender="male")
-        .dropna(subset=["featured_job_organization_id"])
-        .rename(
-            columns={
-                "id": "person_id",
-                "featured_job_organization_id": "org_id",
-            }
-        )
-        .reset_index(drop=True)
-    )
+    cb_people = utils.add_founder_features_to_people(cb_people)
 
     # Create dataframe for person id and degree count
     person_degree_count = utils.person_id_degree_count(cb_degrees)
@@ -268,14 +254,7 @@ def create_dataset(
     )
 
     # Create dataframe for org_id with grouped founders data
-    org_id_founders = (
-        cb_founders.groupby("org_id").agg(
-            founder_count=("is_founder", "sum"),
-            male_founder_percentage=("is_male_founder", "mean"),
-            founder_max_degrees=("degree_count", "max"),
-            founder_mean_degrees=("degree_count", "mean"),
-        )
-    ).reset_index()
+    org_id_founders = utils.groupby_founders_features(cb_founders)
 
     dataset = (
         # Add flag for founded on and filter out companies with 0 flag
@@ -388,20 +367,27 @@ def create_dataset(
         .pipe(utils.add_n_months_since_last_grant, window_end_date)
         # Add col for number of before first grant
         .pipe(utils.add_n_months_before_first_grant)
+        # Add cols for BEIS indicators
+        .pipe(utils.add_beis_indicators, cb_beis_processed)
+        # Add dummy cols for green tech categories
+        .pipe(utils.add_green_tech_cats, green_pilot_lookup=utils.green_pilot_lookup())
+        # Drop rows without a location_id
+        .dropna(subset=["location_id"])
         # Drop columns
         .pipe(
             utils.drop_multi_cols,
             cols_to_drop_str_containing=DROP_MULTI_COLS,
         )
-        .drop(columns=DROP_COLS)
+        .drop(columns=DROP_COLS, errors="ignore")
         .reset_index(drop=True)
     )
+    test_indicator = "_test" if test else ""
     dataset.to_csv(
         PROJECT_DIR
         / "outputs/finals/pilot_outputs"
         / "investment_predictions/company_data_window_"
         f"{str(window_start_date).split(' ')[0]}-{str(window_end_date).split(' ')[0]}"
-        ".csv"
+        f"{test_indicator}.csv"
     )
 
 

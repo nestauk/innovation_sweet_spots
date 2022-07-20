@@ -3,6 +3,7 @@ import numpy as np
 from itertools import chain
 from typing import Union
 from ast import literal_eval
+from innovation_sweet_spots.getters.crunchbase import get_pilot_crunchbase_companies
 
 
 def convert_col_to_has_col(df: pd.DataFrame, col: str, drop: bool) -> pd.DataFrame:
@@ -50,28 +51,14 @@ def ind_to_group(industries: list, industry_to_group_map: dict) -> set:
     return set(flattened)
 
 
-def tech_cats_to_dummies(cb_data: pd.DataFrame) -> pd.DataFrame:
-    """Convert tech_category column to dummy columns with values 0 or 1"""
-    combine_tech_cats = (
-        cb_data.groupby("id")
-        .agg({"tech_category": lambda x: ", ".join(map(str, x))})
-        .reset_index()
-    )
-    dummies = combine_tech_cats["tech_category"].str.get_dummies(sep=", ")
-    id_dummies = combine_tech_cats.merge(
-        dummies, left_index=True, right_index=True
-    ).drop(columns=["tech_category"])
-
-    return (
-        cb_data.drop(columns=["tech_category"])
-        .drop_duplicates()
-        .merge(id_dummies, left_on="id", right_on="id")
-    )
-
-
 def add_industry_dummies(cb_orgs: pd.DataFrame) -> pd.DataFrame:
     """Adds dummy columns for industries"""
-    industry_dummies = pd.get_dummies(cb_orgs["industry_clean"].explode()).sum(level=0)
+    industry_dummies = (
+        pd.get_dummies(cb_orgs["industry_clean"].explode())
+        .sum(level=0)
+        .add_prefix("ind_")
+    )
+    industry_dummies.columns = industry_dummies.columns.str.replace(" ", "_")
     return cb_orgs.merge(industry_dummies, left_index=True, right_index=True)
 
 
@@ -90,7 +77,10 @@ def add_group_dummies(
     cb_orgs["groups"] = cb_orgs["industry_clean"].apply(
         ind_to_group, args=(industry_to_group_map,)
     )
-    group_dummies = pd.get_dummies(cb_orgs["groups"].explode()).sum(level=0)
+    group_dummies = (
+        pd.get_dummies(cb_orgs["groups"].explode()).sum(level=0).add_prefix("group_")
+    )
+    group_dummies.columns = group_dummies.columns.str.replace(" ", "_")
     return cb_orgs.merge(group_dummies, left_index=True, right_index=True)
 
 
@@ -835,7 +825,7 @@ def add_gtr_project_to_cb_gtr_lookup(
     )
 
 
-def standardise_gtr_grants(cb_gtr_lookup_projects):
+def standardise_gtr_grants(cb_gtr_lookup_projects: pd.DataFrame) -> pd.DataFrame:
     """Standardise gtr grants data so that it can be
     combined with crunchbase grants data"""
     return (
@@ -931,3 +921,125 @@ def gtr_projects_with_lead_orgs(
             how="left",
         )[["project_id", "fund_start", "amount", "gtr_org_id"]]
     )
+
+
+def process_cb_beis(cb_beis: pd.DataFrame) -> pd.DataFrame:
+    """Drop columns name, id, nuts2_2010, nuts2_2013, nuts2_2016
+    and duplicate rows from cb_beis file. Add prefix 'beis_' to columns
+    """
+    return (
+        cb_beis.drop(columns=["name", "id", "nuts2_2010", "nuts2_2013", "nuts2_2016"])
+        .drop_duplicates()
+        .rename(
+            columns={
+                col: f"beis_{col}"
+                for col in cb_beis.columns
+                if col not in ["id", "name", "location_id"]
+            }
+        )
+    )
+
+
+def add_beis_indicators(
+    cb_data: pd.DataFrame, cb_beis_processed: pd.DataFrame
+) -> pd.DataFrame:
+    """Add columns for the BEIS indicators to the dataset
+
+    Args:
+        cb_data: Dataframe to add number BEIS indicators too,
+            must contain column for 'location_id'
+        cb_beis_processed: Dataframe containing 'location_id' and BEIS
+            indicators
+
+    Returns:
+        cb_data with BEIS indicators added
+    """
+    return cb_data.merge(
+        right=cb_beis_processed,
+        how="left",
+        left_on="location_id",
+        right_on="location_id",
+    )
+
+
+def green_pilot_lookup() -> pd.DataFrame:
+    """Crunchbase org id to ISS green pilot tech category lookup"""
+    return (
+        get_pilot_crunchbase_companies()[["id", "tech_category"]]
+        .drop_duplicates()
+        .reset_index(drop=True)
+        .assign(
+            tech_category=lambda x: x.tech_category.str.lower().str.replace(
+                " ", "_", regex=False
+            )
+        )
+    )
+
+
+def tech_cats_to_dummies(green_pilot_lookup: pd.DataFrame) -> pd.DataFrame:
+    """Convert tech_category column to dummy columns with values 0 or 1"""
+    combine_tech_cats = (
+        green_pilot_lookup.groupby("id")
+        .agg({"tech_category": lambda x: ", ".join(map(str, x))})
+        .reset_index()
+    )
+    dummies = (
+        combine_tech_cats["tech_category"]
+        .str.get_dummies(sep=", ")
+        .add_prefix("tech_cat_")
+        .assign(green_pilot=1)
+    )
+    return combine_tech_cats.merge(dummies, left_index=True, right_index=True).drop(
+        columns=["tech_category"]
+    )
+
+
+def add_green_tech_cats(
+    cb_data: pd.DataFrame, green_pilot_lookup: pd.DataFrame
+) -> pd.DataFrame:
+    """Add dummy columns for emerging green technology categories
+
+    Args:
+        cb_data: Dataframe to add green tech category dummy columns to
+        green_pilot_lookup: Crunchbase org id to ISS green pilot tech category lookup
+
+    Returns:
+        cb_data with dummy columns for emerging green technology categories
+    """
+    tech_cats = tech_cats_to_dummies(green_pilot_lookup)
+    fill_na_dict = {col: 0 for col in tech_cats.columns if col != "id"}
+    return cb_data.merge(
+        tech_cats,
+        how="left",
+        left_on="id",
+        right_on="id",
+    ).fillna(fill_na_dict)
+
+
+def add_founder_features_to_people(cb_people: pd.DataFrame) -> pd.DataFrame:
+    """Add founder related features to crunchbase people data"""
+    return (
+        cb_people.pipe(add_clean_job_title)
+        .pipe(add_is_founder)
+        .pipe(add_is_gender, gender="male")
+        .dropna(subset=["featured_job_organization_id"])
+        .rename(
+            columns={
+                "id": "person_id",
+                "featured_job_organization_id": "org_id",
+            }
+        )
+        .reset_index(drop=True)
+    )
+
+
+def groupby_founders_features(cb_founders: pd.DataFrame) -> pd.DataFrame:
+    """Groupbys founders features relating to each org_id"""
+    return (
+        cb_founders.groupby("org_id").agg(
+            founder_count=("is_founder", "sum"),
+            male_founder_percentage=("is_male_founder", "mean"),
+            founder_max_degrees=("degree_count", "max"),
+            founder_mean_degrees=("degree_count", "mean"),
+        )
+    ).reset_index()

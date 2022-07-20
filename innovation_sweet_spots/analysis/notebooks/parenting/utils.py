@@ -259,5 +259,4 @@ LATE_STAGE_DEALS = [
     "post_ipo_equity",
     "post_ipo_secondary",
     "private_equity",
-    "undisclosed",
 ]
