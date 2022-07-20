@@ -76,12 +76,63 @@ def clean_website_col(df: pd.DataFrame, col: str) -> pd.DataFrame:
     return df.pipe(remove_fw_slash, col).pipe(remove_http_https, col).pipe(add_www, col)
 
 
-STOPWORDS = ["ltd", "llp", "limited", "holdings", "group", "cic", "uk", "plc"]
+STOPWORDS = [
+    "ltd",
+    "llp",
+    "limited",
+    "holdings",
+    "group",
+    "cic",
+    "uk",
+    "plc",
+    "inc",
+    "gmbh",
+    "srl",
+    "sa",
+    "nz",
+    "co",
+    "se",
+    "sarl",
+    "sl",
+    "bv",
+    "doo",
+    "fmcg",
+    "llc",
+    "zao",
+    "kg",
+    "kft",
+    "aps",
+    "ab",
+    "as",
+    "oy",
+    "sro",
+    "sas",
+    "ccl",
+    "sdn",
+    "bhd",
+    "ug",
+    "ek",
+    "kk",
+    "kc",
+    "sp",
+    "website",
+    "nbsp",
+    "hk",
+    "int",
+    "rl",
+    "usa",
+    "nc",
+    "sac",
+    "sac",
+    "pvt",
+    "intl",
+    "gbr",
+]
 
 # %%
 dr = cols_replace_space_and_lowercase(
     get_foodtech_companies()
-)  # [["id", "NAME", "PROFILE URL", "WEBSITE", "HQ COUNTRY", ]]
+).drop_duplicates()  # [["id", "NAME", "PROFILE URL", "WEBSITE", "HQ COUNTRY", ]]
 cb = get_crunchbase_orgs()  # .query("country_code == 'GBR'")
 
 # %%
@@ -153,7 +204,39 @@ id_dr_to_id_cb_from_cb_url_website_country_name = pd.concat(
 id_dr_to_id_cb_from_cb_url_website_country_name
 
 # %%
-18815 / 25166
+id_dr_to_id_cb_from_cb_url_website_country_name.to_csv(
+    "dr_to_cb_matches.csv", index=False
+)
+
+# %%
+cb.query("id == '25d07a9f-019e-4965-b2c0-019dbb37ea12'")
+
+# %%
+dr.query("id == 1757305")
+
+# %%
+19315 / 25166
+
+# %%
+25166 - 19278
+
+# %%
+dr
+
+# %%
+len(dr_already_matches_ids3)
+
+# %%
+dr_already_matches_ids3 = list(
+    id_dr_to_id_cb_from_cb_url_website_country_name.id_dr.values
+)
+dr_left_to_match3 = dr.query(f"id not in {dr_already_matches_ids3}")
+
+# %%
+dr_left_to_match3
+
+# %%
+dr_left_to_match3.to_csv("dr_left_to_match3.csv", index=False)
 
 # %%
 for col in cb.columns:
