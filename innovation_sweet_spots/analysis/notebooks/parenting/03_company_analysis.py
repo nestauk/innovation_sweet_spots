@@ -56,8 +56,11 @@ funding_df = CB.get_funding_rounds(cb_companies_with_funds).query(
 )
 # Funding time series
 funding_ts = au.cb_get_all_timeseries(
-    cb_companies_with_funds, funding_df, "year", 2010, 2021
+    cb_companies_with_funds, funding_df, "year", 2009, 2021
 )
+
+# %%
+utils.EARLY_STAGE_DEALS
 
 # %% [markdown]
 # # Drawing graphs
@@ -92,7 +95,7 @@ data = (
 
 fig = (
     alt.Chart(
-        data,
+        data.query("Year > 2009"),
         width=400,
         height=200,
     )
@@ -114,6 +117,12 @@ utils.save_data_table(data, figure_name, TABLES_DIR)
 
 # %% [markdown]
 # ### Investment growth figures
+
+# %%
+au.smoothed_growth(data.rename(columns={"Year": "year"}), 2011, 2021)
+
+# %%
+au.smoothed_growth(data.rename(columns={"Year": "year"}), 2017, 2021)
 
 # %%
 # Percentage change from 2011 to 2021
@@ -147,10 +156,16 @@ cb_all_funding_rounds = CB.get_funding_rounds(CB.cb_organisations)
 cb_all_rounds_ts = au.cb_investments_per_period(
     (cb_all_funding_rounds.query("investment_type in @utils.EARLY_STAGE_DEALS").copy()),
     period="Y",
-    min_year=2010,
+    min_year=2009,
     max_year=2021,
 ).assign(year=lambda df: df.time_period.dt.year)
 
+
+# %%
+cb_all_rounds_ts
+
+# %%
+au.smoothed_growth(cb_all_rounds_ts.drop("time_period", axis=1), 2011, 2021)
 
 # %%
 au.smoothed_growth(cb_all_rounds_ts.drop("time_period", axis=1), 2017, 2021)
@@ -176,8 +191,62 @@ au.percentage_change(
     cb_all_rounds_ts.query("`year`==2021")["raised_amount_gbp_total"].iloc[0],
 )
 
+# %%
+horizontal_label = "Year"
+values_label = "Investment (million GBP)"
+tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
+
+data = (
+    cb_all_rounds_ts.assign(
+        raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
+    )
+    .query("time_period < 2022")
+    .rename(
+        columns={
+            "time_period": horizontal_label,
+            "raised_amount_gbp_total": values_label,
+        }
+    )
+    .assign(
+        **{
+            horizontal_label: lambda df: pu.convert_time_period(
+                df[horizontal_label], "Y"
+            )
+        }
+    )
+)[[horizontal_label, values_label]]
+
+
+fig = (
+    alt.Chart(
+        data.query("Year > 2009"),
+        width=400,
+        height=200,
+    )
+    .mark_bar(color=pu.NESTA_COLOURS[0])
+    .encode(
+        alt.X(f"{horizontal_label}:O"),
+        alt.Y(f"{values_label}:Q"),
+        tooltip=tooltip,
+    )
+)
+
+fig_final = pu.configure_plots(fig)
+fig_final
+
+# %%
+figure_name = f"parenting_tech_Global_all_VC_investment"
+AltairSaver.save(fig_final, figure_name, filetypes=["png", "html", "svg"])
+utils.save_data_table(data, figure_name, TABLES_DIR)
+
 # %% [markdown]
-# So, the investment in our identified early years and parenting companies has grown about 15-16x whereas the baseline investment has grown about 11-12 times between 2011 and 2021. For the global figures, Dealroom also reports about 11x increase on their platform, Crunchbase [seems to be around 10x mark](https://news.crunchbase.com/business/global-vc-funding-unicorns-2021-monthly-recap/), whereas The Economist appears to have a lower figure (looking at [the graphs](https://www.economist.com/finance-and-economics/2021/11/23/the-bright-new-age-of-venture-capital/21806438), perhaps around 8x?). Given that these are inevitably noisy estimates, we can probably roughly approximate to about 15x vs 10x growth.
+# The investment in our identified early years and parenting companies has grown about 15-16x comparing 2021 and 2011, whereas the baseline investment has grown about 11-12x for that same comparison.
+#
+# Using smoothed growth estimates (ie, average between 2009-2011 vs 2019-2021) the difference is even more stark, about 2000% vs 900% (ie, 21x vs 10x). Howevever, this would be harder to compare with the figures from other VC sector reports.
+#
+# Looking at the other report, for the global total VC figures Dealroom reports about 11x increase on their platform, Crunchbase [seems to be around 10x mark](https://news.crunchbase.com/business/global-vc-funding-unicorns-2021-monthly-recap/) (since 2012), whereas The Economist appears to have a lower figure (looking at [the graphs](https://www.economist.com/finance-and-economics/2021/11/23/the-bright-new-age-of-venture-capital/21806438), perhaps around 8x?).
+#
+# Given that these are inevitably approximate estimates, I think we can roughly say the figures to be about 15x (conservative estimate) for parenting and early years sector vs 10x growth for global VC in the last decade.
 #
 #
 
