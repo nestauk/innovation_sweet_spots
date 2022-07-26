@@ -844,6 +844,30 @@ len(company_to_taxonomy_df.id.unique())
 company_to_taxonomy_df.groupby(["level", "Category"]).count()
 
 # %% [markdown]
+# ## Export for checking
+
+# %%
+# DR.company_data.merge(company_to_taxonomy_df, how='left').to_csv('to_check.csv')
+
+# %%
+company_to_taxonomy_dict["26411"]
+
+
+# %%
+def assign_tax(id_string):
+    if id_string in company_to_taxonomy_dict:
+        return company_to_taxonomy_dict[id_string]
+    else:
+        return {}
+
+
+# %%
+df = DR.company_data.copy().assign(taxonomy=lambda df: df.id.apply(assign_tax))
+
+# %%
+df.to_csv("to_check.csv")
+
+# %% [markdown]
 # ## Helper functions
 
 # %% [markdown]
