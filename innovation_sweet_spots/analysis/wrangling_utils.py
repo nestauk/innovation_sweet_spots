@@ -614,6 +614,7 @@ class CrunchbaseWrangler:
             )
             # More informative column names
             .rename(columns={"id": "funding_round_id"})
+            .query("announced_on > '1980'")
             .sort_values("announced_on")
             .assign(
                 # Convert to thousands
@@ -838,6 +839,22 @@ class CrunchbaseWrangler:
             # Add industries list
             .merge(
                 company_industries, on=["id", "name"], how="left", validate="one_to_one"
+            )
+        )
+
+    def get_all_industries_from_groups(
+        self, list_of_groups: Iterator[str]
+    ) -> Iterator[str]:
+        """
+        Returns a list of all industries that are part of the specified industry groups
+        """
+        return sorted(
+            list(
+                set(
+                    itertools.chain(
+                        *[self.group_to_industries[group] for group in list_of_groups]
+                    )
+                )
             )
         )
 

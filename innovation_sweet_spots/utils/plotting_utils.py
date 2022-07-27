@@ -12,6 +12,38 @@ ChartType = alt.vegalite.v4.api.Chart
 FONT = "Averta"
 # TITLE_FONT = "Zosia"
 TITLE_FONT = "Averta"
+
+FONTSIZE_TITLE = 16
+FONTSIZE_NORMAL = 13
+
+
+def configure_plots(fig, chart_title: str = "", chart_subtitle: str = ""):
+    """Add titles, subtitles and configure font sizes"""
+    return (
+        fig.properties(
+            title={
+                "anchor": "start",
+                "text": chart_title,
+                "fontSize": FONTSIZE_TITLE,
+                "subtitle": chart_subtitle,
+                "subtitleFont": FONT,
+                "subtitleFontSize": FONTSIZE_NORMAL,
+            },
+        )
+        .configure_axis(
+            gridDash=[1, 7],
+            gridColor="grey",
+            labelFontSize=FONTSIZE_NORMAL,
+            titleFontSize=FONTSIZE_NORMAL,
+        )
+        .configure_legend(
+            titleFontSize=FONTSIZE_NORMAL,
+            labelFontSize=FONTSIZE_NORMAL,
+        )
+        .configure_view(strokeWidth=0)
+    )
+
+
 NESTA_COLOURS = [
     "#0000FF",
     "#FDB633",
@@ -297,6 +329,109 @@ def cb_deal_types(
         )
         .configure_legend(title=None)
     )
+
+
+def infer_geo_label(category_column: str) -> str:
+    return category_column.split("_")[-1].capitalize()
+
+
+def cb_top_geographies(
+    data: pd.DataFrame,
+    value_column: str,
+    category_column: str = "org_country",
+    value_label: str = None,
+    category_label: str = None,
+    top_n: int = 10,
+) -> ChartType:
+    """
+    Plots a bar chart with stats for top_n countries
+
+    Args:
+        data: Dataframe with a columns for 'country'
+    """
+    category_label = (
+        infer_geo_label(category_column) if category_label is None else category_label
+    )
+    df = data.sort_values(value_column, ascending=False).head(top_n)
+    chart = (
+        alt.Chart(df)
+        .mark_bar(color=NESTA_COLOURS[0])
+        .encode(
+            y=alt.Y(category_column, sort="-x", title=category_label),
+            x=alt.X(value_column),
+        )
+        .configure_legend(title=None)
+    )
+    chart.encoding.x.title = (
+        process_axis_label(value_column) if value_label is None else value_label
+    )
+    chart.encoding.y.title = (
+        process_axis_label(category_column)
+        if category_label is None
+        else category_label
+    )
+    return standardise_chart(chart)
+
+
+def time_series_by_category(
+    data: pd.DataFrame,
+    value_column: str,
+    value_units: str = None,
+    time_column: str = "time_period",
+    period: str = "Y",
+    category_column: str = "geography",
+) -> ChartType:
+    """Basic time series plot"""
+    chart = (
+        alt.Chart(
+            data.assign(
+                **{time_column: convert_time_period(data[time_column], period)}
+            ),
+            width=400,
+            height=200,
+        )
+        .mark_line(point=False, strokeWidth=1.5)
+        .encode(
+            alt.X(f"{time_column}:O"),
+            alt.Y(f"{value_column}:Q"),
+            color=category_column,
+        )
+    )
+    chart.encoding.x.title = process_axis_label(time_column)
+    chart.encoding.y.title = process_axis_label(value_column, units=value_units)
+    return standardise_chart(chart)
+
+
+def magnitude_growth(
+    magnitude_growth: pd.DataFrame,
+    magnitude_label: str,
+    growth_label: str = "Growth",
+    #     text_label: str = None,
+):
+    """"""
+    return (
+        alt.Chart(
+            (
+                magnitude_growth
+                # Convert growth to fractions
+                .assign(growth_=lambda x: x.growth / 100)
+                # Reset industries index to a column
+                .reset_index()
+            ),
+            width=300,
+            height=300,
+        )
+        .mark_circle(size=80, color=NESTA_COLOURS[0])
+        .encode(
+            x=alt.X("magnitude", title=magnitude_label),
+            y=alt.Y("growth_", title=growth_label, axis=alt.Axis(format="%")),
+            tooltip=["index", "magnitude", "growth"],
+        )
+        .configure_axis(
+            gridDash=[0],
+            gridColor="white",
+        )
+    ).interactive()
 
 
 def infer_geo_label(category_column: str) -> str:

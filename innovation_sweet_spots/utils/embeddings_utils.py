@@ -1,5 +1,6 @@
 """
 innovation_sweet_spots.utils.embeddings_utils
+
 Functions for using text embeddings
 """
 from innovation_sweet_spots.utils.io import save_text_items, read_text_items
@@ -28,6 +29,7 @@ class QueryEmbeddings:
     ):
         """
         Find most similar vectors to the given vector
+
         Args:
             vectors: Numpy array of shape [n_texts, n_dimensions] encoding texts
             texts: List of text strings (len(texts) must be equal to n_texts)
@@ -96,7 +98,24 @@ class Vectors:
             vectors: Numpy array of vectors, of shape [n_documents, n_dimensions]
             filename: File prefix (use if loading vectors from disk)
             folder: Location of the vectors and their IDs
+
         """
+        self.model_name = model_name
+        if vector_ids is None:
+            # Load from local disk
+            self.load_vectors(filename, model_name, folder)
+        else:
+            # Take the provided vectors and vector ids
+            self.vector_ids = np.array(vector_ids)
+            self.vectors = vectors
+        self._model = None
+        assert (
+            len(self.vector_ids) == self.vectors.shape[0]
+        ), "Number of vector ids does not match the number of vectors"
+        assert len(np.unique(self.vector_ids)) == len(
+            self.vector_ids
+        ), "All vector ids must be unique"
+
         self.model_name = model_name
         self._model = None
         self.filename = filename

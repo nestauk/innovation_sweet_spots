@@ -7,7 +7,6 @@ https://access-research-development-spatial-data.beis.gov.uk/indicators
 from innovation_sweet_spots.getters.path_utils import INPUTS_PATH
 from innovation_sweet_spots.utils.io import unzip_files
 import pandas as pd
-import os
 import urllib
 
 # Data version to use
