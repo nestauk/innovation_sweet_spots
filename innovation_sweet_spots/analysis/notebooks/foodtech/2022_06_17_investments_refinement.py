@@ -718,7 +718,9 @@ taxonomy_df = create_taxonomy_dataframe(taxonomy, DR)
 taxonomy_df.iloc[0:20]
 
 # %%
-# taxonomy_df.to_csv("taxonomy.csv", index=False)
+taxonomy_df.to_csv(
+    PROJECT_DIR / "outputs/foodtech/interim/taxonomy_v2022_07_27.csv", index=False
+)
 
 # %% [markdown]
 # ## Refining taxonomy assignments
