@@ -995,6 +995,8 @@ class DealroomWrangler:
         self._company_tags = None
         self._company_industries = None
         self._company_subindustries = None
+        self._company_labels = None
+        self._labels = None
         self._funding_rounds = None
 
     @property
@@ -1011,6 +1013,8 @@ class DealroomWrangler:
         if self._foodtech_data is None:
             self._foodtech_data = (
                 dealroom.get_foodtech_companies()
+                # Deduplicate IDs
+                .astype({"id": str})
                 .drop_duplicates("id", keep="first")
                 .pipe(self.process_input_data)
             )
@@ -1095,6 +1099,30 @@ class DealroomWrangler:
         """
         return column_name.split("(")[0].strip()
 
+    def get_ids_in_industry(self, industry: str):
+        """Get company ids in a subindustry"""
+        return self.company_industries.query("`INDUSTRIES` == @industry").id.to_list()
+
+    def get_ids_in_subindustry(self, subindustry: str):
+        """Get company ids in a subindustry"""
+        return self.company_subindustries.query(
+            "`SUB INDUSTRIES` == @subindustry"
+        ).id.to_list()
+
+    def get_companies_by_industry(self, industry: str):
+        """Get companies that are in the specific subindustry"""
+        ids_in_industry = self.get_ids_in_industry(industry)
+        return self.company_data.query("id in @ids_in_industry").assign(
+            industry=industry
+        )
+
+    def get_rounds_by_industry(self, industry: str):
+        """Get investment rounds for companies in the specific subindustry"""
+        ids_in_industry = self.get_ids_in_industry(industry)
+        return self.funding_rounds.query("id in @ids_in_industry").assign(
+            industry=industry
+        )
+
     def get_ids_in_subindustry(self, subindustry: str):
         """Get company ids in a subindustry"""
         return self.company_subindustries.query(
@@ -1115,23 +1143,65 @@ class DealroomWrangler:
             subindustry=subindustry
         )
 
-    def get_ids_in_industry(self, industry: str):
-        """Get company ids in a subindustry"""
-        return self.company_industries.query("`INDUSTRIES` == @industry").id.to_list()
+    def get_ids_by_labels(self, label: str, label_type: str):
+        """Get company ids corresponding to a given label"""
+        return self.company_labels.query(
+            "`Category` == @label and `label_type` == @label_type"
+        ).id.to_list()
 
-    def get_companies_by_industry(self, industry: str):
-        """Get companies that are in the specific subindustry"""
-        ids_in_industry = self.get_ids_in_industry(industry)
-        return self.company_data.query("id in @ids_in_industry").assign(
-            industry=industry
+    def get_companies_by_labels(self, label: str, label_type: str):
+        """Get companies that have the specific label"""
+        ids = self.get_ids_by_labels(label, label_type)
+        return self.company_data.query("id in @ids").assign(
+            Category=label, label_type=label_type
         )
 
-    def get_rounds_by_industry(self, industry: str):
-        """Get investment rounds for companies in the specific subindustry"""
-        ids_in_industry = self.get_ids_in_industry(industry)
-        return self.funding_rounds.query("id in @ids_in_industry").assign(
-            industry=industry
+    def get_rounds_by_labels(self, label: str, label_type: str):
+        """Get investment rounds for companies have the specific label"""
+        ids = self.get_ids_by_labels(label, label_type)
+        return self.funding_rounds.query("id in @ids").assign(
+            Category=label, label_type=label_type
         )
+
+    @property
+    def company_labels(self):
+        """Companies and all their industry, sub-industry and tag labels"""
+        if self._company_labels is None:
+            self._company_labels = self.get_all_company_labels()
+        return self._company_labels
+
+    @property
+    def labels(self):
+        """All unique industry, sub-industry and tag labels"""
+        if self._labels is None:
+            self._labels = (
+                self.company_labels.drop_duplicates("Category")
+                .sort_values("Category")
+                .drop("id", axis=1)
+                .reset_index(drop=True)
+            )
+        return self._labels
+
+    def get_all_company_labels(self) -> pd.DataFrame:
+        """Compiles all industry, sub-industry and tag labels into one dataframe"""
+        label = "SUB INDUSTRIES"
+        sub = self.company_subindustries.rename(columns={label: "Category"}).assign(
+            label_type=label
+        )
+
+        label = "INDUSTRIES"
+        ind = self.company_industries.rename(columns={label: "Category"}).assign(
+            label_type=label
+        )
+
+        label = "TAGS"
+        tags = self.company_tags.rename(columns={label: "Category"}).assign(
+            label_type=label
+        )
+
+        company_labels = pd.concat([sub, ind, tags], ignore_index=True)
+        company_labels = company_labels[-company_labels.Category.isnull()]
+        return company_labels
 
     def explode_timeseries(self, column_name: str) -> pd.DataFrame:
         """

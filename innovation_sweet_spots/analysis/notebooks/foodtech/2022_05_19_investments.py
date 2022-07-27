@@ -25,6 +25,8 @@ import innovation_sweet_spots.analysis.analysis_utils as au
 from innovation_sweet_spots.utils import plotting_utils as pu
 import utils
 
+import importlib
+
 importlib.reload(wu)
 import altair as alt
 import pandas as pd
