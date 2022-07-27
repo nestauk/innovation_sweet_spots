@@ -115,6 +115,18 @@ figure_name = f"parenting_tech_Total_investment"
 AltairSaver.save(fig_final, figure_name, filetypes=["png", "html", "svg"])
 utils.save_data_table(data, figure_name, TABLES_DIR)
 
+# %%
+# Alt text
+data_text = "; ".join(
+    [
+        f"{row[values_label]:.0f} million in {int(row[horizontal_label])}"
+        for i, row in data.iterrows()
+    ]
+)
+alt_text = f"This graph shows how the global investment into parenting and early years education startups has grown from 2010 to 2021. \
+The estimated investment amounts are the following: {data_text}"
+alt_text
+
 # %% [markdown]
 # ### Investment growth figures
 
@@ -309,6 +321,18 @@ AltairSaver.save(fig_final, figure_name, filetypes=["png", "html", "svg"])
 utils.save_data_table(data[[labels_label, values_label]], figure_name, TABLES_DIR)
 
 
+# %%
+# Alt text
+data_text = "; ".join(
+    [
+        f"{row[values_label]:.0f} million in {row[labels_label]}"
+        for i, row in data.iterrows()
+    ]
+)
+alt_text = f"This graph shows countries with the largest investment amount into parenting and early years education companies. \
+The estimated investment amounts are the following: {data_text}"
+alt_text
+
 # %% [markdown]
 # ## Digital technologies
 
@@ -445,5 +469,21 @@ figure_name = f"parenting_tech_Digital"
 AltairSaver.save(fig_final, figure_name, filetypes=["png", "html", "svg"])
 utils.save_data_table(data, figure_name, TABLES_DIR)
 
+
+# %%
+# Alt text
+data_text = "; ".join(
+    [
+        f"{row['growth']*100:.0f}% for {row['digital_technology']}"
+        for i, row in data.iterrows()
+        if i < 15
+    ]
+)
+alt_text = f"This graph shows the growth and amount of venture capital investment into specific digital technologies used by parenting and early years education companies. \
+The estimated relative growth percentage between 2017 and 2021 for the top 15 different digital technologies used in parenting and early years education products and services is the following: {data_text}"
+alt_text
+
+# %%
+data
 
 # %%
