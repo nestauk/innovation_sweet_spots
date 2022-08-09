@@ -259,14 +259,14 @@ with open(os.path.join(DISC_OUTPUTS_DIR, "hydrogen_phrases.json"), "w") as outfi
 
 # %%
 heat_pump_phrases = {
-    "noun_phrase_hp": [
+    "noun_phrase": [
         {"POS": "ADJ", "OP": "*"},
         {"POS": "NOUN"},
         {"POS": "NOUN", "OP": "?"},
         {"TEXT": "heat"},
         {"TEXT": {"IN": ["pump", "pumps"]}},
     ],
-    "adj_phrase_hp": [
+    "adj_phrase": [
         {"POS": "ADV", "OP": "*"},
         {"POS": "ADJ"},
         {"POS": "ADJ", "OP": "*"},
@@ -274,7 +274,7 @@ heat_pump_phrases = {
         {"TEXT": "heat"},
         {"TEXT": {"IN": ["pump", "pumps"]}},
     ],
-    "term_is_hp": [
+    "term_is": [
         {"TEXT": "heat"},
         {"TEXT": {"IN": ["pump", "pumps"]}},
         {"LEMMA": "be"},
@@ -282,7 +282,7 @@ heat_pump_phrases = {
         {"POS": {"IN": ["ADV", "DET"]}, "OP": "*"},
         {"POS": {"IN": ["NOUN", "ADJ"]}, "OP": "*"},
     ],
-    "term_have_hp": [
+    "term_have": [
         {"TEXT": "heat"},
         {"TEXT": {"IN": ["pump", "pumps"]}},
         {"LEMMA": "have"},
@@ -290,7 +290,7 @@ heat_pump_phrases = {
         {"POS": {"IN": ["ADV", "DET"]}, "OP": "*"},
         {"POS": {"IN": ["NOUN", "ADJ"]}, "OP": "*"},
     ],
-    "term_can_hp": [
+    "term_can": [
         {"TEXT": "heat"},
         {"TEXT": {"IN": ["pump", "pumps"]}},
         {"LEMMA": "have"},
@@ -299,7 +299,7 @@ heat_pump_phrases = {
         {"POS": {"IN": ["ADV", "DET"]}, "OP": "*"},
         {"POS": {"IN": ["NOUN", "ADJ"]}, "OP": "*"},
     ],
-    "term_is_at_hp": [
+    "term_is_at": [
         {"TEXT": "heat"},
         {"TEXT": {"IN": ["pump", "pumps"]}},
         {"LEMMA": "be"},
@@ -307,7 +307,7 @@ heat_pump_phrases = {
         {"POS": "DET"},
         {"POS": "NOUN"},
     ],
-    "verb_obj_hp": [
+    "verb_obj": [
         {"POS": {"IN": ["NOUN", "ADJ", "ADV", "VERB"]}, "OP": "?"},
         {"POS": {"IN": ["NOUN", "ADJ", "ADV", "VERB"]}, "OP": "?"},
         {"POS": "VERB"},
@@ -315,7 +315,7 @@ heat_pump_phrases = {
         {"TEXT": "heat"},
         {"TEXT": {"IN": ["pump", "pumps"]}},
     ],
-    "verb_subj_hp": [
+    "verb_subj": [
         {"TEXT": "heat"},
         {"TEXT": {"IN": ["pump", "pumps"]}},
         {"POS": "VERB"},
