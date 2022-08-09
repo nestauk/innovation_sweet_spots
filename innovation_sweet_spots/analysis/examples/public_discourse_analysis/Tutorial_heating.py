@@ -64,6 +64,8 @@ REQUIRED_TERMS = [
 # # Heat pumps
 
 # %%
+import importlib
+
 importlib.reload(au)
 
 # %%
@@ -245,36 +247,3 @@ g.save_preprocessed_data()
 
 # %%
 g.plot_document_mentions()
-
-# %%
-query_id = "obesity"
-search_terms = ["obesity"]
-banned_terms = ["Australia"]
-
-
-# %%
-articles, metadata = au.get_guardian_articles(
-    search_terms=search_terms,
-    use_cached=True,
-    allowed_categories=[],
-    query_identifier=query_id,
-    save_outputs=True,
-)
-
-# %%
-importlib.reload(au)
-g = au.DiscourseAnalysis(
-    search_terms=search_terms,
-    required_terms=REQUIRED_TERMS,
-    banned_terms=banned_terms,
-    use_cached=True,
-    query_identifier=query_id,
-)
-
-# %%
-g.plot_document_mentions()
-
-# %%
-
-# %% [markdown]
-# # Baseline generation

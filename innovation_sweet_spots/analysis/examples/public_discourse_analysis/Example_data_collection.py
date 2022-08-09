@@ -160,3 +160,6 @@ article_text.to_csv(
 )
 
 # %%
+article_text
+
+# %%

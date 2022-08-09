@@ -1,7 +1,7 @@
 """
 
 """
-# from innovation_sweet_spots import logging
+from innovation_sweet_spots import logging
 from innovation_sweet_spots.getters import guardian
 from innovation_sweet_spots.utils.pd import (
     pd_data_collection_utils as dcu,
@@ -117,6 +117,7 @@ class DiscourseAnalysis:
             use_cached: Whether to use pre-computed intermediate outputs
             query_identifier: Name of the query (used to create/lookup folders and filenames)
             outputs_path: Location to serve intermediate, processed outputs
+            verbose: If True, it will output logging messages
 
         """
         self.search_terms = search_terms
@@ -495,10 +496,14 @@ class DiscourseAnalysis:
 
     @property
     def phrase_patterns(self):
+        """"""
         if self._phrase_patterns is None:
-            self._phrase_patterns = load_json(
-                self.outputs_path / f"phrase_patterns_{self.q_id}.json"
-            )
+            try:
+                self._phrase_patterns = load_json(
+                    self.outputs_path / f"phrase_patterns_{self.q_id}.json"
+                )
+            except:
+                return None
         return self._phrase_patterns
 
     def term_phrases(self):
@@ -526,20 +531,24 @@ class DiscourseAnalysis:
 
     @property
     def pos_phrases(self):
+        """"""
         if self._pos_phrases is None:
-            self._pos_phrases = pos.save_phrases(
-                [
-                    pos.aggregate_matches(
-                        pos.match_patterns_across_years(
-                            self.combined_term_sentences,
-                            NLP,
-                            self.phrase_patterns[pattern],
-                            self.pos_period_length,
+            if self.phrase_patterns is not None:
+                self._pos_phrases = pos.save_phrases(
+                    [
+                        pos.aggregate_matches(
+                            pos.match_patterns_across_years(
+                                self.combined_term_sentences,
+                                NLP,
+                                self.phrase_patterns[pattern],
+                                self.pos_period_length,
+                            )
                         )
-                    )
-                    for pattern in self.phrase_patterns
-                ]
-            )
+                        for pattern in self.phrase_patterns
+                    ]
+                )
+            else:
+                self._pos_phrases = pd.DataFrame()
         return self._pos_phrases
 
     @property
