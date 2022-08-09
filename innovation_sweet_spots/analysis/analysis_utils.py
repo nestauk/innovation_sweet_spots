@@ -7,6 +7,8 @@ from innovation_sweet_spots import logging
 import pandas as pd
 import numpy as np
 from innovation_sweet_spots.analysis.wrangling_utils import check_valid
+from typing import Iterator
+from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 
 
 def impute_empty_periods(
@@ -345,12 +347,300 @@ def sort_companies_by_funding(
             len(cb_orgs.dropna(subset=["total_funding_usd"])) / len(cb_orgs) * 100
         )
         logging.info(
-            f"{percent_with_funding:.0f}% of organisations have funding information."
+            f"{percent_with_funding:.0f}% of organisations have funding amount information."
         )
     return df
 
 
+def sort_companies_by_deals(
+    cb_orgs: pd.DataFrame,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """
+    Args:
+        cb_orgs: A dataframe with a column for 'num_funding_rounds' among other data
+        verbose: If True, will print what percentage of organisations that have deal info
+
+    Returns:
+        A dataframe with organisations sorted by the number of deals
+    """
+    df = (
+        cb_orgs
+        # Add zeros for companies without funding info
+        .fillna({"num_funding_rounds": 0})
+        # Covert all funding values to float
+        .assign(
+            num_funding_rounds=lambda x: x.num_funding_rounds.astype(float)
+        ).sort_values("num_funding_rounds", ascending=False)
+    )
+    if verbose:
+        percent_with_funding = (
+            len(cb_orgs.dropna(subset=["num_funding_rounds"])) / len(cb_orgs) * 100
+        )
+        logging.info(
+            f"{percent_with_funding:.0f}% of organisations have deal information."
+        )
+    return df
+
+
+def get_companies_with_funds(cb_orgs: pd.DataFrame) -> pd.DataFrame:
+    """
+    Returns Crunchbase companies that have funding data
+    """
+    # Companies with non-zero funding amounts
+    cb_orgs_with_funds = (
+        sort_companies_by_funding(cb_orgs).query("total_funding_usd > 0").id.to_list()
+    )
+    # Companies with non-zero deals
+    cb_orgs_with_deals = (
+        sort_companies_by_deals(cb_orgs).query("num_funding_rounds > 0").id.to_list()
+    )
+    # Return companies with non-zero amounts or deals
+    ids_with_funds = set(cb_orgs_with_deals + cb_orgs_with_deals)
+    return cb_orgs.query("id in @ids_with_funds")
+
+
+def cb_companies_by_geo(
+    cb_orgs: pd.DataFrame,
+    geo_entity: str = "country",
+) -> pd.DataFrame:
+    return (
+        cb_orgs.groupby(geo_entity)
+        .agg(no_of_companies=("id", "count"))
+        .sort_values("no_of_companies", ascending=False)
+        .reset_index()
+    )
+
+
+def cb_link_funding_round_to_geo(
+    cb_orgs: pd.DataFrame, funding_df: pd.DataFrame
+) -> pd.DataFrame:
+    """Links funding round to company's geography"""
+    return funding_df.merge(
+        (
+            cb_orgs[["id", "country", "region", "city"]].rename(
+                columns={
+                    "country": "org_country",
+                    "region": "org_region",
+                    "city": "org_city",
+                }
+            )
+        ),
+        left_on="org_id",
+        right_on="id",
+        how="left",
+    ).drop("id", axis=1)
+
+
+def cb_funding_by_geo(
+    cb_orgs: pd.DataFrame,
+    funding_df: pd.DataFrame,
+    geo_entity: str = "org_country",
+) -> pd.DataFrame:
+    """Get number of deals and raised amounts by country"""
+    return (
+        cb_link_funding_round_to_geo(cb_orgs, funding_df)
+        .groupby(geo_entity)
+        .agg(
+            no_of_rounds=("funding_round_id", "count"),
+            raised_amount_gbp=("raised_amount_gbp", "sum"),
+        )
+        .reset_index()
+    )
+
+
+def cb_get_timeseries_by_geo(
+    cb_orgs: pd.DataFrame,
+    cb_funding_rounds: pd.DataFrame,
+    period: str,
+    min_year: int,
+    max_year: int,
+    geo_entity: str = "org_country",
+    geographies: Iterator[str] = None,
+) -> pd.DataFrame:
+    """Produces investment time series for specified geographies"""
+    # Link funding rounds to geographical entities
+    cb_funding_rounds_geo = cb_link_funding_round_to_geo(cb_orgs, cb_funding_rounds)
+    # Specify geographies
+    geographies = (
+        cb_funding_rounds_geo[geo_entity].unique()
+        if geographies is None
+        else geographies
+    )
+    dfs = []
+    for geo in sorted(geographies):
+        dfs.append(
+            cb_get_all_timeseries(
+                cb_orgs.query(f"{geo_entity.split('_')[-1]} == @geo").copy(),
+                cb_funding_rounds_geo.query(f"{geo_entity} == @geo").copy(),
+                period,
+                min_year,
+                max_year,
+            ).assign(geography=geo)
+        )
+    return pd.concat(dfs, ignore_index=True)
+
+
+def cb_deal_amount_to_range(
+    amount: float, currency: str = "£", categories: bool = True
+) -> str:
+    """
+    Convert amounts to range in millions
+
+    Args:
+        amount: Investment amount (in GBP thousands)
+        categories: If True, adding indicative deal categories
+        currency: Currency symbol
+    """
+    amount /= 1e3
+    if (amount >= 0.001) and (amount < 1):
+        return f"{currency}0-1M" if not categories else f"{currency}0-1M (pre-seed)"
+    elif (amount >= 1) and (amount < 4):
+        return f"{currency}1-4M" if not categories else f"{currency}1-4M (seed)"
+    elif (amount >= 4) and (amount < 15):
+        return f"{currency}4-15M" if not categories else f"{currency}4-15M (series A)"
+    elif (amount >= 15) and (amount < 40):
+        return f"{currency}15-40M" if not categories else f"{currency}15-40M (series B)"
+    elif (amount >= 40) and (amount < 100):
+        return (
+            f"{currency}40-100M" if not categories else f"{currency}40-100M (series C)"
+        )
+    elif (amount >= 100) and (amount < 250):
+        return f"{currency}100-250M"
+    elif amount >= 250:
+        return f"{currency}250+"
+    else:
+        return "n/a"
+
+
+def cb_top_industries(cb_orgs: pd.DataFrame, cb_wrangler: CrunchbaseWrangler):
+    """Get top industries"""
+    return (
+        cb_wrangler.get_company_industries(cb_orgs)
+        .merge(cb_orgs[["id", "founded_on"]])
+        .groupby("industry")
+        .agg(counts=("id", "count"))
+        .sort_values("counts", ascending=False)
+        .reset_index()
+    )
+
+
+def cb_top_groups():
+    # TODO!
+    pass
+
+
+def investments_by_industry_ts(
+    cb_orgs: pd.DataFrame,
+    industries: Iterator[str],
+    cb_wrangler: CrunchbaseWrangler,
+    min_year: int,
+    max_year: int,
+    use_industry_groups: bool = False,
+    funding_round_types: list = None,
+):
+    """"""
+    # Get companies within specified industries
+    industries_orgs = (
+        cb_wrangler.get_company_industries(cb_orgs)
+        .query("industry in @industries")
+        .merge(cb_orgs, on=["id", "name"], how="left")
+        .drop_duplicates(["id", "name", "industry"])
+    )
+    if use_industry_groups:
+        industries_orgs = (
+            industries_orgs.assign(
+                industry=lambda x: x.industry.apply(
+                    lambda y: cb_wrangler.industry_to_group[y]
+                )
+            )
+            .explode("industry")
+            .drop_duplicates(["id", "name", "industry"])
+        )
+    # Create time series for each industry
+    df_deals = []
+    df_companies = []
+    df_investments = []
+    for industry in industries:
+        industry_orgs = industries_orgs.query(f"industry == '{industry}'")
+        industry_orgs_deals = cb_wrangler.get_funding_rounds(industry_orgs)
+        if funding_round_types is not None:
+            industry_orgs_deals = industry_orgs_deals.query(
+                "investment_type in @funding_round_types"
+            ).copy()
+        ts_df = cb_get_all_timeseries(
+            industry_orgs,
+            industry_orgs_deals,
+            period="year",
+            min_year=min_year,
+            max_year=max_year,
+        )
+        df_deals.append(
+            ts_df.rename(columns={"no_of_rounds": industry}).set_index("time_period")[
+                industry
+            ]
+        )
+        df_companies.append(
+            ts_df.rename(columns={"no_of_orgs_founded": industry}).set_index(
+                "time_period"
+            )[industry]
+        )
+        df_investments.append(
+            ts_df.rename(columns={"raised_amount_gbp_total": industry}).set_index(
+                "time_period"
+            )[industry]
+        )
+    return (
+        pd.concat(df_deals, axis=1),
+        pd.concat(df_companies, axis=1),
+        pd.concat(df_investments, axis=1),
+    )
+
+
+def ts_moving_average(ts_df: pd.DataFrame):
+    """Calculate 3-year moving average for time series with time period"""
+    return (
+        ts_df.reset_index()
+        .assign(year=lambda x: x.time_period.dt.year)
+        .pipe(moving_average, replace_columns=True)
+        .assign(time_period=ts_df.reset_index()["time_period"])
+    )
+
+
+def ts_magnitude_growth(ts_df: pd.DataFrame, year_start: int, year_end: int):
+    return (
+        magnitude(
+            ts_df.reset_index()
+            .assign(year=lambda x: x.time_period.dt.year)
+            .drop("time_period", axis=1),
+            year_start,
+            year_end,
+        )
+        .to_frame("magnitude")
+        .assign(growth=smoothed_growth(ts_moving_average(ts_df), year_start, year_end))
+    )
+
+
 ### Time series trends
+
+
+def compare_years(ts_df: pd.DataFrame, year: int = 2021, year_reference: int = 2020):
+    df = (
+        ts_df.reset_index()
+        .assign(year=lambda x: x.time_period.dt.year)
+        .set_index("year")
+        .drop("time_period", axis=1)
+    )
+    return pd.DataFrame(
+        data={
+            "year": df.loc[year, :],
+            "reference_year": df.loc[year_reference, :],
+            "difference": df.loc[year, :] - df.loc[year_reference, :],
+            "growth": (df.loc[year, :] - df.loc[year_reference, :])
+            / df.loc[year_reference, :]
+            * 100,
+        }
+    )
 
 
 def moving_average(
@@ -400,6 +690,27 @@ def magnitude(time_series: pd.DataFrame, year_start: int, year_end: int) -> pd.S
 def percentage_change(initial_value, new_value):
     """Calculates percentage change from first_value to second_value"""
     return (new_value - initial_value) / initial_value * 100
+
+
+def growth(
+    time_series: pd.DataFrame,
+    year_start: int,
+    year_end: int,
+) -> pd.Series:
+    """Calculates a growth estimate
+    Args:
+        time_series: A dataframe with a columns for 'year' and other data
+        year_start: First year of the trend window
+        year_end: Last year of the trend window
+    Returns:
+        Series with smoothed growth estimates for all data columns
+    """
+    # Smooth timeseries
+    df = time_series.set_index("year")
+    # Percentage change
+    return percentage_change(
+        initial_value=df.loc[year_start, :], new_value=df.loc[year_end, :]
+    )
 
 
 def smoothed_growth(
