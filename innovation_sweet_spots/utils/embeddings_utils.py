@@ -101,22 +101,6 @@ class Vectors:
 
         """
         self.model_name = model_name
-        if vector_ids is None:
-            # Load from local disk
-            self.load_vectors(filename, model_name, folder)
-        else:
-            # Take the provided vectors and vector ids
-            self.vector_ids = np.array(vector_ids)
-            self.vectors = vectors
-        self._model = None
-        assert (
-            len(self.vector_ids) == self.vectors.shape[0]
-        ), "Number of vector ids does not match the number of vectors"
-        assert len(np.unique(self.vector_ids)) == len(
-            self.vector_ids
-        ), "All vector ids must be unique"
-
-        self.model_name = model_name
         self._model = None
         self.filename = filename
         self.folder = folder

@@ -15,6 +15,7 @@ CB_GTR_LINK_PATH = INPUTS_PATH / "cb_gtr_link"
 HANSARD_PATH = INPUTS_PATH / "hansard"
 GUARDIAN_PATH = INPUTS_PATH / "guardian"
 DEALROOM_PATH = INPUTS_PATH / "dealroom"
+OPENALEX_PATH = INPUTS_PATH / "openAlex"
 
 # Output paths
 OUTPUT_PATH = PROJECT_DIR / "outputs"
