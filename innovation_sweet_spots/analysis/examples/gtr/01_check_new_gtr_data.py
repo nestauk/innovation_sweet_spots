@@ -25,6 +25,8 @@ from innovation_sweet_spots.analysis.wrangling_utils import GtrWrangler
 import os
 import pandas as pd
 
+pd.set_option("max_colwidth", 300)
+
 # %%
 GTR_FOLDER = PROJECT_DIR / "inputs/data/gtr_2022_august"
 OLD_FOLDER = PROJECT_DIR / "inputs/data/gtr"
@@ -58,20 +60,61 @@ pd.read_csv(OLD_FOLDER / "gtr_topic.csv").head(2)
 # ## Research projects
 
 # %%
+import importlib
+import innovation_sweet_spots.getters.path_utils
+
+importlib.reload(innovation_sweet_spots.getters.path_utils)
+from innovation_sweet_spots.getters import gtr_2022 as gtr
+
+importlib.reload(gtr)
+
+# %%
 projects = load_json(GTR_FOLDER / "gtr_projects-projects.json")
-len(projects)
 
 # %%
-sorted(list(projects[0].keys()))
+projects_df = gtr.get_gtr_projects()
 
 # %%
-projects[21]
+from pandas_profiling import ProfileReport
+
+profile = ProfileReport(projects_df, title="GtR projects report")
+profile.to_file(GTR_FOLDER / "gtr_projects-projects.html")
 
 # %%
-pd.read_csv(OLD_FOLDER / "gtr_projects.csv").head(2)
+projects_df.info()
+
+# %%
+import innovation_sweet_spots.utils.text_processing_utils as tpu
+
+importlib.reload(tpu)
+
+COLUMNS = ["abstractText", "techAbstractText"]
+text_documents = tpu.create_documents_from_dataframe(projects_df, columns=COLUMNS)
+
+# %%
+from matplotlib import pyplot as plt
+
+# %matplotlib inline
+plt.hist([len(s) for s in text_documents], bins=50)
+
+# %%
+projects_df[
+    ["title", "abstractText", "start", "end", "techAbstractText", "id", "project_id"]
+]
+
+# %%
+projects_df
+
+# %%
+df_old = pd.read_csv(OLD_FOLDER / "gtr_projects.csv")
+
+# %%
+df_old.info()
 
 # %% [markdown]
 # ## Research funding
+#
+# - Duplicated entries of funding (different `id` but same `project_id`)
 
 # %%
 funds = load_json(GTR_FOLDER / "gtr_projects-funds.json")
@@ -86,5 +129,8 @@ df.project_id.duplicated().sum()
 
 # %%
 df[df.project_id.duplicated(keep=False)].sort_values("project_id").head(20)
+
+# %% [markdown]
+# ### Quick keyword check
 
 # %%

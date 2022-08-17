@@ -11,6 +11,7 @@ from gensim import models
 from typing import Iterator
 from os import PathLike
 import pandas as pd
+import html
 from innovation_sweet_spots.utils.text_cleaning_utils import clean_text
 
 # DEF_LANGUAGE_MODEL = {"model": "en_core_web_sm", "disable": ["ner"]}
@@ -39,11 +40,11 @@ def create_documents_from_dataframe(
 ) -> Iterator[str]:
     """Build documents from texts in the table columns"""
     # Select columns to include in the document
-    df_ = df[columns].fillna("").copy()
+    df_ = df[columns].fillna("").copy().astype(str)
     # Preprocess project text
     text_lists = [df_[col].to_list() for col in columns]
     # Create project documents
-    docs = [preprocessor(text) for text in create_documents(text_lists)]
+    docs = [preprocessor(html.unescape(text)) for text in create_documents(text_lists)]
     return docs
 
 
