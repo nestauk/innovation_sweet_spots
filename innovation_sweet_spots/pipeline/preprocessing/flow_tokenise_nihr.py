@@ -4,7 +4,7 @@ Metaflow to tokenise Gateway to Research project descriptions
 NB: Takes about XX hrs for 120k+ projects
 
 Usage (running from the terminal):
-python innovation_sweet_spots/pipeline/preprocessing/flow_tokenise_gtr.py run --test-mode False
+python innovation_sweet_spots/pipeline/preprocessing/flow_tokenise_nihr.py run --test-mode False
 """
 from metaflow import FlowSpec, Parameter, step
 from innovation_sweet_spots import PROJECT_DIR, logging
