@@ -8,10 +8,12 @@ python innovation_sweet_spots/pipeline/preprocessing/flow_tokenise_gtr.py run --
 """
 from metaflow import FlowSpec, Parameter, step
 from innovation_sweet_spots import PROJECT_DIR, logging
+import pandas as pd
 
 # %%
 # Data parameters
-COLUMNS = ["abstractText", "techAbstractText"]
+NIHR_PATH = PROJECT_DIR / "inputs/data/nihr/nihr_summary_data.csv"
+COLUMNS = ["project_title", "scientific_abstract", "plain_english_abstract"]
 
 # %%
 # Phraser parameters
@@ -22,7 +24,7 @@ THRESH = 0.35
 # %%
 # Outputs parameters
 OUTPUT_DIR = PROJECT_DIR / "outputs/preprocessed"
-OUTPUT_NAME = "gtr_abstracts_v2022_08_16"
+OUTPUT_NAME = "nihr_abstracts_v2022_08_17"
 
 
 # %%
@@ -48,15 +50,14 @@ class Tokeniser(FlowSpec):
 
     @step
     def start(self):
-        """Loads GtR data and creates text documents from specified columns"""
-        from innovation_sweet_spots.getters import gtr_2022 as gtr
+        """Loads NIHR data and creates text documents from specified columns"""
         from innovation_sweet_spots.utils.text_processing_utils import (
             create_documents_from_dataframe,
         )
 
         # Load in Gateway to Research
-        logging.info("Loading in Gateway to Research data")
-        data = gtr.get_gtr_projects()
+        logging.info("Loading in NIHR data")
+        data = pd.read_csv(NIHR_PATH)
         # Subsample if in test mode
         data = data.iloc[0:100] if self.test_mode else data
 
