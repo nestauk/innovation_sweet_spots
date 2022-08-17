@@ -63,7 +63,7 @@ class Tokeniser(FlowSpec):
 
         # Combine specified columns into text documents
         self.text_documents = create_documents_from_dataframe(data, columns=COLUMNS)
-        self.ids = data.id.to_list()
+        self.ids = data.recordid.to_list()
 
         self.next(self.tokenise_texts)
 
