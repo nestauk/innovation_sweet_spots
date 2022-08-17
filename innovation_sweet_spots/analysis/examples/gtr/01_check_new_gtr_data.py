@@ -131,6 +131,35 @@ df.project_id.duplicated().sum()
 df[df.project_id.duplicated(keep=False)].sort_values("project_id").head(20)
 
 # %% [markdown]
-# ### Quick keyword check
+# ### Quick check of the tokenised corpus
+
+# %%
+import innovation_sweet_spots.getters.preprocessed as prp
+
+importlib.reload(prp)
+
+gtr_corpus = prp.get_gtr_corpus()
+
+# %%
+ids = list(gtr_corpus.keys())
+
+# %%
+# gtr_corpus[ids[3]]
+
+# %%
+from innovation_sweet_spots.analysis.query_terms import QueryTerms
+
+QueryGtR = QueryTerms(corpus=gtr_corpus)
+
+# %%
+SEARCH_TERMS = [
+    # ["alternative protein"],
+    # ["alt protein"],
+    ["kitchen"]
+]
+
+# %%
+query_df = QueryGtR.find_matches(SEARCH_TERMS, return_only_matches=True)
+query_df.merge(projects_df[["id", "title"]])
 
 # %%
