@@ -63,7 +63,7 @@ def clean_website_col(df: pd.DataFrame, col: str) -> pd.DataFrame:
         col: Column containing website text
 
     Returns:
-        Dataframe with column with cleaned website text
+        Dataframe with cleaned website text column
     """
     return df.pipe(remove_fw_slash, col).pipe(remove_http_https, col).pipe(add_www, col)
 
@@ -131,6 +131,38 @@ def add_clean_name_col(companies_dataset: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def update_cb_countries_to_match_dr(cb_companies: pd.DataFrame) -> pd.DataFrame:
+    """Rename crunchbase country to match dealroom hq country"""
+    cb_companies["country"] = cb_companies["country"].replace(
+        {
+            "Viet Nam": "Vietnam",
+            "Macedonia, Republic of": "North Macedonia",
+            "American Samoa": "Samoa",
+            "Russian Federation": "Russia",
+            "Bolivia, Plurinational State of": "Bolivia",
+            "Taiwan, Province of China": "Taiwan",
+            "Congo, The Democratic Republic of the": "Democratic Republic of the Congo",
+            "Congo": "Democratic Republic of the Congo",
+            "Korea, Republic of": "South Korea",
+            "Moldova, Republic of": "Moldova",
+            "Czechia": "Czech Republic",
+            "Brunei Darussalam": "Brunei",
+            "Lao People's Democratic Republic": "Laos",
+            "Myanmar": "Burma (Myanmar)",
+            "Iran, Islamic Republic of": "Iran",
+        }
+    )
+    return cb_companies
+
+
+def update_dr_countries_to_match_cb(dr_companies: pd.DataFrame) -> pd.DataFrame:
+    "Rename dealroom hq country to match crunchbase country"
+    dr_companies["hq_country"] = dr_companies["hq_country"].replace(
+        {"Hong Kong SAR": "Hong Kong", "Hong Kong-China": "Hong Kong"}
+    )
+    return dr_companies
+
+
 STOPWORDS = [
     "ltd",
     "llp",
@@ -196,8 +228,11 @@ dr = (
     .drop_duplicates()
     .dropna(subset=["id"])
     .pipe(add_clean_name_col)
+    .pipe(update_dr_countries_to_match_cb)
 )
-cb = get_crunchbase_orgs().pipe(add_clean_name_col)
+cb = (
+    get_crunchbase_orgs().pipe(add_clean_name_col).pipe(update_cb_countries_to_match_dr)
+)
 
 # %%
 """
@@ -238,9 +273,16 @@ combined_dr_cb_lookup = make_combined_dr_cb_lookup(
 # Update list of dr ids that have been matched to cb ids
 dr_matched_ids = list(combined_dr_cb_lookup.id_dr.values)
 # Update dataframe of dealroom companies that have not been matched yet
-dr_companies_left_to_match = dr.query(f"id not in {dr_matched_ids}")
+dr_companies_left_to_match = dr.query(f"id not in {dr_matched_ids}").reset_index(
+    drop=True
+)
 
 # %%
 dr_companies_left_to_match
+
+# %%
+dr_countries = dr_companies_left_to_match.hq_country.unique()
+cb_countries = cb.country.unique()
+list(set(dr_countries).difference(cb_countries))
 
 # %%
