@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.1
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -18,6 +18,8 @@
 from innovation_sweet_spots.getters.dealroom import get_foodtech_companies
 from innovation_sweet_spots.getters.crunchbase import get_crunchbase_orgs
 import pandas as pd
+
+pd.set_option("mode.chained_assignment", None)
 from jacc_hammer.name_clean import preproc_names
 
 
@@ -34,16 +36,6 @@ def remove_http_https(df: pd.DataFrame, col: str) -> pd.DataFrame:
     specified df and col"""
     df[col] = df[col].str.replace("https://", "").str.replace("http://", "")
     return df
-
-
-def find_dr_cb_matches(dr_companies, cb_companies, dr_on, cb_on):
-    return dr_companies.merge(
-        right=cb_companies,
-        left_on=dr_on,
-        right_on=cb_on,
-        how="left",
-        suffixes=("_dr", "_cb"),
-    )[["id_dr", "id_cb"]].dropna()
 
 
 def remove_fw_slash(df: pd.DataFrame, col: str) -> pd.DataFrame:
@@ -71,9 +63,72 @@ def clean_website_col(df: pd.DataFrame, col: str) -> pd.DataFrame:
         col: Column containing website text
 
     Returns:
-        Dataframe with cleaned website text
+        Dataframe with column with cleaned website text
     """
     return df.pipe(remove_fw_slash, col).pipe(remove_http_https, col).pipe(add_www, col)
+
+
+def find_dr_cb_matches(
+    dr_companies: pd.DataFrame, cb_companies: pd.DataFrame, dr_on: str, cb_on: str
+) -> pd.DataFrame:
+    """Match crunchbase companies to dealroom companies
+
+    Args:
+        dr_companies: Dealroom dataframe of companies
+            containing id and column to join on
+        cb_companies: Crunchbase dataframe of companies
+            containing id and column to join on
+        dr_on: Column to match the dealroom dataframe on
+        cb_on: Column to match the crunchbase dataframe on
+
+    Returns:
+        Dataframe with a column for dealroom ids
+            and related crunchbase id
+
+    """
+    return dr_companies.merge(
+        right=cb_companies,
+        left_on=dr_on,
+        right_on=cb_on,
+        how="left",
+        suffixes=("_dr", "_cb"),
+    )[["id_dr", "id_cb"]].dropna()
+
+
+def find_url_matches(
+    dr_companies: pd.DataFrame, cb_companies: pd.DataFrame, dr_url: str, cb_url: str
+) -> pd.DataFrame:
+    """Return dealroom to crunchbase lookup dataframe.
+    Matches are found using specified urls."""
+    return (
+        dr_companies.dropna(subset=[dr_url])
+        .pipe(clean_website_col, col=dr_url)
+        .pipe(
+            find_dr_cb_matches,
+            cb_companies=cb_companies.dropna(subset=[cb_url]).pipe(
+                clean_website_col, col=cb_url
+            ),
+            dr_on=dr_url,
+            cb_on=cb_url,
+        )
+    )
+
+
+def make_combined_dr_cb_lookup(lookups: list) -> pd.DataFrame:
+    """Make combined dealroom to crunchbase lookup
+    from a list of lookups and drop duplicates"""
+    return (
+        pd.concat(lookups)
+        .reset_index(drop=True)
+        .drop_duplicates(subset=["id_dr"], keep="first")
+    )
+
+
+def add_clean_name_col(companies_dataset: pd.DataFrame) -> pd.DataFrame:
+    """Add a cleaned name column to specified company dataset"""
+    return companies_dataset.assign(
+        clean_name=lambda x: preproc_names(x.name, stopwords=STOPWORDS)
+    )
 
 
 STOPWORDS = [
@@ -129,121 +184,63 @@ STOPWORDS = [
     "gbr",
 ]
 
+DR_URL_COLS = ["crunchbase", "website", "linkedin", "facebook", "twitter"]
+
+CB_URL_COLS = ["cb_url", "domain", "linkedin_url", "facebook_url", "twitter_url"]
+
 # %%
-dr = cols_replace_space_and_lowercase(
+# Load datasets
+dr = (
     get_foodtech_companies()
-).drop_duplicates()  # [["id", "NAME", "PROFILE URL", "WEBSITE", "HQ COUNTRY", ]]
-cb = get_crunchbase_orgs()  # .query("country_code == 'GBR'")
-
-# %%
-dr_clean_cb_url = clean_website_col(dr.dropna(subset=["crunchbase"]), "crunchbase")
-cb_clean_cb_url = clean_website_col(cb.dropna(subset=["cb_url"]), "cb_url")
-
-# %%
-# find matches on cb url
-id_dr_to_id_cb_from_cb_url = find_dr_cb_matches(
-    dr_clean_cb_url, cb_clean_cb_url, "crunchbase", "cb_url"
+    .pipe(cols_replace_space_and_lowercase)
+    .drop_duplicates()
+    .dropna(subset=["id"])
+    .pipe(add_clean_name_col)
 )
+cb = get_crunchbase_orgs().pipe(add_clean_name_col)
 
 # %%
-dr_already_matches_ids = list(id_dr_to_id_cb_from_cb_url.id_dr.values)
+"""
+filter columns only for those that are being used
+"""
 
 # %%
-dr_left_to_match = dr.query(f"id not in {dr_already_matches_ids}")
+# Find dealroom to crunchbase matches using urls
+combined_url_matches = []
+dr_companies_left_to_match = dr.copy()
+for dr_url, cb_url in zip(DR_URL_COLS, CB_URL_COLS):
+    url_matches = find_url_matches(dr_companies_left_to_match, cb, dr_url, cb_url)
+    # Add current matches to the combined dr to cb lookup
+    combined_url_matches.append(url_matches)
+    combined_dr_cb_lookup = make_combined_dr_cb_lookup(combined_url_matches)
+    # Update list of dr ids that have been matched to cb ids
+    dr_matched_ids = list(combined_dr_cb_lookup.id_dr.values)
+    # Update dataframe of dealroom companies that have not been matched yet
+    dr_companies_left_to_match = dr.query(f"id not in {dr_matched_ids}")
 
 # %%
-dr_clean_website = clean_website_col(
-    dr_left_to_match.dropna(subset=["website"]), "website"
+dr_companies_left_to_match
+
+# %%
+# Find exact matches of companies with the same country and name
+matches_from_country_and_name = dr_companies_left_to_match.dropna(
+    subset=["clean_name"]
+).pipe(
+    find_dr_cb_matches,
+    cb_companies=cb,
+    dr_on=["clean_name", "hq_country"],
+    cb_on=["clean_name", "country"],
 )
-cb_clean_website = clean_website_col(cb.dropna(subset=["domain"]), "domain")
-
-# %%
-id_dr_to_id_cb_from_website = find_dr_cb_matches(
-    dr_clean_website, cb_clean_website, "website", "domain"
+# Add exact matches of same country and name to the combined dr to cb lookup
+combined_dr_cb_lookup = make_combined_dr_cb_lookup(
+    [combined_dr_cb_lookup, matches_from_country_and_name]
 )
+# Update list of dr ids that have been matched to cb ids
+dr_matched_ids = list(combined_dr_cb_lookup.id_dr.values)
+# Update dataframe of dealroom companies that have not been matched yet
+dr_companies_left_to_match = dr.query(f"id not in {dr_matched_ids}")
 
 # %%
-id_dr_to_id_cb_from_cb_url_and_website = pd.concat(
-    [id_dr_to_id_cb_from_cb_url, id_dr_to_id_cb_from_website]
-).reset_index(drop=True)
-
-# %%
-dr_already_matches_ids2 = list(id_dr_to_id_cb_from_cb_url_and_website.id_dr.values)
-
-# %%
-dr_left_to_match2 = dr.query(f"id not in {dr_already_matches_ids2}")
-
-# %%
-dr_left_to_match2["clean_name"] = preproc_names(
-    dr_left_to_match2["name"], stopwords=STOPWORDS
-)
-
-# %%
-cb["clean_name"] = preproc_names(cb["name"], stopwords=STOPWORDS)
-
-# %%
-dr_clean_name = dr_left_to_match2.dropna(subset=["clean_name"])
-
-# %%
-cb_clean_name = cb.dropna(subset=["clean_name"])
-
-# %%
-id_dr_to_id_cb_from_country_and_name = find_dr_cb_matches(
-    dr_clean_name,
-    cb_clean_name,
-    ["clean_name", "hq_country"],
-    ["clean_name", "country"],
-)
-
-# %%
-id_dr_to_id_cb_from_cb_url_website_country_name = pd.concat(
-    [id_dr_to_id_cb_from_cb_url_and_website, id_dr_to_id_cb_from_country_and_name]
-)
-
-# %%
-id_dr_to_id_cb_from_cb_url_website_country_name
-
-# %%
-id_dr_to_id_cb_from_cb_url_website_country_name.to_csv(
-    "dr_to_cb_matches.csv", index=False
-)
-
-# %%
-cb.query("id == '25d07a9f-019e-4965-b2c0-019dbb37ea12'")
-
-# %%
-dr.query("id == 1757305")
-
-# %%
-19315 / 25166
-
-# %%
-25166 - 19278
-
-# %%
-dr
-
-# %%
-len(dr_already_matches_ids3)
-
-# %%
-dr_already_matches_ids3 = list(
-    id_dr_to_id_cb_from_cb_url_website_country_name.id_dr.values
-)
-dr_left_to_match3 = dr.query(f"id not in {dr_already_matches_ids3}")
-
-# %%
-dr_left_to_match3
-
-# %%
-dr_left_to_match3.to_csv("dr_left_to_match3.csv", index=False)
-
-# %%
-for col in cb.columns:
-    print(col)
-
-# %%
-for col in dr.columns:
-    print(col)
+dr_companies_left_to_match
 
 # %%
