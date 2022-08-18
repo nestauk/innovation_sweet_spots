@@ -150,6 +150,7 @@ def update_cb_countries_to_match_dr(cb_companies: pd.DataFrame) -> pd.DataFrame:
             "Lao People's Democratic Republic": "Laos",
             "Myanmar": "Burma (Myanmar)",
             "Iran, Islamic Republic of": "Iran",
+            "Côte d'Ivoire": "Côte dIvoire",
         }
     )
     return cb_companies
@@ -158,13 +159,17 @@ def update_cb_countries_to_match_dr(cb_companies: pd.DataFrame) -> pd.DataFrame:
 def update_dr_countries_to_match_cb(dr_companies: pd.DataFrame) -> pd.DataFrame:
     "Rename dealroom hq country to match crunchbase country"
     dr_companies["hq_country"] = dr_companies["hq_country"].replace(
-        {"Hong Kong SAR": "Hong Kong", "Hong Kong-China": "Hong Kong"}
+        {
+            "Hong Kong SAR": "Hong Kong",
+            "Hong Kong-China": "Hong Kong",
+            "Côte d'Ivoire": "Côte dIvoire",
+        }
     )
     return dr_companies
 
 
 STOPWORDS = [
-    "ltd",
+    "technologies" "ltd",
     "llp",
     "limited",
     "holdings",
@@ -273,9 +278,9 @@ combined_dr_cb_lookup = make_combined_dr_cb_lookup(
 # Update list of dr ids that have been matched to cb ids
 dr_matched_ids = list(combined_dr_cb_lookup.id_dr.values)
 # Update dataframe of dealroom companies that have not been matched yet
-dr_companies_left_to_match = dr.query(f"id not in {dr_matched_ids}").reset_index(
-    drop=True
-)
+dr_companies_left_to_match = dr.query(
+    f"id not in {dr_matched_ids}"
+)  # .reset_index(drop=True)
 
 # %%
 dr_companies_left_to_match
@@ -286,3 +291,73 @@ cb_countries = cb.country.unique()
 list(set(dr_countries).difference(cb_countries))
 
 # %%
+from tempfile import TemporaryDirectory
+from jacc_hammer.fuzzy_hash import Cos_config, Fuzzy_config, match_names_stream
+from pathlib import Path
+
+# Load configs
+cos_config = Cos_config()
+fuzzy_config = Fuzzy_config()
+# Create temp directory
+tmp_dir = Path(TemporaryDirectory().name)
+tmp_dir.mkdir()
+# Create list of countries in dealroom dataset
+dr_countries = [
+    country
+    for country in dr_companies_left_to_match.hq_country.unique()
+    if pd.isnull(country) is False
+]
+# Set settings
+sim_mean_min = 50
+chunksize = 100_000
+for country in dr_countries:
+    dr_country_subset = dr_companies_left_to_match.query(
+        f"hq_country == '{country}'"
+    ).reset_index(drop=True)
+    cb_country_subset = cb.query(f"country == '{country}'").reset_index(drop=True)
+    if len(cb_country_subset) == 0:
+        pass
+    else:
+        cb_names = cb_country_subset.clean_name.to_list()
+        dr_names = dr_country_subset.clean_name.to_list()
+        fuzzy_name_matches = pd.concat(
+            match_names_stream(
+                [cb_names, dr_names],
+                chunksize=chunksize,
+                tmp_dir=tmp_dir,
+                cos_config=cos_config,
+                fuzzy_config=fuzzy_config,
+            )
+        ).query(f"sim_mean >= {sim_mean_min}")
+        fuzzy_name_matches_with_info = (
+            fuzzy_name_matches.merge(
+                right=cb_country_subset, right_index=True, left_on="x", how="left"
+            )
+            .rename(columns={"name": "cb_name", "address": "cb_address", "id": "cb_id"})
+            .merge(right=dr_country_subset, right_index=True, left_on="y", how="left")
+            .rename(
+                columns={
+                    "name": "dr_name",
+                    "address": "dr_address",
+                    "id": "dr_id",
+                }
+            )
+            .sort_values(by=["sim_mean"], ascending=False)
+            .reset_index(drop=True)[
+                [
+                    "x",
+                    "y",
+                    "sim_ratio",
+                    "sim_jacc",
+                    "sim_cos",
+                    "sim_mean",
+                    "cb_name",
+                    "cb_address",
+                    "cb_id",
+                    "dr_name",
+                    "dr_address",
+                    "dr_id",
+                ]
+            ]
+        )
+        fuzzy_name_matches_with_info.to_csv(f"{country}_fuzzy_name_matches.csv")
