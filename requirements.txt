@@ -11,7 +11,7 @@ typer
 sh
 CurrencyConverter
 pyldavis
-tomotopy
+#tomotopy
 altair-saver
 selenium
 webdriver-manager
