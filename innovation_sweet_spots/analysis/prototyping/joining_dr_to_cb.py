@@ -216,6 +216,8 @@ STOPWORDS = [
     "toronto",
     "distribuidora",
     "tecnologia",
+    "distribution",
+    "communications",
     "associates",
     "drinks",
     "network",
