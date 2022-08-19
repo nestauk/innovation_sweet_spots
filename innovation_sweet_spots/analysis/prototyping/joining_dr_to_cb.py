@@ -169,6 +169,28 @@ def update_dr_countries_to_match_cb(dr_companies: pd.DataFrame) -> pd.DataFrame:
 
 
 STOPWORDS = [
+    "partnership",
+    "control",
+    "japan",
+    "packaging",
+    "investments",
+    "publishing",
+    "entertainment",
+    "luxembourg",
+    "scientific",
+    "portugal",
+    "denmark",
+    "danmark",
+    "italia",
+    "media",
+    "brokers",
+    "capital",
+    "oy",
+    "innovate",
+    "innovation",
+    "ventures",
+    "biotech",
+    "beverages",
     "hospitality",
     "new zealand",
     "australia",
@@ -176,18 +198,25 @@ STOPWORDS = [
     "enterprises",
     "payments",
     "technology",
+    "medical",
     "foundation",
     "costa rica",
+    "pacific",
     "designs",
     "china",
+    "india",
     "green",
     "therapeutics",
     "malaysia",
     "industries",
+    "sciences",
+    "organics",
+    "controls",
     "environmental",
     "toronto",
     "distribuidora",
-    "Tecnologia",
+    "tecnologia",
+    "associates",
     "drinks",
     "network",
     "market",
@@ -324,9 +353,6 @@ dr_companies_left_to_match = dr.query(
 )  # .reset_index(drop=True)
 
 # %%
-dr_companies_left_to_match
-
-# %%
 dr_countries = dr_companies_left_to_match.hq_country.unique()
 cb_countries = cb.country.unique()
 list(set(dr_countries).difference(cb_countries))
@@ -350,7 +376,7 @@ dr_countries = [
     if pd.isnull(country) is False
 ]
 # Set settings
-sim_mean_min = 50
+sim_mean_min = 70
 chunksize = 100_000
 for country in dr_countries:
     # Create temp directory
@@ -378,13 +404,23 @@ for country in dr_countries:
             fuzzy_name_matches.merge(
                 right=cb_country_subset, right_index=True, left_on="x", how="left"
             )
-            .rename(columns={"name": "cb_name", "address": "cb_address", "id": "cb_id"})
+            .rename(
+                columns={
+                    "name": "cb_name",
+                    "clean_name": "cb_clean_name",
+                    "address": "cb_address",
+                    "id": "cb_id",
+                    "short_description": "cb_description",
+                }
+            )
             .merge(right=dr_country_subset, right_index=True, left_on="y", how="left")
             .rename(
                 columns={
                     "name": "dr_name",
+                    "clean_name": "dr_clean_name",
                     "address": "dr_address",
                     "id": "dr_id",
+                    "tagline": "dr_description",
                 }
             )
             .sort_values(by=["sim_mean"], ascending=False)
@@ -392,20 +428,28 @@ for country in dr_countries:
                 [
                     "x",
                     "y",
-                    "sim_ratio",
-                    "sim_jacc",
-                    "sim_cos",
-                    "sim_mean",
                     "cb_name",
                     "dr_name",
+                    "cb_clean_name",
+                    "dr_clean_name",
+                    "cb_description",
+                    "dr_description",
                     "cb_address",
                     "dr_address",
                     "cb_id",
                     "dr_id",
+                    "sim_ratio",
+                    "sim_jacc",
+                    "sim_cos",
+                    "sim_mean",
                 ]
             ]
         )
-        fuzzy_name_matches_with_info.to_csv(
+        country_fuzzy_match_save_path = (
             DR_TO_CB_FUZZY_MATCHES_DIR
             / f"{country.lower().replace(' ', '_')}_fuzzy_name_matches.csv"
         )
+        if len(fuzzy_name_matches_with_info) > 0:
+            fuzzy_name_matches_with_info.to_csv(country_fuzzy_match_save_path)
+
+# %%
