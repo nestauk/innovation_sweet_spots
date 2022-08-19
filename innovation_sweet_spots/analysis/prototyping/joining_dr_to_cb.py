@@ -169,7 +169,10 @@ def update_dr_countries_to_match_cb(dr_companies: pd.DataFrame) -> pd.DataFrame:
 
 
 STOPWORDS = [
-    "technologies" "ltd",
+    "hospitality" "technologies",
+    "technology",
+    "drinks",
+    "restaurants" "innovations" "ltd",
     "llp",
     "limited",
     "holdings",
@@ -294,13 +297,14 @@ list(set(dr_countries).difference(cb_countries))
 from tempfile import TemporaryDirectory
 from jacc_hammer.fuzzy_hash import Cos_config, Fuzzy_config, match_names_stream
 from pathlib import Path
+from innovation_sweet_spots import PROJECT_DIR
 
 # Load configs
 cos_config = Cos_config()
 fuzzy_config = Fuzzy_config()
-# Create temp directory
-tmp_dir = Path(TemporaryDirectory().name)
-tmp_dir.mkdir()
+# Save fuzzy matches to dir
+DR_TO_CB_FUZZY_MATCHES_DIR = PROJECT_DIR / "outputs/dr_to_cb_fuzzy_matches/"
+DR_TO_CB_FUZZY_MATCHES_DIR.mkdir(exist_ok=True)
 # Create list of countries in dealroom dataset
 dr_countries = [
     country
@@ -311,6 +315,9 @@ dr_countries = [
 sim_mean_min = 50
 chunksize = 100_000
 for country in dr_countries:
+    # Create temp directory
+    tmp_dir = Path(TemporaryDirectory().name)
+    tmp_dir.mkdir()
     dr_country_subset = dr_companies_left_to_match.query(
         f"hq_country == '{country}'"
     ).reset_index(drop=True)
@@ -360,4 +367,7 @@ for country in dr_countries:
                 ]
             ]
         )
-        fuzzy_name_matches_with_info.to_csv(f"{country}_fuzzy_name_matches.csv")
+        fuzzy_name_matches_with_info.to_csv(
+            DR_TO_CB_FUZZY_MATCHES_DIR
+            / f"{country.lower().replace(' ', '_')}_fuzzy_name_matches.csv"
+        )
