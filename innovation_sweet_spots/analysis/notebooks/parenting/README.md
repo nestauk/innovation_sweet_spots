@@ -94,7 +94,7 @@ See below the types of deals included in the analysis:
 
 #### Digital technologies
 
-For the digital technology analysis, we again used Crunchbase industry labels. We used the broader industry groups specified by Crunchbase, and selected all industries that fall into the industry groups specified below (and defined in `utils.py`). There were in total almost 300 different digital industry groups considered in the analysis.
+For the digital technology analysis, we again used Crunchbase industry labels. We used the broader industry groups specified by Crunchbase, and selected all industries that fall into the industry groups specified below (and defined in `utils.py`). In total, we included almost 300 different digital industries that are covered by these specified broader groups.
 
 ```
 "information technology",

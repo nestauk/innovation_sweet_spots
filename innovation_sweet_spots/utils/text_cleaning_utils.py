@@ -12,8 +12,11 @@ import nltk
 from functools import lru_cache
 import numpy as np
 
-nltk.download("stopwords")
-nltk.download("wordnet")
+
+def download_nltk_data():
+    nltk.download("stopwords")
+    nltk.download("wordnet")
+
 
 ### Compiling regex patterns as they might get used many times over ###
 
