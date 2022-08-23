@@ -9,7 +9,7 @@ from metaflow import FlowSpec, Parameter, step
 from innovation_sweet_spots import PROJECT_DIR, logging
 
 # Data parameters
-COLUMNS = ["abstractText", "techAbstractText"]
+COLUMNS = ["title", "abstractText", "techAbstractText"]
 
 # Phraser parameters
 NGRAMS = 4

@@ -16,3 +16,8 @@ PATH = GTR_2022_PATH
 def get_gtr_projects() -> pd.DataFrame:
     """Main GtR projects table"""
     return pd.DataFrame(load_json(PATH / "gtr_projects-projects.json"))
+
+
+def get_gtr_topics() -> pd.DataFrame:
+    """GtR topics table"""
+    return pd.DataFrame(load_json(PATH / "gtr_projects-topic.json"))
