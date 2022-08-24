@@ -156,7 +156,6 @@ def find_dr_cb_matches(
     Returns:
         Dataframe with a column for dealroom ids
             and related crunchbase id
-
     """
     return dr_companies.merge(
         right=cb_companies,
