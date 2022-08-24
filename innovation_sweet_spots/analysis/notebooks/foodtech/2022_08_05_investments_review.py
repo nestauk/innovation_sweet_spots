@@ -51,6 +51,19 @@ DR = wu.DealroomWrangler()
 # Number of companies
 len(DR.company_data)
 
+# %%
+# Reviewed companies
+from innovation_sweet_spots.getters.google_sheets import get_foodtech_reviewed_vc
+
+reviewed_df = get_foodtech_reviewed_vc(from_local=False)
+
+# %% [markdown]
+# - check that there are no errors in taxonomy assignments (typos)
+# - recreate the taxonomy dict and associated files
+# - rerun the analyses
+# - consider any additional analyses
+# - write up
+
 # %% [markdown]
 # ## Deal types
 
@@ -63,37 +76,75 @@ for d in sorted(utils.LATE_DEAL_TYPES):
     print(d)
 
 # %% [markdown]
-# ## Explore label embeddings
+# ## Reviewed taxonomy
+# - Check all major categories
+# - Check all sub-categories
 
 # %%
-import innovation_sweet_spots.getters.dealroom as dlr
-from innovation_sweet_spots.utils import cluster_analysis_utils
-import innovation_sweet_spots.utils.embeddings_utils as eu
+import ast
+import re
+
 
 # %%
-import umap
-import numpy as np
+def process_reviewed_text(text: str) -> str:
+    text = re.sub("‘", "'", text)
+    text = re.sub("’", "'", text)
+    return text
+
 
 # %%
-v_labels = dlr.get_label_embeddings()
-
-# %%
-query = eu.QueryEmbeddings(
-    vectors=v_labels.vectors, texts=v_labels.vector_ids, model=v_labels.model
+process_reviewed_text(
+    "{'agritech': ['agritech (all other)'], 'food waste': ['food waste (all other)’]}"
 )
 
 # %%
-labels = DR.labels.assign(text=lambda df: df.Category.apply(tcu.clean_dealroom_labels))
+for i, row in reviewed_df.iterrows():
+    try:
+        ast.literal_eval(process_reviewed_text(row.taxonomy_checked))
+    except:
+        print(row.NAME, row.taxonomy_checked)
 
 # %%
-pd.set_option("max_colwidth", 200)
-ids = DR.company_labels.query("Category=='compounding'").id.to_list()
-DR.company_data.query("id in @ids")[["NAME", "TAGLINE", "WEBSITE"]]
+taxonomy_assigments = reviewed_df.taxonomy_checked.apply(
+    lambda x: ast.literal_eval(process_reviewed_text(x))
+)
 
 # %%
-i = 0
-df = query.find_most_similar("retail").merge(labels).iloc[i : i + 20]
-df
+from collections import defaultdict
+
+# %%
+all_keys = set()
+all_values = set()
+taxonomy = defaultdict(set)
+for t in taxonomy_assigments:
+    all_keys = all_keys.union(set(list(t.keys())))
+    all_values = all_values.union(set([t for tt in list(t.values()) for t in tt]))
+    for key in t:
+        taxonomy[key] = taxonomy[key].union(set(t[key]))
+
+
+# %%
+for key in taxonomy:
+    taxonomy[key] = list(taxonomy[key])
+taxonomy = dict(taxonomy)
+
+# %%
+taxonomy
+
+# %%
+df = reviewed_df[reviewed_df.taxonomy_checked != "{}"]
+
+# %%
+assert len(df[df.duplicated("id", keep=False)]) == 0
+
+# %%
+all_ids = df.id.to_list()
+tax_assignments = list(
+    df.taxonomy_checked.apply(lambda x: ast.literal_eval(process_reviewed_text(x)))
+)
+
+# %%
+company_to_taxonomy_dict = dict(zip(all_ids, tax_assignments))
 
 # %% [markdown]
 # ## User defined taxonomy
@@ -686,41 +737,41 @@ rejected_tags = [
 
 # %%
 def create_taxonomy_dataframe(
-    taxonomy: pd.DataFrame, DR: wu.DealroomWrangler = None
+    taxonomy: pd.DataFrame,
 ) -> pd.DataFrame:
     """
     Create a taxonomy dataframe from a dictionary
     """
     taxonomy_df = []
     for major in taxonomy.keys():
-        for minor in taxonomy[major].keys():
-            for label in taxonomy[major][minor]:
-                taxonomy_df.append([major, minor, label])
-    taxonomy_df = pd.DataFrame(taxonomy_df, columns=["Major", "Minor", "Category"])
+        for minor in taxonomy[major]:
+            # for label in taxonomy[major][minor]:
+            taxonomy_df.append([major, minor])
+    taxonomy_df = pd.DataFrame(taxonomy_df, columns=["Major", "Minor"])
 
-    if DR is not None:
-        # Number of companies for each label (NB: also accounts for multiple labels of different types with the same name)
-        category_counts = (
-            DR.company_labels.groupby(["Category", "label_type"], as_index=False)
-            .agg(counts=("id", "count"))
-            .sort_values("counts", ascending=False)
-        )
-        taxonomy_df = taxonomy_df.merge(
-            category_counts[["Category", "label_type", "counts"]]
-        )
+    # if DR is not None:
+    #     # Number of companies for each label (NB: also accounts for multiple labels of different types with the same name)
+    #     category_counts = (
+    #         DR.company_labels.groupby(["Category", "label_type"], as_index=False)
+    #         .agg(counts=("id", "count"))
+    #         .sort_values("counts", ascending=False)
+    #     )
+    #     taxonomy_df = taxonomy_df.merge(
+    #         category_counts[["Category", "label_type", "counts"]]
+    #     )
     return taxonomy_df
 
 
 # %%
-taxonomy_df = create_taxonomy_dataframe(taxonomy, DR)
+taxonomy_df = create_taxonomy_dataframe(taxonomy)
 
 # %%
 taxonomy_df.iloc[0:20]
 
 # %%
-taxonomy_df.to_csv(
-    PROJECT_DIR / "outputs/foodtech/interim/taxonomy_v2022_07_27.csv", index=False
-)
+# taxonomy_df.to_csv(
+#     PROJECT_DIR / "outputs/foodtech/interim/taxonomy_v2022_07_27.csv", index=False
+# )
 
 # %% [markdown]
 # ## Refining taxonomy assignments
@@ -749,10 +800,10 @@ df = taxonomy_df.drop_duplicates(["Minor", "Major"])
 minor_to_major = dict(zip(df.Minor, df.Major))
 
 # %%
-major_label_types = ["INDUSTRIES", "SUB INDUSTRIES"]
-companies_to_check = list(
-    DR.company_labels.query("Category in @taxonomy_df.Category.to_list()").id.unique()
-)
+# major_label_types = ["INDUSTRIES", "SUB INDUSTRIES"]
+# companies_to_check = list(
+#     DR.company_labels.query("Category in @taxonomy_df.Category.to_list()").id.unique()
+# )
 
 # %%
 # company_to_taxonomy_dict_old = company_to_taxonomy_dict.copy()
@@ -826,9 +877,12 @@ company_to_taxonomy_dict["1686094"] = {
     "cooking and kitchen": ["dark kitchen"],
 }
 
+# %% [markdown]
+# ## Restart from here
+
 # %%
 company_to_taxonomy_labels = []
-for company_id in companies_to_check:
+for company_id in all_ids:
     for cat in company_to_taxonomy_dict[company_id]:
         company_to_taxonomy_labels.append([company_id, cat, "Major"])
         for minor_cat in company_to_taxonomy_dict[company_id][cat]:
@@ -841,6 +895,15 @@ company_to_taxonomy_df = pd.DataFrame(
 
 # %%
 len(company_to_taxonomy_df.id.unique())
+
+# %%
+company_to_taxonomy_df.head(5)
+
+# %%
+# company_to_taxonomy_df.groupby(['Category', 'level']).count()
+
+# %%
+# company_to_taxonomy_df
 
 # %%
 company_to_taxonomy_df.groupby(["level", "Category"]).count()
@@ -1545,7 +1608,7 @@ au.percentage_change(
 )
 
 # %%
-AltairSaver.save(fig, f"vJuly18_total_investment", filetypes=["html", "png"])
+AltairSaver.save(fig, f"vAugust24_total_investment", filetypes=["html", "png"])
 
 # %%
 horizontal_label = "Year"
@@ -2040,7 +2103,7 @@ AltairSaver.save(
 )
 
 # %%
-category = "delivery"
+category = "personalised nutrition"
 horizontal_label = "Year"
 values_label = "Investment (million GBP)"
 tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]

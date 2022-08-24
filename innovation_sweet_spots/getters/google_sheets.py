@@ -89,3 +89,22 @@ def get_foodtech_search_terms(from_local=True, save_locally=True):
             data_df.to_csv(local_path, index=False)
             logging.info(f"Search terms saved locally to {local_path}")
         return data_df
+
+
+def get_foodtech_reviewed_vc(from_local=True, save_locally=True):
+    """Get search terms for food tech project"""
+    local_path = PROJECT_DIR / "outputs/foodtech/interim/foodtech_reviewed_VC.csv"
+    # Google sheets info
+    scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+    spreadsheet_id = "12D6cQXqMG9ou6XJbPpNw7S7tnr8nXK14r8XTD1BW5Fg"
+    data_range = "selected_companies_v2022_08_05"
+    if from_local:
+        logging.info(f"Loading search terms from {local_path}")
+        return pd.read_csv(local_path)
+    else:
+        data = pull_sheet_data(scopes, spreadsheet_id, data_range)
+        data_df = pd.DataFrame(data[1:], columns=data[0])
+        if save_locally:
+            data_df.to_csv(local_path, index=False)
+            logging.info(f"Search terms saved locally to {local_path}")
+        return data_df
