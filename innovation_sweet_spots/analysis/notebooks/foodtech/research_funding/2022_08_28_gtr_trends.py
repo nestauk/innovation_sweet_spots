@@ -185,4 +185,13 @@ magnitude_growth.sort_values(["index", "magnitude"], ascending=False).query(
 # Very, very rough and ready trends on research funding (using the mostly not-reviewed data) but looks interesting - biomedical at the top
 # Supply chain is probably overestimated
 # Packaging is mixing together sustainable packaging with shelf life
-# Food waste i
+# Food waste is probably mixing agtech
+# Retial is interesting! what's going on there?
+# personalised nutrition a lot of attention there
+# kitchen tech?
+# some interesting movement around delivery apps,
+# alt protein and such appears quite modest, but
+#
+# Overall it looks like innovation funding is going to emerging areas?
+
+# %%
