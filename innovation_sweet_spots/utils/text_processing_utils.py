@@ -183,6 +183,19 @@ def process_and_tokenise_corpus(text_corpus: Iterator[str], nlp=None, **kwargs) 
     return tok_ngram, ngram_phraser
 
 
+def process_corpus(text_corpus: Iterator[str], nlp=None, verbose: bool = True) -> list:
+    """
+    Same as process_and_tokenise_corpus but without creating phrases
+    """
+    if nlp is None:
+        nlp = setup_spacy_model(DEF_LANGUAGE_MODEL)
+    corpus = [remove_newline(x) for x in text_corpus]
+    if verbose:
+        logging.info("Tokenising")
+    tokenised = [process_spacy_doc_to_tokens(doc) for doc in nlp.pipe(corpus)]
+    return tokenised
+
+
 def process_text_disc(doc: spacy.tokens.doc.Doc) -> list:
     """Adapted from process_spacy_doc_to_tokens for discourse analysis"""
 

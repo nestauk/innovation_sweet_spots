@@ -49,7 +49,9 @@ def impute_empty_periods(
 ### GtR specific utils
 
 
-def gtr_deduplicate_projects(gtr_docs: pd.DataFrame) -> pd.DataFrame:
+def gtr_deduplicate_projects(
+    gtr_docs: pd.DataFrame, start_date_column: str = "start"
+) -> pd.DataFrame:
     """
     Deduplicates projects that have the same title and description. This can be used
     to report the overall funding amount of the whole project when it has
@@ -73,7 +75,7 @@ def gtr_deduplicate_projects(gtr_docs: pd.DataFrame) -> pd.DataFrame:
     return (
         gtr_docs.drop("amount", axis=1)
         .merge(gtr_docs_summed_amounts, on=["title", "description"], how="left")
-        .sort_values("start")
+        .sort_values(start_date_column)
         .drop_duplicates(["title", "description"], keep="first")
         .reset_index(drop=True)
         # Restore previous column order
@@ -81,7 +83,11 @@ def gtr_deduplicate_projects(gtr_docs: pd.DataFrame) -> pd.DataFrame:
 
 
 def gtr_funding_per_period(
-    gtr_docs: pd.DataFrame, period: str, min_year: int, max_year: int
+    gtr_docs: pd.DataFrame,
+    period: str,
+    min_year: int,
+    max_year: int,
+    start_date_column: str = "start",
 ) -> pd.DataFrame:
     """
     Given a table with projects and their funding, return an aggregation by period
@@ -102,8 +108,8 @@ def gtr_funding_per_period(
     # Convert project start dates to time period
     gtr_docs = (
         gtr_docs.copy()
-        .astype({"start": "datetime64[ns]"})
-        .assign(time_period=lambda x: x.start.dt.strftime("%Y-%m-%d"))
+        .astype({start_date_column: "datetime64[ns]"})
+        .assign(time_period=lambda x: x[start_date_column].dt.strftime("%Y-%m-%d"))
         .astype({"time_period": "datetime64[ns]"})
     )
     # Group by time period
@@ -124,7 +130,11 @@ def gtr_funding_per_period(
 
 
 def gtr_funding_median_per_period(
-    gtr_docs: pd.DataFrame, period: str, min_year: int, max_year: int
+    gtr_docs: pd.DataFrame,
+    period: str,
+    min_year: int,
+    max_year: int,
+    start_date_column: str = "start",
 ) -> pd.DataFrame:
     """
     Given a table with projects and their funding, return median funding by period
@@ -147,8 +157,8 @@ def gtr_funding_median_per_period(
     # Convert project start dates to time period
     gtr_docs = (
         gtr_docs.copy()
-        .astype({"start": "datetime64[ns]"})
-        .assign(time_period=lambda x: x.start.dt.strftime("%Y-%m-%d"))
+        .astype({start_date_column: "datetime64[ns]"})
+        .assign(time_period=lambda x: x[start_date_column].dt.strftime("%Y-%m-%d"))
         .astype({"time_period": "datetime64[ns]"})
     )
 
@@ -170,7 +180,11 @@ def gtr_funding_median_per_period(
 
 
 def gtr_get_all_timeseries_period(
-    gtr_docs: pd.DataFrame, period: str, min_year: int, max_year: int
+    gtr_docs: pd.DataFrame,
+    period: str,
+    min_year: int,
+    max_year: int,
+    start_date_column: str = "start",
 ) -> pd.DataFrame:
     """
     Calculates all typical time series from a list of GtR projects and return
@@ -191,14 +205,16 @@ def gtr_get_all_timeseries_period(
     # Deduplicate projects. This is used to report the number of new projects
     # started each period, accounting for cases where the same project has received
     # additional funding in later periods
-    gtr_docs_dedup = gtr_deduplicate_projects(gtr_docs)
+    gtr_docs_dedup = gtr_deduplicate_projects(gtr_docs, start_date_column)
     # Number of new projects per time period
     time_series_projects = gtr_funding_per_period(
-        gtr_docs_dedup, period, min_year, max_year
+        gtr_docs_dedup, period, min_year, max_year, start_date_column
     )[["time_period", "no_of_projects"]]
     # Amount of research funding per period (note: here we use the non-duplicated table,
     # to account for additional funding for projects that might have started in earlier periods
-    time_series_funding = gtr_funding_per_period(gtr_docs, period, min_year, max_year)
+    time_series_funding = gtr_funding_per_period(
+        gtr_docs, period, min_year, max_year, start_date_column
+    )
     # Join up both tables
     time_series_funding["no_of_projects"] = time_series_projects["no_of_projects"]
     return time_series_funding
