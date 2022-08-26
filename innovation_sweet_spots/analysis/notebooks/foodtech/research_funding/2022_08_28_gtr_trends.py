@@ -177,6 +177,12 @@ magnitude_growth = pd.concat(magnitude_growth, ignore_index=False).reset_index()
 
 # %%
 pd.options.display.float_format = "{:.3f}".format
-magnitude_growth.sort_values(["index", "magnitude"], ascending=False)
+magnitude_growth.sort_values(["index", "magnitude"], ascending=False).query(
+    "index=='amount_total'"
+)
 
-# %%
+# %% [markdown]
+# Very, very rough and ready trends on research funding (using the mostly not-reviewed data) but looks interesting - biomedical at the top
+# Supply chain is probably overestimated
+# Packaging is mixing together sustainable packaging with shelf life
+# Food waste i
