@@ -30,6 +30,9 @@ import pandas as pd
 COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
 
 # %%
+importlib.reload(wu)
+
+# %%
 from innovation_sweet_spots import PROJECT_DIR
 
 # %%
@@ -154,9 +157,9 @@ company_to_taxonomy_dict = dict(zip(all_ids, tax_assignments))
 # DR.company_labels.query('id in @ids').groupby(['Category', 'label_type']).count().sort_values('id').tail(30)
 
 # %%
-label_clusters = pd.read_csv(
-    PROJECT_DIR / "outputs/foodtech/interim/dealroom_labels.csv"
-)
+# label_clusters = pd.read_csv(
+#     PROJECT_DIR / "outputs/foodtech/interim/dealroom_labels.csv"
+# )
 
 # %% [markdown]
 # #### version 1
@@ -724,7 +727,7 @@ technology_tags = (
 # #### create taxonomy dataframe
 
 # %%
-enabling_tech.keys()
+# enabling_tech.keys()
 
 # %%
 rejected_tags = [
@@ -809,60 +812,60 @@ minor_to_major = dict(zip(df.Minor, df.Major))
 # company_to_taxonomy_dict_old = company_to_taxonomy_dict.copy()
 
 # %%
-# company_id = '890906'
-# # company_id = '1763210'
-# company_id = '1299047'
-company_to_taxonomy_dict = {}
+# # company_id = '890906'
+# # # company_id = '1763210'
+# # company_id = '1299047'
+# company_to_taxonomy_dict = {}
 
-for company_id in tqdm(companies_to_check, total=len(companies_to_check)):
+# for company_id in tqdm(companies_to_check, total=len(companies_to_check)):
 
-    # Check to which taxonomy categories does the company seem to fall in
-    company_to_taxonomy = DR.company_labels.query("id == @company_id").merge(
-        taxonomy_df[["Category", "Major", "Minor", "label_type"]],
-        on=["Category", "label_type"],
-    )
+#     # Check to which taxonomy categories does the company seem to fall in
+#     company_to_taxonomy = DR.company_labels.query("id == @company_id").merge(
+#         taxonomy_df[["Category", "Major", "Minor", "label_type"]],
+#         on=["Category", "label_type"],
+#     )
 
-    # MAJOR CATEGORY
-    major_categories = company_to_taxonomy.Major.unique()
-    n_major = len(major_categories)
-    if n_major == 1:
-        # If there is only one major category, assign that
-        company_to_taxonomy_dict[company_id] = {major_categories[0]: []}
-    elif n_major > 1:
-        # If there are more than 1 major category assignments
-        # Check sub industries
-        df = company_to_taxonomy.query("label_type in @major_label_types")
-        if len(df) > 0:
-            # If we can use industries/sub-industries
-            company_to_taxonomy_dict[company_id] = {x: [] for x in df.Major.unique()}
-        else:
-            # If there are no industries/sub-industries
-            company_to_taxonomy_dict[company_id] = {x: [] for x in major_categories}
+#     # MAJOR CATEGORY
+#     major_categories = company_to_taxonomy.Major.unique()
+#     n_major = len(major_categories)
+#     if n_major == 1:
+#         # If there is only one major category, assign that
+#         company_to_taxonomy_dict[company_id] = {major_categories[0]: []}
+#     elif n_major > 1:
+#         # If there are more than 1 major category assignments
+#         # Check sub industries
+#         df = company_to_taxonomy.query("label_type in @major_label_types")
+#         if len(df) > 0:
+#             # If we can use industries/sub-industries
+#             company_to_taxonomy_dict[company_id] = {x: [] for x in df.Major.unique()}
+#         else:
+#             # If there are no industries/sub-industries
+#             company_to_taxonomy_dict[company_id] = {x: [] for x in major_categories}
 
-    # MINOR CATEGORY
-    minor_categories = company_to_taxonomy.Minor.unique()
-    n_minor = len(minor_categories)
+#     # MINOR CATEGORY
+#     minor_categories = company_to_taxonomy.Minor.unique()
+#     n_minor = len(minor_categories)
 
-    for minor_cat in minor_categories:
-        maj = minor_to_major[minor_cat]
-        if maj in company_to_taxonomy_dict[company_id]:
-            company_to_taxonomy_dict[company_id][maj].append(minor_cat)
+#     for minor_cat in minor_categories:
+#         maj = minor_to_major[minor_cat]
+#         if maj in company_to_taxonomy_dict[company_id]:
+#             company_to_taxonomy_dict[company_id][maj].append(minor_cat)
 
-    for cat in company_to_taxonomy_dict[company_id]:
-        minor_cats = company_to_taxonomy_dict[company_id][cat]
-        if len(minor_cats) > 1:
-            contains_general = ["all other" in s for s in minor_cats]
-            company_to_taxonomy_dict[company_id][cat] = [
-                cat for i, cat in enumerate(minor_cats) if not contains_general[i]
-            ]
+#     for cat in company_to_taxonomy_dict[company_id]:
+#         minor_cats = company_to_taxonomy_dict[company_id][cat]
+#         if len(minor_cats) > 1:
+#             contains_general = ["all other" in s for s in minor_cats]
+#             company_to_taxonomy_dict[company_id][cat] = [
+#                 cat for i, cat in enumerate(minor_cats) if not contains_general[i]
+#             ]
 
-    # Special rules
-    if "dietary supplements" in minor_categories:
-        company_to_taxonomy_dict[company_id] = {"health": ["dietary supplements"]}
+#     # Special rules
+#     if "dietary supplements" in minor_categories:
+#         company_to_taxonomy_dict[company_id] = {"health": ["dietary supplements"]}
 
 
 # %%
-DR.company_data[DR.company_data.NAME.str.contains("Bolt")]
+# DR.company_data[DR.company_data.NAME.str.contains("Bolt")]
 
 # %%
 company_to_taxonomy_dict["26411"]
@@ -871,11 +874,11 @@ company_to_taxonomy_dict["26411"]
 # #### Special assignments
 
 # %%
-# Karma Kitchen
-company_to_taxonomy_dict["1686094"] = {
-    "logistics": ["delivery"],
-    "cooking and kitchen": ["dark kitchen"],
-}
+# # Karma Kitchen
+# company_to_taxonomy_dict["1686094"] = {
+#     "logistics": ["delivery"],
+#     "cooking and kitchen": ["dark kitchen"],
+# }
 
 # %% [markdown]
 # ## Restart from here
@@ -900,13 +903,176 @@ len(company_to_taxonomy_df.id.unique())
 company_to_taxonomy_df.head(5)
 
 # %%
-# company_to_taxonomy_df.groupby(['Category', 'level']).count()
+# Remove categories
+drop_categories = ["taste", "vegan", "algae", "oleaginous"]
+company_to_taxonomy_df = company_to_taxonomy_df[
+    company_to_taxonomy_df.Category.isin(drop_categories) == False
+].reset_index(drop=True)
 
 # %%
-# company_to_taxonomy_df
+# Check category "innovative food (all other")
+category_to_check = "innovative food (all other)"
+ids = list(company_to_taxonomy_df.query("Category == @category_to_check").id.unique())
+print(len(ids))
+
+innovative_food_terms = [
+    "reformulation",
+    "plant-based",
+    "fermentation",
+    "alt protein",
+    "lab meat",
+    "insects",
+]
+
+indices = []
+for company_id in ids:
+    df = company_to_taxonomy_df.query("id == @company_id and level == 'Minor'")
+    if df.Category.isin(innovative_food_terms).sum() > 0:
+        indices.append(df.query("Category == @category_to_check").index[0])
+
+
+print(len(indices))
+
+company_to_taxonomy_df = company_to_taxonomy_df.drop(indices).reset_index(drop=True)
+
+# %%
+# Check category "innovative food (all other")
+category_to_check = "alt protein"
+ids = list(company_to_taxonomy_df.query("Category == @category_to_check").id.unique())
+print(len(ids))
+
+alt_protein_terms = [
+    "plant-based",
+    "fermentation",
+    "lab meat",
+    "insects",
+]
+
+indices = []
+for company_id in ids:
+    df = company_to_taxonomy_df.query("id == @company_id and level == 'Minor'")
+    if df.Category.isin(alt_protein_terms).sum() > 0:
+        indices.append(df.query("Category == @category_to_check").index[0])
+
+print(len(indices))
+company_to_taxonomy_df = company_to_taxonomy_df.drop(indices).reset_index(drop=True)
+
+# %%
+# Check category "innovative food (all other")
+category_to_check = "diet"
+ids = list(company_to_taxonomy_df.query("Category == @category_to_check").id.unique())
+print(len(ids))
+
+alt_terms = ["personalised nutrition"]
+
+indices = []
+for company_id in ids:
+    df = company_to_taxonomy_df.query("id == @company_id and level == 'Minor'")
+    if df.Category.isin(alt_terms).sum() > 0:
+        indices.append(df.query("Category == @category_to_check").index[0])
+
+print(len(indices))
+
+company_to_taxonomy_df = company_to_taxonomy_df.drop(indices).reset_index(drop=True)
+
+# %%
+company_to_taxonomy_df.loc[
+    company_to_taxonomy_df.query("Category == 'health tech'").index, "Category"
+] = "health (all other)"
+
+
+# %%
+# company_to_taxonomy_df[company_to_taxonomy_df.duplicated(['id','Category'])]
+
+# %%
+# Check category "innovative food (all other")
+category_to_check = "health (all other)"
+ids = list(company_to_taxonomy_df.query("Category == @category_to_check").id.unique())
+print(len(ids))
+
+alt_terms = [
+    "personalised nutrition",
+    "diet",
+    "biomedical",
+]
+
+indices = []
+for company_id in ids:
+    df = company_to_taxonomy_df.query("id == @company_id and level == 'Minor'")
+    if df.Category.isin(alt_terms).sum() > 0:
+        indices.append(df.query("Category == @category_to_check").index[0])
+
+print(len(indices))
+
+company_to_taxonomy_df = company_to_taxonomy_df.drop(indices).reset_index(drop=True)
+
+# %%
+company_to_taxonomy_df.loc[
+    company_to_taxonomy_df.query("Category == 'food waste (all other)'").index,
+    "Category",
+] = "waste reduction"
+
+company_to_taxonomy_df.loc[
+    company_to_taxonomy_df.query("Category == 'innovative food (all other)'").index,
+    "Category",
+] = "innovative food (other)"
+
+company_to_taxonomy_df.loc[
+    company_to_taxonomy_df.query("Category == 'health (all other)'").index, "Category"
+] = "health (other)"
+
+company_to_taxonomy_df.loc[
+    company_to_taxonomy_df.query("Category == 'alt protein'").index, "Category"
+] = "alt protein (other)"
+
+# %%
+taxonomy = {
+    "agritech": [
+        "agritech (all other)",
+        "precision agriculture",
+        "crop protection",
+        "vertical farming",
+    ],
+    "food waste": ["packaging", "waste reduction"],
+    "health": [
+        "health (other)",
+        "diet",
+        "biomedical",
+        "dietary supplements",
+        "personalised nutrition",
+    ],
+    "innovative food": [
+        "plant-based",
+        "fermentation",
+        "lab meat",
+        "insects",
+        "alt protein (other)",
+        "reformulation",
+        "innovative food (other)",
+    ],
+    "logistics": ["supply chain", "delivery", "meal kits"],
+    "retail and restaurants": ["retail", "restaurants"],
+    "cooking and kitchen": ["kitchen tech", "dark kitchen"],
+}
+
+# %%
+taxonomy_df = create_taxonomy_dataframe(taxonomy)
+
+# %%
+df = taxonomy_df.drop_duplicates(["Minor", "Major"])
+minor_to_major = dict(zip(df.Minor, df.Major))
 
 # %%
 company_to_taxonomy_df.groupby(["level", "Category"]).count()
+
+# %%
+# df = (
+#     company_to_taxonomy_df.query("Category == 'supply chain'")
+#     .merge(DR.company_data[['id', 'NAME']], how='left')
+#     .merge(company_to_taxonomy_df.query("level == 'Minor'")[['id', 'Category']], on='id')
+# )
+# # df[df.duplicated('id', keep=False)==False]
+# df
 
 # %% [markdown]
 # ## Export for checking
@@ -1490,7 +1656,7 @@ foodtech_ids = list(company_to_taxonomy_df.id.unique())
 # %%
 (
     DR.funding_rounds.query("id in @foodtech_ids")
-    .query("`EACH ROUND TYPE` in @utils.LATE_DEAL_TYPES")
+    .query("`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES")
     .query('announced_on > "2020-12-31" and announced_on < "2022-01-01"')
     .raised_amount_gbp.sum()
 )
@@ -1658,7 +1824,7 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
-AltairSaver.save(fig, f"vJuly18_total_investment_rounds", filetypes=["html", "png"])
+AltairSaver.save(fig, f"vAugust24_total_investment_rounds", filetypes=["html", "png"])
 
 # %% [markdown]
 # ## Major categories
@@ -1760,7 +1926,7 @@ fig_final
 
 # %%
 AltairSaver.save(
-    fig_final, f"vJuly18_growth_vs_magnitude_Major", filetypes=["html", "png"]
+    fig_final, f"vAugust24_growth_vs_magnitude_Major", filetypes=["html", "png"]
 )
 
 # %%
@@ -1869,8 +2035,10 @@ fig_category_growth(
 # ## Minor categories (medium granularity)
 
 # %%
-magnitude_vs_growth_minor = get_trends(taxonomy_df, rejected_tags, "Minor", DR)
-magnitude_vs_growth_minor
+magnitude_vs_growth_minor = get_trends(taxonomy_df, rejected_tags, "Minor", DR).query(
+    "Major != 'agritech'"
+)
+# magnitude_vs_growth_minor
 
 # %%
 fig_growth_vs_magnitude(
@@ -1967,19 +2135,34 @@ final_fig
 # # .str.contains('formula')]
 
 # %%
-AltairSaver.save(final_fig, f"vJuly18_growth_Minor", filetypes=["html", "png"])
+AltairSaver.save(final_fig, f"vAugust24_growth_Minor", filetypes=["html", "png"])
 
 # %%
-category = "taste"
+len(
+    DR.company_data[["id", "NAME", "PROFILE URL", "WEBSITE", "country"]].query(
+        "id in @ids.id.to_list()"
+    )
+)
+
+# %%
+pd.set_option("max_colwidth", 200)
+category = "reformulation"
 ids = company_to_taxonomy_df.query("Category == @category")
 (
-    DR.funding_rounds.query("id in @ids.id.to_list()")
-    .query("`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES")
-    .merge(DR.company_data[["id", "NAME", "PROFILE URL", "country"]])
-    .groupby(["id", "NAME", "country", "PROFILE URL"], as_index=False)
-    .sum()
+    DR.company_data[["id", "NAME", "TAGLINE", "PROFILE URL", "WEBSITE", "country"]]
+    .query("id in @ids.id.to_list()")
+    .merge(
+        (
+            DR.funding_rounds.query("`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES")
+            .groupby(["id"], as_index=False)
+            .sum()
+        ),
+        on="id",
+        how="left",
+    )
     .sort_values("raised_amount_gbp", ascending=False)
-).head(10)
+    .drop(["funding_round_id", "raised_amount_usd"], axis=1)
+)
 
 # %%
 # ids = company_to_taxonomy_df.query("Category in 'taste'").id.to_list()
@@ -2095,7 +2278,7 @@ text = (
 )
 
 final_fig = pu.configure_titles(pu.configure_axes((fig + text)), "", "")
-final_fig
+final_fig.interactive()
 
 # %%
 AltairSaver.save(
@@ -2208,6 +2391,171 @@ ids = get_category_ids(taxonomy_df, rejected_tags, DR, column="Minor")
 #     y_label="Raised amount (million GBP)",
 #     x_label="Year",
 # )
+
+# %% [markdown]
+# ## Minor category time series
+
+# %%
+category = "reformulation"
+category = "innovative food (other)"
+horizontal_label = "Year"
+values_label = "Investment (million GBP)"
+tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
+
+data = (
+    category_ts.assign(raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total)
+    .query("time_period < 2022")
+    .query("Category == @category")
+    .rename(
+        columns={
+            "time_period": horizontal_label,
+            "raised_amount_gbp_total": values_label,
+        }
+    )
+)
+
+fig = (
+    alt.Chart(
+        data.assign(
+            **{horizontal_label: pu.convert_time_period(data[horizontal_label], "Y")}
+        ),
+        width=400,
+        height=200,
+    )
+    .mark_bar(color=pu.NESTA_COLOURS[0])
+    .encode(
+        alt.X(f"{horizontal_label}:O"),
+        alt.Y(
+            f"{values_label}:Q",
+            # scale=alt.Scale(domain=[0, 1200])
+        ),
+        tooltip=tooltip,
+    )
+)
+final_fig = pu.configure_plots(fig)
+final_fig
+
+# %%
+AltairSaver.save(
+    final_fig, f"vAugust24_ts_Minor_{category}_amount", filetypes=["html", "png"]
+)
+
+# %%
+category = "reformulation"
+horizontal_label = "Year"
+values_label = "Number of rounds"
+tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
+
+data = (
+    category_ts.assign(raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total)
+    .query("time_period < 2022")
+    .query("Category == @category")
+    .rename(
+        columns={
+            "time_period": horizontal_label,
+            "no_of_rounds": values_label,
+        }
+    )
+)
+
+fig = (
+    alt.Chart(
+        data.assign(
+            **{horizontal_label: pu.convert_time_period(data[horizontal_label], "Y")}
+        ),
+        width=400,
+        height=200,
+    )
+    .mark_bar(color=pu.NESTA_COLOURS[0])
+    .encode(
+        alt.X(f"{horizontal_label}:O"),
+        alt.Y(
+            f"{values_label}:Q",
+            # scale=alt.Scale(domain=[0, 1200])
+        ),
+        tooltip=tooltip,
+    )
+)
+final_fig = pu.configure_plots(fig)
+final_fig
+
+# %%
+AltairSaver.save(
+    final_fig, f"vAugust24_ts_Minor_{category}_rounds", filetypes=["html", "png"]
+)
+
+# %%
+pd.set_option("max_colwidth", 200)
+# category = "reformulation"
+ids = company_to_taxonomy_df.query("Category == @category")
+(
+    DR.company_data[["id", "NAME", "TAGLINE", "PROFILE URL", "WEBSITE", "country"]]
+    .query("id in @ids.id.to_list()")
+    .merge(
+        (
+            DR.funding_rounds.query("`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES")
+            .groupby(["id"], as_index=False)
+            .sum()
+        ),
+        on="id",
+        how="left",
+    )
+    .sort_values("raised_amount_gbp", ascending=False)
+    .drop(["funding_round_id", "raised_amount_usd"], axis=1)
+)
+
+# %%
+
+# %% [markdown]
+# ## Exporting the list of startups
+
+# %%
+pd.set_option("max_colwidth", 200)
+# category = "reformulation"
+ids = company_to_taxonomy_df
+df_export = (
+    company_to_taxonomy_df.query("level == 'Minor'")
+    .merge(
+        DR.company_data[["id", "NAME", "TAGLINE", "PROFILE URL", "WEBSITE", "country"]],
+        on="id",
+        how="left",
+    )
+    .merge(
+        (
+            DR.funding_rounds.query("`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES")
+            .groupby(["id"], as_index=False)
+            .sum()
+        ),
+        on="id",
+        how="left",
+    )
+    .sort_values("raised_amount_gbp", ascending=False)
+    .drop(["funding_round_id", "raised_amount_usd", "level"], axis=1)
+    .merge(taxonomy_df[["Minor", "Major"]], left_on="Category", right_on="Minor")
+    .rename(columns={"Category": "sub_category", "Major": "category"})
+    .sort_values(["raised_amount_gbp"], ascending=False)
+    .sort_values(["category", "sub_category"])
+)[
+    [
+        "id",
+        "NAME",
+        "TAGLINE",
+        "PROFILE URL",
+        "WEBSITE",
+        "country",
+        "raised_amount_gbp",
+        "category",
+        "sub_category",
+    ]
+]
+
+df_export.loc[df_export.category == "agritech", "sub_category"] = "-"
+
+# %%
+df_export.to_csv(
+    PROJECT_DIR / "outputs/foodtech/interim/foodtech_reviewed_VC_final_v2022_08_31.csv",
+    index=False,
+)
 
 # %% [markdown]
 # # Country performance
