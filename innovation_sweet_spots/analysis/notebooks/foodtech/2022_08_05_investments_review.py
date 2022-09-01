@@ -1960,6 +1960,7 @@ category_ts.head(1)
 
 # %%
 category = "cooking and kitchen"
+category = "retail and restaurants"
 horizontal_label = "Year"
 values_label = "Investment (million GBP)"
 tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
