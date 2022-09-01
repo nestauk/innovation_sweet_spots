@@ -142,9 +142,9 @@ taxonomy_df = pd.concat(
         taxonomy_df,
         pd.DataFrame(
             data={
-                "Category": ["Innovative food"],
-                "Sub Category": ["Reformulation"],
-                "Tech area": ["Reformulation"],
+                "Category": ["Innovative food", "General"],
+                "Sub Category": ["Reformulation", "General"],
+                "Tech area": ["Reformulation", "General"],
             }
         ),
     ],
@@ -157,7 +157,7 @@ research_project_funding = pd.concat([ukri_df, nihr_df_reviewed_]).merge(
 )
 
 # %%
-research_project_funding
+# research_project_funding
 
 # %%
 (
@@ -187,8 +187,18 @@ au.gtr_get_all_timeseries_period(
 # ## Major categories
 
 # %%
+categories_to_check = [
+    "Health",
+    "Innovative food",
+    "Logistics",
+    "Restaurants and retail",
+    "Cooking and kitchen",
+    "Food waste",
+]
+
+# %%
 tech_area_ts = []
-for tech_area in research_project_funding.Category.unique():
+for tech_area in categories_to_check:
     df = research_project_funding.query("Category == @tech_area")
     df_ts = au.gtr_get_all_timeseries_period(
         df, period="year", min_year=2010, max_year=2022, start_date_column="start_date"
@@ -198,7 +208,8 @@ tech_area_ts = pd.concat(tech_area_ts, ignore_index=False)
 
 # %%
 magnitude_growth = []
-for tech_area in research_project_funding.Category.unique():
+for tech_area in categories_to_check:
+    print(tech_area)
     df = au.ts_magnitude_growth(
         tech_area_ts.query("tech_area == @tech_area"), 2017, 2021
     ).drop("index")
@@ -300,9 +311,56 @@ fig_final
 # ## Subcategories
 
 # %%
+categories_to_check = [
+    "Biomedical",
+    "Lab meat",
+    "Alt protein",
+    "Supply chain",
+    "Plant-based",
+    "Retail",
+    "Delivery apps",
+    "Fermentation",
+    "Fat",
+    "Dark kitchen",
+    "Kitchen tech",
+    "Dietary supplements",
+    "Insects",
+    "Food waste",
+    "Diet",
+    "Packaging",
+    "Sugar",
+    "Personalised nutrition",
+    "Meal kits",
+    "Restaurants",
+    "Reformulation",
+    "Innovative food",
+    "Suply chain",
+]
+
+# %%
+research_project_funding[
+    "consolidated_category"
+] = research_project_funding.tech_area_checked.copy()
+research_project_funding.loc[
+    research_project_funding.consolidated_category == "Fat", "consolidated_category"
+] = "Reformulation"
+research_project_funding.loc[
+    research_project_funding.consolidated_category == "Sugar", "consolidated_category"
+] = "Reformulation"
+research_project_funding.loc[
+    research_project_funding.consolidated_category == "Suply chain",
+    "consolidated_category",
+] = "Supply chain"
+research_project_funding.loc[
+    research_project_funding.consolidated_category == "Delivery apps",
+    "consolidated_category",
+] = "Delivery"
+
+
+# %%
 tech_area_ts = []
-for tech_area in research_project_funding.tech_area.unique():
-    df = research_project_funding.query("tech_area == @tech_area")
+for tech_area in categories_to_check:
+    df = research_project_funding.query("tech_area_checked == @tech_area")
     df_ts = au.gtr_get_all_timeseries_period(
         df, period="year", min_year=2010, max_year=2022, start_date_column="start_date"
     ).assign(tech_area=tech_area)
@@ -311,7 +369,7 @@ tech_area_ts = pd.concat(tech_area_ts, ignore_index=False)
 
 # %%
 magnitude_growth = []
-for tech_area in research_project_funding.tech_area.unique():
+for tech_area in categories_to_check:
     df = au.ts_magnitude_growth(
         tech_area_ts.query("tech_area == @tech_area"), 2017, 2021
     ).drop("index")
@@ -357,6 +415,90 @@ fig = (
             scale=alt.Scale(
                 # type=horizontal_scale,
                 domain=(0, 90_000),
+            ),
+        ),
+        y=alt.Y(
+            "growth:Q",
+            axis=alt.Axis(title="Growth", format="%"),
+        ),
+        color=alt.Color(f"{colour_field}:N", legend=None),
+        tooltip=[
+            alt.Tooltip("tech_area", title="Category"),
+            alt.Tooltip("magnitude", title=horizontal_title),
+            alt.Tooltip("growth", title="Growth", format=".0%"),
+        ],
+    )
+    .properties(
+        title={
+            "anchor": "start",
+            "text": title_text,
+            "subtitle": subtitle_text,
+            "subtitleFont": pu.FONT,
+            "fontSize": 15,
+        },
+    )
+)
+
+text = fig.mark_text(
+    align="left", baseline="middle", font=pu.FONT, dx=7, fontSize=15
+).encode(text=text_field)
+
+fig_final = (
+    (fig + text)
+    .configure_axis(
+        grid=False,
+        gridDash=[5, 7],
+        # gridColor="grey",
+        labelFontSize=pu.FONTSIZE_NORMAL,
+        titleFontSize=pu.FONTSIZE_NORMAL,
+    )
+    .configure_legend(
+        titleFontSize=pu.FONTSIZE_NORMAL,
+        labelFontSize=pu.FONTSIZE_NORMAL,
+    )
+    .configure_view(strokeWidth=0)
+)
+
+fig_final.interactive()
+
+# %%
+pd.options.display.float_format = "{:.3f}".format
+magnitude_growth_plot = (
+    magnitude_growth.sort_values(["index", "magnitude"], ascending=False)
+    .assign(growth=lambda df: df.growth / 100)
+    .query("index=='no_of_projects'")
+)
+
+# %%
+import altair as alt
+from innovation_sweet_spots.utils import plotting_utils as pu
+
+colour_field = "tech_area"
+text_field = "tech_area"
+# horizontal_scale = "linear"
+horizontal_title = f"Average yearly funding (GBP)"
+legend = alt.Legend()
+
+title_text = "Foodtech trends (2017-2021)"
+subtitle_text = [
+    # "Data: Dealroom. Showing data on early stage deals (eg, seed and series funding)",
+    # "Late stage deals, such as IPOs, acquisitions, and debt financing not included.",
+]
+
+fig = (
+    alt.Chart(
+        magnitude_growth_plot,
+        width=400,
+        height=400,
+    )
+    .mark_circle(size=80)
+    .encode(
+        x=alt.X(
+            "magnitude:Q",
+            axis=alt.Axis(title=horizontal_title),
+            scale=alt.Scale(
+                # type=horizontal_scale,
+                # domain=(0, 90_000),
             ),
         ),
         y=alt.Y(
