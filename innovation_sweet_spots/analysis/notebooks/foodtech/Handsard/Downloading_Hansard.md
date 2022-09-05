@@ -1,4 +1,4 @@
-# Guide for downloading handsard data
+# Guide for downloading hansard data
 
 1. Create a working directory.
 3. Navigate to this working directory in the terminal
