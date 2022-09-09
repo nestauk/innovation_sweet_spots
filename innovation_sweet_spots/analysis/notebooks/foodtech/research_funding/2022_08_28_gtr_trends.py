@@ -221,6 +221,7 @@ magnitude_growth = pd.concat(magnitude_growth, ignore_index=False).reset_index()
 pd.options.display.float_format = "{:.3f}".format
 magnitude_growth_plot = (
     magnitude_growth.sort_values(["index", "magnitude"], ascending=False)
+    .assign(magnitude=lambda df: df.magnitude / 1000)
     .assign(growth=lambda df: df.growth / 100)
     .query("index=='amount_total'")
 )
@@ -237,8 +238,8 @@ from innovation_sweet_spots.utils import plotting_utils as pu
 
 colour_field = "tech_area"
 text_field = "tech_area"
-# horizontal_scale = "linear"
-horizontal_title = f"Average yearly funding (GBP)"
+horizontal_scale = "linear"
+horizontal_title = f"Average yearly funding (million GBP)"
 legend = alt.Legend()
 
 title_text = "Foodtech trends (2017-2021)"
@@ -259,8 +260,8 @@ fig = (
             "magnitude:Q",
             axis=alt.Axis(title=horizontal_title),
             scale=alt.Scale(
-                # type=horizontal_scale,
-                domain=(0, 90_000),
+                type=horizontal_scale,
+                domain=(0, 90),
             ),
         ),
         y=alt.Y(
@@ -318,23 +319,18 @@ categories_to_check = [
     "Supply chain",
     "Plant-based",
     "Retail",
-    "Delivery apps",
     "Fermentation",
-    "Fat",
     "Dark kitchen",
     "Kitchen tech",
     "Dietary supplements",
-    "Insects",
-    "Food waste",
     "Diet",
     "Packaging",
-    "Sugar",
     "Personalised nutrition",
     "Meal kits",
     "Restaurants",
     "Reformulation",
     "Innovative food",
-    "Suply chain",
+    "Waste reduction",
 ]
 
 # %%
@@ -348,6 +344,9 @@ research_project_funding.loc[
     research_project_funding.consolidated_category == "Sugar", "consolidated_category"
 ] = "Reformulation"
 research_project_funding.loc[
+    research_project_funding.consolidated_category == "Fiber", "consolidated_category"
+] = "Reformulation"
+research_project_funding.loc[
     research_project_funding.consolidated_category == "Suply chain",
     "consolidated_category",
 ] = "Supply chain"
@@ -355,12 +354,16 @@ research_project_funding.loc[
     research_project_funding.consolidated_category == "Delivery apps",
     "consolidated_category",
 ] = "Delivery"
+research_project_funding.loc[
+    research_project_funding.consolidated_category == "Food waste",
+    "consolidated_category",
+] = "Waste reduction"
 
 
 # %%
 tech_area_ts = []
 for tech_area in categories_to_check:
-    df = research_project_funding.query("tech_area_checked == @tech_area")
+    df = research_project_funding.query("consolidated_category == @tech_area")
     df_ts = au.gtr_get_all_timeseries_period(
         df, period="year", min_year=2010, max_year=2022, start_date_column="start_date"
     ).assign(tech_area=tech_area)
@@ -381,9 +384,13 @@ magnitude_growth = pd.concat(magnitude_growth, ignore_index=False).reset_index()
 pd.options.display.float_format = "{:.3f}".format
 magnitude_growth_plot = (
     magnitude_growth.sort_values(["index", "magnitude"], ascending=False)
+    .assign(magnitude=lambda df: df.magnitude / 1000)
     .assign(growth=lambda df: df.growth / 100)
     .query("index=='amount_total'")
 )
+
+# %%
+magnitude_growth_plot.sort_values("growth")
 
 # %%
 import altair as alt
@@ -392,7 +399,7 @@ from innovation_sweet_spots.utils import plotting_utils as pu
 colour_field = "tech_area"
 text_field = "tech_area"
 # horizontal_scale = "linear"
-horizontal_title = f"Average yearly funding (GBP)"
+horizontal_title = f"Average yearly funding (millions GBP)"
 legend = alt.Legend()
 
 title_text = "Foodtech trends (2017-2021)"
@@ -414,7 +421,7 @@ fig = (
             axis=alt.Axis(title=horizontal_title),
             scale=alt.Scale(
                 # type=horizontal_scale,
-                domain=(0, 90_000),
+                domain=(0, 90),
             ),
         ),
         y=alt.Y(
