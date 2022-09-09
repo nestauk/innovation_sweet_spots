@@ -50,9 +50,18 @@ def create_url(
     parameters["api-key"] = api_key
     for key in adjusted_parameters:
         parameters[key] = adjusted_parameters[key]
-    search_query = f'q="{quote(search_term)}"&'
+    # Split the search terms on commmas and add ANDs between them
+    if len(search_term.split(','))<=1:
+        search_query = f'q="{quote(search_term)}"&'
+    else:
+        search_terms = search_term.split(',')
+        search_query = f'q="{quote(search_terms[0])}"&'
+        for i in search_terms[1:]:
+            search_query = search_query.replace('&', f' AND "{quote(i)}"&')
+
     url = f"{BASE_URL}search?" + search_query + urlencode(parameters)
     return url
+
 
 
 def get_request(url):
