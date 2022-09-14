@@ -30,6 +30,9 @@ from innovation_sweet_spots.getters.preprocessed import (
 )
 from innovation_sweet_spots.getters.google_sheets import get_foodtech_search_terms
 
+# %%
+from innovation_sweet_spots import PROJECT_DIR
+
 # %% [markdown]
 # # Fetching input data
 
@@ -101,7 +104,12 @@ terms_df = process_foodtech_terms(
 tech_area_terms = compile_term_dict(terms_df, "Tech area")
 
 # %%
-tech_area_terms
+from innovation_sweet_spots.utils.io import save_pickle
+
+save_pickle(
+    tech_area_terms,
+    PROJECT_DIR / "outputs/foodtech/interim/foodtech_search_terms.pickle",
+)
 
 # %% [markdown]
 # # Use search terms
