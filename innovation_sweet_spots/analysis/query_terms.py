@@ -178,3 +178,34 @@ class QueryTerms:
             return pd.DataFrame(matches).query("has_any_terms==True")
         else:
             return pd.DataFrame(matches)
+
+
+def get_document_hits(
+    Query_instance, tech_area_terms, tech_areas_to_check, filter_hits
+):
+    all_hits = {}
+    query_results = pd.DataFrame()
+    for tech_area in tech_areas_to_check:
+        query_df = Query_instance.find_matches(
+            tech_area_terms[tech_area], return_only_matches=True
+        )
+        hits = set(query_df.id.to_list()).intersection(set(filter_hits.id.to_list()))
+        query_df = (
+            get_hit_terms(query_df.query("id in @hits"))
+            .assign(tech_area=tech_area)
+            .sort_values("found_terms")
+        )[["id", "found_terms", "tech_area"]]
+        assert len(query_df) == len(hits)
+        query_results = pd.concat([query_results, query_df], ignore_index=True)
+        all_hits[tech_area] = hits
+    return query_results, all_hits
+
+
+def get_hit_terms(df: pd.DataFrame, column_name: str = "found_terms") -> pd.DataFrame:
+    """Collates all found terms into one string and adds a new column 'found terms'"""
+    df = df.copy()
+    hit_terms = []
+    for i, row in df.drop("has_any_terms", axis=1).iterrows():
+        hit_terms.append(f'[{", ".join(row[row==True].index)}]')
+    df[column_name] = hit_terms
+    return df
