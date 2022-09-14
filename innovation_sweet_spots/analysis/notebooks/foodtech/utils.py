@@ -3,43 +3,35 @@
 import innovation_sweet_spots.analysis.analysis_utils as au
 import pandas as pd
 
+# EXCLUDED_DEAL_TYPES = [
+#     "GRANT",
+#     '-',
+#     # np.nan,
+#     'ICO',
+# ]
+
 EARLY_DEAL_TYPES = [
     "SERIES B",
     "EARLY VC",
     "SERIES A",
     "SEED",
-    # "GRANT",
-    #     '-',
-    #     np.nan,
-    #     'ACQUISITION',
     "ANGEL",
     "CONVERTIBLE",
     "LATE VC",
     "SPINOUT",
-    #     'DEBT',
-    #     'POST IPO EQUITY',
-    #     'IPO',
     "GROWTH EQUITY VC",
-    #     'MERGER',
     "SERIES C",
     "SERIES D",
-    #     'SPAC IPO',
-    #     'BUYOUT',
     "PRIVATE PLACEMENT VC",
-    #     'POST IPO DEBT',
     "SERIES F",
     "SERIES E",
     "SECONDARY",
     "SERIES H",
     "SERIES G",
-    #     'POST IPO CONVERTIBLE',
     "SERIES I",
     "SPAC PRIVATE PLACEMENT",
-    #     'LENDING CAPITAL',
     "GROWTH EQUITY NON VC",
-    #     'POST IPO SECONDARY',
     "MEDIA FOR EQUITY",
-    #     'ICO',
     "PROJECT, REAL ESTATE, INFRASTRUCTURE FINANCE",
 ]
 

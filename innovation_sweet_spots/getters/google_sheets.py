@@ -109,7 +109,6 @@ def get_foodtech_reviewed_vc(from_local=True, save_locally=True):
             logging.info(f"Search terms saved locally to {local_path}")
         return data_df
 
-
 def get_foodtech_reviewed_gtr(from_local=True, save_locally=True):
     """"""
     local_path = PROJECT_DIR / "outputs/foodtech/interim/foodtech_reviewed_gtr.csv"
@@ -146,3 +145,4 @@ def get_foodtech_reviewed_nihr(from_local=True, save_locally=True):
             data_df.to_csv(local_path, index=False)
             logging.info(f"Search terms saved locally to {local_path}")
         return data_df
+        

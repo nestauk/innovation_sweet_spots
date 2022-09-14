@@ -196,11 +196,13 @@ gtr_query_results_new = gtr_query_results_.query(
 )
 len(gtr_query_results_new)
 
+
 # %% [markdown]
 # ### Export for review
 
 # %%
 from innovation_sweet_spots import PROJECT_DIR
+
 from innovation_sweet_spots.getters import gtr_2022 as gtr
 import pandas as pd
 
@@ -211,7 +213,6 @@ from innovation_sweet_spots.utils.io import save_json, load_json
 
 # %%
 OUTPUTS_DIR = PROJECT_DIR / "outputs/foodtech/interim/research_funding/"
-
 
 # %%
 def prep_export_table(df_to_export, gtr_df):
