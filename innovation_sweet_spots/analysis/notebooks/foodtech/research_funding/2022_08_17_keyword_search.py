@@ -30,6 +30,9 @@ from innovation_sweet_spots.getters.preprocessed import (
 )
 from innovation_sweet_spots.getters.google_sheets import get_foodtech_search_terms
 
+# %%
+from innovation_sweet_spots import PROJECT_DIR
+
 # %% [markdown]
 # # Fetching input data
 
@@ -101,7 +104,12 @@ terms_df = process_foodtech_terms(
 tech_area_terms = compile_term_dict(terms_df, "Tech area")
 
 # %%
-tech_area_terms
+from innovation_sweet_spots.utils.io import save_pickle
+
+save_pickle(
+    tech_area_terms,
+    PROJECT_DIR / "outputs/foodtech/interim/foodtech_search_terms.pickle",
+)
 
 # %% [markdown]
 # # Use search terms
@@ -117,7 +125,7 @@ Query_nihr = QueryTerms(corpus=nihr_corpus)
 Query_gtr = QueryTerms(corpus=gtr_corpus)
 
 # %%
-tech_areas_to_check = list(tech_area_terms.keys())[:-2]
+tech_areas_to_check = list(tech_area_terms.keys())[:-3]
 
 
 # %%
@@ -177,10 +185,24 @@ pd.DataFrame(
 # %%
 gtr_query_results
 
+# %%
+gtr_query_results_, gtr_all_hits_ = get_document_hits(
+    Query_gtr, tech_area_terms, ["Food technology terms"], food_hits
+)
+
+# %%
+gtr_query_results_new = gtr_query_results_.query(
+    "id not in @gtr_query_results.id.to_list()"
+)
+len(gtr_query_results_new)
+
+
 # %% [markdown]
 # ### Export for review
 
 # %%
+from innovation_sweet_spots import PROJECT_DIR
+
 from innovation_sweet_spots.getters import gtr_2022 as gtr
 import pandas as pd
 
@@ -193,25 +215,28 @@ from innovation_sweet_spots.utils.io import save_json, load_json
 OUTPUTS_DIR = PROJECT_DIR / "outputs/foodtech/interim/research_funding/"
 
 # %%
-gtr_query_details = gtr_query_results.merge(gtr_df, on="id")
+def prep_export_table(df_to_export, gtr_df):
+    gtr_columns_to_export = [
+        "id",
+        "title",
+        "abstractText",
+        "techAbstractText",
+        "grantCategory",
+        "leadFunder",
+        "leadOrganisationDepartment",
+        "found_terms",
+        "tech_area",
+    ]
+
+    gtr_query_details = df_to_export.merge(gtr_df, on="id")
+    return gtr_query_details[gtr_columns_to_export]
+
 
 # %%
-gtr_columns_to_export = [
-    "id",
-    "title",
-    "abstractText",
-    "techAbstractText",
-    "grantCategory",
-    "leadFunder",
-    "leadOrganisationDepartment",
-    "found_terms",
-    "tech_area",
-]
+gtr_query_details = prep_export_table(gtr_query_results, gtr_df)
 
 # %%
-gtr_query_details[gtr_columns_to_export].to_csv(
-    OUTPUTS_DIR / "gtr_projects_v2022_08_22.csv", index=False
-)
+gtr_query_details.to_csv(OUTPUTS_DIR / "gtr_projects_v2022_08_22.csv", index=False)
 
 # %%
 gtr_all_hits_export = gtr_all_hits.copy()
@@ -221,6 +246,13 @@ gtr_all_hits_export["Food terms"] = food_hits.id.to_list()
 
 # %%
 save_json(gtr_all_hits_export, OUTPUTS_DIR / "gtr_projects_v2022_08_22.json")
+
+# %% [markdown]
+# ### New exports
+
+# %%
+new_table = prep_export_table(gtr_query_results_new, gtr_df)
+new_table.to_csv(OUTPUTS_DIR / "gtr_projects_v2022_08_31_foodtech.csv", index=False)
 
 # %% [markdown]
 # ## NIHR

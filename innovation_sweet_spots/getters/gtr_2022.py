@@ -21,3 +21,12 @@ def get_gtr_projects() -> pd.DataFrame:
 def get_gtr_topics() -> pd.DataFrame:
     """GtR topics table"""
     return pd.DataFrame(load_json(PATH / "gtr_projects-topic.json"))
+
+
+def get_gtr_funds() -> pd.DataFrame:
+    """GtR topics table"""
+    return pd.DataFrame(load_json(PATH / "gtr_projects-funds.json"))
+
+
+def get_wrangled_projects() -> pd.DataFrame:
+    return pd.read_csv(GTR_2022_PATH / "gtr_projects-wrangled_project_data.csv")

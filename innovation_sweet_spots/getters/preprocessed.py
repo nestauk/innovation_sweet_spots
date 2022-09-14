@@ -14,6 +14,17 @@ PILOT_CB_CORPUS_PATH = PILOT_OUTPUTS / "preprocessed/cb_descriptions_uk_tokenise
 CRUNCHBASE_FULL_PATH = OUTPUT_PATH / "preprocessed/tokens_cb_descriptions_v2022.p"
 GTR_CORPUS_PATH = OUTPUT_PATH / "preprocessed/tokens_gtr_abstracts_v2022_08_16.p"
 NIHR_CORPUS_PATH = OUTPUT_PATH / "preprocessed/tokens_nihr_abstracts_v2022_08_17.p"
+HANSARD_CORPUS_PATH = OUTPUT_PATH / "preprocessed/tokens_hansard_speeches_v2022_09_12.p"
+
+
+def get_hansard_corpus(
+    filepath=HANSARD_CORPUS_PATH,
+) -> Dict[str, Iterator[str]]:
+    """
+    Loads a dictionary of tokenised GtR project abstract text,
+    following the format {project_id: list of tokens}
+    """
+    return load_pickle(filepath)
 
 
 def get_gtr_corpus(
