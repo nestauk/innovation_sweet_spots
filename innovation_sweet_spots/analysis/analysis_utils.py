@@ -636,7 +636,7 @@ def ts_magnitude_growth(ts_df: pd.DataFrame, year_start: int, year_end: int):
             year_end,
         )
         .to_frame("magnitude")
-        .assign(growth=smoothed_growth(ts_moving_average(ts_df), year_start, year_end))
+        .assign(growth=smoothed_growth(ts_df, year_start, year_end))
     )
 
 
@@ -644,11 +644,7 @@ def ts_magnitude_growth_(ts_df: pd.DataFrame, year_start: int, year_end: int):
     return (
         magnitude(ts_df, year_start, year_end)
         .to_frame("magnitude")
-        .assign(
-            growth=smoothed_growth(
-                ts_df.pipe(moving_average, replace_columns=True), year_start, year_end
-            )
-        )
+        .assign(growth=smoothed_growth(ts_df, year_start, year_end))
     )
 
 

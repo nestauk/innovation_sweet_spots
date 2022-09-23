@@ -34,6 +34,16 @@ from innovation_sweet_spots.getters.google_sheets import get_foodtech_search_ter
 from innovation_sweet_spots import PROJECT_DIR
 
 # %% [markdown]
+# ### Already reviewed data
+
+# %%
+from innovation_sweet_spots.getters import google_sheets
+
+# %%
+ukri_df_reviewed = google_sheets.get_foodtech_reviewed_gtr(from_local=False)
+nihr_df_reviewed = google_sheets.get_foodtech_reviewed_nihr(from_local=False)
+
+# %% [markdown]
 # # Fetching input data
 
 # %%
@@ -202,7 +212,6 @@ len(gtr_query_results_new)
 
 # %%
 from innovation_sweet_spots import PROJECT_DIR
-
 from innovation_sweet_spots.getters import gtr_2022 as gtr
 import pandas as pd
 
@@ -238,6 +247,9 @@ gtr_query_details = prep_export_table(gtr_query_results, gtr_df)
 # %%
 gtr_query_details.to_csv(OUTPUTS_DIR / "gtr_projects_v2022_08_22.csv", index=False)
 
+# %% [markdown]
+# ### New exports
+
 # %%
 gtr_all_hits_export = gtr_all_hits.copy()
 for key in gtr_all_hits_export:
@@ -247,12 +259,58 @@ gtr_all_hits_export["Food terms"] = food_hits.id.to_list()
 # %%
 save_json(gtr_all_hits_export, OUTPUTS_DIR / "gtr_projects_v2022_08_22.json")
 
-# %% [markdown]
-# ### New exports
-
 # %%
 new_table = prep_export_table(gtr_query_results_new, gtr_df)
 new_table.to_csv(OUTPUTS_DIR / "gtr_projects_v2022_08_31_foodtech.csv", index=False)
+
+# %% [markdown]
+# ### Additional check
+
+# %%
+gtr_query_results_, gtr_all_hits_ = get_document_hits(
+    Query_gtr, tech_area_terms, ["Food technology terms"], food_hits
+)
+
+# %%
+agri_hits = Query_gtr.find_matches(
+    [
+        ["agriculture"],
+        ["agrifood"],
+        ["aquaculture"],
+        ["agri food"],
+        ["waste stream"],
+        [" crop "],
+        ["cereal"],
+        [" soil "],
+        ["food safety"],
+    ],
+    return_only_matches=True,
+)
+
+# %%
+excluded_ids = agri_hits.id.to_list() + ukri_df_reviewed.id.to_list()
+
+# %%
+len(ukri_df_reviewed.id.to_list())
+
+# %%
+len(gtr_query_results_)
+
+# %%
+gtr_query_results_new = gtr_query_results_.query("id not in @excluded_ids")
+len(gtr_query_results_new)
+
+# %%
+gtr_query_details = prep_export_table(gtr_query_results_new, gtr_df)
+
+# %%
+pd.set_option("max_colwidth", 200)
+gtr_query_details.sample()[["title", "abstractText"]]
+
+# %%
+gtr_query_details.to_csv(
+    OUTPUTS_DIR / "gtr_projects_v2022_09_14_foodtech_extra.csv", index=False
+)
 
 # %% [markdown]
 # ## NIHR
@@ -319,5 +377,31 @@ nihr_all_hits_export["Food terms"] = nihr_food_hits.id.to_list()
 
 # %%
 save_json(nihr_all_hits_export, OUTPUTS_DIR / "nihr_projects_v2022_08_22.json")
+
+# %% [markdown]
+# ## Additional checks
+
+# %%
+nihr_query_results_, nihr_all_hits_ = get_document_hits(
+    Query_nihr, tech_area_terms, ["Food technology terms"], nihr_food_hits
+)
+
+# %%
+excluded_ids = nihr_df_reviewed.id.to_list()
+
+# %%
+nihr_query_results_new = nihr_query_results_.query("id not in @excluded_ids")
+len(nihr_query_results_new)
+
+# %%
+nihr_query_results_new
+
+# %%
+nihr_query_details = nihr_query_results_new.merge(
+    nihr_df.rename(columns={"recordid": "id"}), on="id"
+)
+
+# %%
+# nihr_query_details[['project_title']]
 
 # %%

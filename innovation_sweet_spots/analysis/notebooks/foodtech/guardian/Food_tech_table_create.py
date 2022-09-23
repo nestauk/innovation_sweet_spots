@@ -84,16 +84,13 @@ search_terms[96]
 
 # %%
 for i in enumerate(search_terms):
-    if i[0] < 160:
-        continue
-    else:
-        articles, metadata = au.get_guardian_articles(
-            search_terms=[i[1]],
-            use_cached=True,
-            allowed_categories=CATEGORIES,
-            query_identifier=query_id + str(i[0]),
-            save_outputs=True,
-        )
+    articles, metadata = au.get_guardian_articles(
+        search_terms=[i[1]],
+        use_cached=True,
+        allowed_categories=CATEGORIES,
+        query_identifier=query_id + str(i[0]),
+        save_outputs=True,
+    )
 
 
 # %%

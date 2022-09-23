@@ -30,6 +30,7 @@ import pandas as pd
 COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
 
 # %%
+importlib.reload(au)
 importlib.reload(wu)
 
 # %%
@@ -68,7 +69,7 @@ reviewed_df = get_foodtech_reviewed_vc(from_local=False)
 # - write up
 
 # %%
-VERSION_NAME = "September5"
+VERSION_NAME = "September"
 
 # %% [markdown]
 # ## Deal types
@@ -1607,16 +1608,9 @@ cooc
 
 # %%
 foodtech_ids = [str(s) for s in list(company_to_taxonomy_df.id.unique())]
-# foodtech_ids = DR.company_data.id.to_list()
-
-# %%
-# DR.funding_rounds.query("id in @foodtech_ids")
 
 # %%
 DR.funding_rounds.id.iloc[1]
-
-# %%
-# foodtech_ids[0]
 
 # %%
 (
@@ -1640,6 +1634,9 @@ company_to_taxonomy_df.head(2)
 # %%
 # foodtech_ids = list(company_to_taxonomy_df.query("Category == 'logistics'").id.unique())
 
+
+# %% [markdown]
+# ### Global foodtech investment
 
 # %%
 foodtech_ts_early = (
@@ -1748,61 +1745,6 @@ au.estimate_magnitude_growth(
 )
 
 # %%
-# horizontal_label = "Year"
-# values_label = "Investment (bn GBP)"
-# tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
-
-# data = (
-#     foodtech_ts.assign(
-#         raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
-#     )
-#     .query("time_period < 2022")
-#     .rename(
-#         columns={
-#             "time_period": horizontal_label,
-#             "raised_amount_gbp_total": values_label,
-#         }
-#     )
-# )
-
-# fig = (
-#     alt.Chart(
-#         data.assign(
-#             **{horizontal_label: pu.convert_time_period(data[horizontal_label], "Y")}
-#         ),
-#         width=400,
-#         height=200,
-#     )
-#     .mark_bar(color=pu.NESTA_COLOURS[0])
-#     .encode(
-#         alt.X(f"{horizontal_label}:O"),
-#         alt.Y(
-#             f"sum({values_label}):Q",
-#             title="Raised investment (bn GBP)"
-#             # scale=alt.Scale(domain=[0, 1200])
-#             # stack='normalize',
-#         ),
-#         tooltip=tooltip,
-#         color=alt.Color(
-#             "deal_type",
-#             sort=["Late", "Early"],
-#             # legend=None,
-#             legend=alt.Legend(title="Deal type")
-#         ),
-#         order=alt.Order(
-#             # Sort the segments of the bars by this field
-#             "deal_type",
-#             sort="ascending",
-#         ),
-#     )
-# )
-# fig = pu.configure_plots(fig)
-# fig
-
-# %%
-# AltairSaver.save(fig, f"vSeptember5_total_investment_amount_Logistics", filetypes=["html", "png"])
-
-# %%
 horizontal_label = "Year"
 values_label = "Number of rounds"
 tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.0f")]
@@ -1851,6 +1793,129 @@ fig
 
 # %%
 AltairSaver.save(fig, f"vAugust24_total_investment_rounds", filetypes=["html", "png"])
+
+# %% [markdown]
+# ### UK food tech investment
+
+# %%
+EU_countries = [
+    "Austria",
+    "Belgium",
+    "Bulgaria",
+    "Croatia",
+    "Cyprus",
+    "Czech Republic",
+    "Denmark",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Hungary",
+    "Ireland",
+    "Italy",
+    "Latvia",
+    "Lithuania",
+    "Luxembourg",
+    "Malta",
+    "Netherlands",
+    "Poland",
+    "Portugal",
+    "Romania",
+    "Slovakia",
+    "Slovenia",
+    "Spain",
+    "Sweden",
+]
+
+# %%
+df = DR.company_data.query("`HQ REGION` == 'Europe'")
+europe_countries = sorted(df[-df.country.isnull()].country.unique())
+
+# %%
+# country = "United Kingdom"
+# country = "United States"
+df_uk = DR.company_data.query("id in @foodtech_ids").query("country == @country")
+# df_uk = DR.company_data.query("id in @foodtech_ids").query('country in @EU_countries')
+df_uk_rounds = DR.funding_rounds.query("id in @df_uk.id.to_list()")
+
+# %%
+foodtech_ts_early = (
+    au.cb_get_all_timeseries(
+        df_uk,
+        df_uk_rounds.query("`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES"),
+        period="year",
+        min_year=2010,
+        max_year=2022,
+    )
+    .assign(year=lambda df: df.time_period.dt.year)
+    .assign(deal_type="Early")
+)
+
+foodtech_ts_late = (
+    au.cb_get_all_timeseries(
+        df_uk,
+        df_uk_rounds.query("`EACH ROUND TYPE` in @utils.LATE_DEAL_TYPES"),
+        period="year",
+        min_year=2010,
+        max_year=2022,
+    )
+    .assign(year=lambda df: df.time_period.dt.year)
+    .assign(deal_type="Late")
+)
+foodtech_ts = pd.concat([foodtech_ts_early, foodtech_ts_late])
+
+# %%
+horizontal_label = "Year"
+values_label = "Investment (bn GBP)"
+tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
+
+data = (
+    foodtech_ts.assign(
+        raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
+    )
+    .query("time_period < 2022")
+    .rename(
+        columns={
+            "time_period": horizontal_label,
+            "raised_amount_gbp_total": values_label,
+        }
+    )
+)
+
+fig = (
+    alt.Chart(
+        data.assign(
+            **{horizontal_label: pu.convert_time_period(data[horizontal_label], "Y")}
+        ),
+        width=400,
+        height=200,
+    )
+    .mark_bar(color=pu.NESTA_COLOURS[0])
+    .encode(
+        alt.X(f"{horizontal_label}:O"),
+        alt.Y(
+            f"sum({values_label}):Q",
+            title="Raised investment (bn GBP)"
+            # scale=alt.Scale(domain=[0, 1200])
+            # stack='normalize',
+        ),
+        tooltip=tooltip,
+        color=alt.Color(
+            "deal_type",
+            sort=["Late", "Early"],
+            # legend=None,
+            legend=alt.Legend(title="Deal type"),
+        ),
+        order=alt.Order(
+            # Sort the segments of the bars by this field
+            "deal_type",
+            sort="ascending",
+        ),
+    )
+)
+fig = pu.configure_plots(fig)
+fig
 
 # %% [markdown]
 # ## Early vs late deals per major category
@@ -1981,8 +2046,6 @@ magnitude_vs_growth
 
 # %%
 magnitude_vs_growth.Magnitude.sum() - 12079.305930
-
-# %%
 
 # %%
 # fig_growth_vs_magnitude(
@@ -2720,8 +2783,6 @@ ids = company_to_taxonomy_df.query("Category == @category")
     .drop(["funding_round_id", "raised_amount_usd"], axis=1)
 )
 
-# %%
-
 # %% [markdown]
 # ## Exporting the list of startups
 
@@ -2790,19 +2851,22 @@ data = (
     .agg(raised_amount_gbp=("raised_amount_gbp", "sum"))
     .assign(raised_amount_gbp=lambda df: df.raised_amount_gbp / 1000)
     .sort_values("raised_amount_gbp", ascending=False)
-).head(10)
-data
+)
+data.head(10)
+
+# %%
+data.query("country in @EU_countries").sum()
 
 # %%
 fig = (
     alt.Chart(
-        data,
+        data.head(10),
         width=200,
         height=300,
     )
-    .mark_bar(color=pu.NESTA_COLOURS[1])
+    .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
-        alt.Y(f"country:N", sort="-x", title="Country"),
+        alt.Y(f"country:N", sort="-x", title=""),
         alt.X(
             f"raised_amount_gbp:Q",
             title="Investment amount (bn GBP)"
@@ -2830,17 +2894,20 @@ data = (
     .agg(raised_amount_gbp=("raised_amount_gbp", "sum"))
     .assign(raised_amount_gbp=lambda df: df.raised_amount_gbp / 1000)
     .sort_values("raised_amount_gbp", ascending=False)
-).head(10)
-data
+)
+data.head(10)
+
+# %%
+data.query("country in @EU_countries").sum()
 
 # %%
 fig = (
     alt.Chart(
-        data,
+        data.head(10),
         width=200,
         height=300,
     )
-    .mark_bar(color=pu.NESTA_COLOURS[0])
+    .mark_bar(color=pu.NESTA_COLOURS[1])
     .encode(
         alt.Y(f"country:N", sort="-x", title="Country"),
         alt.X(
@@ -2916,7 +2983,7 @@ df_check = (
 # %%
 fig = (
     alt.Chart((data.query("Category in @cats")))
-    .mark_bar(color=pu.NESTA_COLOURS[1])
+    .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
         # x=alt.X('percentage:Q', title="", axis=alt.Axis(format='%')),
         x=alt.X("raised_amount_gbp:Q", title="Investment (bn. GBP)"),
