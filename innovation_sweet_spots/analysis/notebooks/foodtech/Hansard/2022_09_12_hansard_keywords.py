@@ -25,6 +25,9 @@ import importlib
 importlib.reload(hansard)
 
 # %%
+import utils
+
+# %%
 from innovation_sweet_spots.analysis.query_terms import QueryTerms
 from innovation_sweet_spots.getters.preprocessed import get_hansard_corpus
 
@@ -34,22 +37,33 @@ import innovation_sweet_spots.analysis.query_terms as query_terms
 importlib.reload(query_terms)
 
 # %%
+# Load the updated search terms
+
+# %%
 from innovation_sweet_spots.utils.io import load_pickle
 from innovation_sweet_spots import PROJECT_DIR
 
 tech_area_terms = load_pickle(
-    PROJECT_DIR / "outputs/foodtech/interim/foodtech_search_terms.pickle"
+    PROJECT_DIR / "outputs/foodtech/interim/foodtech_search_terms_v2.pickle"
 )
-# tech_area_terms['Biomedical'].append(['obese'])
 
 # %%
-tech_area_terms["Supply chain"] = tech_area_terms["Supply chain"][1:]
-tech_area_terms["Kitchen tech"] = tech_area_terms["Kitchen tech"][1:]
+# tech_area_terms['Biomedical']
+# tech_area_terms["Innovative food"]
+
+# %%
+# tech_area_terms["Supply chain"] = tech_area_terms["Supply chain"][1:]
+# tech_area_terms["Kitchen tech"] = tech_area_terms["Kitchen tech"][1:]
 
 # %%
 from innovation_sweet_spots.getters.google_sheets import get_foodtech_search_terms
 
-df_search_terms = get_foodtech_search_terms()
+df_search_terms = get_foodtech_search_terms(from_local=False)
+
+# %%
+df_search_terms["Terms"] = df_search_terms["Terms"].apply(
+    utils.remove_space_after_comma
+)
 
 # %% [markdown]
 # # Speeches data
@@ -76,6 +90,9 @@ len(df_debates)
 tech_areas_to_check = list(tech_area_terms.keys())[:-3]
 
 # %%
+tech_areas_to_check
+
+# %%
 hansard_corpus = get_hansard_corpus()
 
 # %%
@@ -85,6 +102,22 @@ Query_hansard = QueryTerms(corpus=hansard_corpus)
 food_hits = Query_hansard.find_matches(
     tech_area_terms["Food terms"], return_only_matches=True
 )
+
+# %%
+# all_hits = Query_hansard.find_matches(
+#     [['']], return_only_matches=True
+# )
+
+# %%
+# len(gtr_query_results__)
+
+# %%
+# len(gtr_query_results)
+
+# %%
+# gtr_query_results__, gtr_all_hits__ = query_terms.get_document_hits(
+#     Query_hansard, tech_area_terms, tech_areas_to_check, all_hits
+# )
 
 # %%
 gtr_query_results, gtr_all_hits = query_terms.get_document_hits(
@@ -117,11 +150,11 @@ hansard_query_export = gtr_query_results.merge(
 #     print('---')
 
 # %%
-hansard_query_export.to_csv(
-    PROJECT_DIR
-    / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_09_14.csv",
-    index=False,
-)
+# hansard_query_export.to_csv(
+#     PROJECT_DIR
+#     / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_10_10.csv",
+#     index=False,
+# )
 
 # %% [markdown]
 # ## Baseline speeches
@@ -143,6 +176,9 @@ alt.Chart(hansard_baseline).mark_line().encode(x="year", y="total_counts")
 # - Time series across years of speeches per consolidated categories
 
 # %%
+import pandas as pd
+
+# %%
 # Add taxonomy to the hits
 hansard_query_export_ = hansard_query_export.merge(
     df_search_terms[["Tech area", "Terms", "Sub Category", "Category"]].drop_duplicates(
@@ -154,7 +190,20 @@ hansard_query_export_ = hansard_query_export.merge(
 )
 
 # %%
-hansard_query_export_.groupby(["Category", "Sub Category"]).agg(
+hansard_query_export_.to_csv(
+    PROJECT_DIR
+    / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_10_10.csv",
+    index=False,
+)
+
+# %%
+hansard_query_export_ = pd.read_csv(
+    PROJECT_DIR
+    / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_10_10.csv",
+)
+
+# %%
+hansard_query_export_.groupby(["Sub Category"]).agg(
     counts=("id", "count")
 ).reset_index()
 
@@ -174,12 +223,15 @@ ts_category = (
 )
 
 # %%
+ts_category
+
+# %%
 # scale = 'log'
 scale = "linear"
 
 fig = (
     alt.Chart(ts_category)
-    .mark_line()
+    .mark_line(size=3, interpolate="monotone")
     .encode(
         x=alt.X("year:O"),
         y=alt.Y("fraction:Q", sort="-x", scale=alt.Scale(type=scale)),
@@ -196,17 +248,19 @@ fig
 #     print('/n')
 
 # %%
-# build a time series
-# impute empty years
+# # build a time series
+# # impute empty years
 
-category_ts = []
-for tech_area in categories_to_check:
-    df = research_project_funding.query("Category == @tech_area")
-    df_ts = au.gtr_get_all_timeseries_period(
-        df, period="year", min_year=2010, max_year=2022, start_date_column="start_date"
-    ).assign(tech_area=tech_area)
-    tech_area_ts.append(df_ts)
-tech_area_ts = pd.concat(tech_area_ts, ignore_index=False)
+# category_ts = []
+# for tech_area in categories_to_check:
+#     df = research_project_funding.query("Category == @tech_area")
+#     df_ts = au.gtr_get_all_timeseries_period(
+#         df, period="year", min_year=2010, max_year=2022, start_date_column="start_date"
+#     ).assign(tech_area=tech_area)
+#     tech_area_ts.append(df_ts)
+# tech_area_ts = pd.concat(tech_area_ts, ignore_index=False)
+
+# %%
 
 # %% [markdown]
 # ## Other checks
@@ -256,10 +310,35 @@ hits["sents"] = hits.speech.apply(
 )
 
 # %%
-for i, row in hits.iterrows():
-    if int(row.year) > 2000:
-        print(row.year, row.speech)
-        print("")
+# for i, row in hits.iterrows():
+#     if int(row.year) > 2000:
+#         print(row.year, row.speech)
+#         print("")
+
+# %% [markdown]
+# ## Check terms
+
+# %%
+# df = Query_hansard.find_matches([["food", "reformulat"]], return_only_matches=True)
+df = Query_hansard.find_matches([["deliveroo"]], return_only_matches=True)
+df = Query_hansard.find_matches([["dark kitchen"]], return_only_matches=True)
+df = Query_hansard.find_matches(
+    [["alternative", "protein", "food"]], return_only_matches=True
+)
+# df = Query_hansard.find_matches([["alternative", "protein"]], return_only_matches=True)
+
+# %%
+df.head(1)
+
+# %%
+df = df.merge(df_debates[["id", "speech", "speakername", "year"]], on="id")
+
+# %%
+k = 0
+print(df.iloc[k].speech)
+
+# %% [raw]
+#
 
 # %% [markdown]
 # ## Checking categories
@@ -279,6 +358,8 @@ hansard_query_export_["sents"] = sents
 
 # %%
 cat = "Innovative food"
+cat = "Cooking and kitchen"
+cat = "Alt protein"
 for i, row in (
     hansard_query_export_.sort_values("year").query("Category == @cat").iterrows()
 ):

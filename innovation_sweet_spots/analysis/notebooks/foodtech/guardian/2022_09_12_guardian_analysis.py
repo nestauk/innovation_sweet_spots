@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -24,6 +25,15 @@ from innovation_sweet_spots.utils import plotting_utils as pu
 import altair as alt
 import pandas as pd
 import numpy as np
+from innovation_sweet_spots import PROJECT_DIR
+
+# %% [markdown]
+# # Plotting utils
+
+# %%
+import innovation_sweet_spots.utils.altair_save_utils as alt_save
+
+AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
 
 
 # %% [markdown]
@@ -37,12 +47,31 @@ def remove_space_after_comma(text):
 
 # %%
 # Fetch search terms
-df_search_terms = get_foodtech_search_terms()
+df_search_terms = get_foodtech_search_terms(from_local=False)
 df_search_terms["Terms"] = df_search_terms["Terms"].apply(remove_space_after_comma)
 
 # %%
+df_search_results_path = (
+    PROJECT_DIR / "outputs/foodtech/interim/public_discourse/Food_terms_table_V2.csv"
+)
+df_precision_path = (
+    PROJECT_DIR / "outputs/foodtech/interim/public_discourse/Food_terms_precision.csv"
+)
+df_search_results = pd.read_csv(df_search_results_path)
+df_precision = pd.read_csv(df_precision_path)
+
+# %%
+imprecise_terms = df_precision.query("proportion_correct < 0.5").terms.to_list()
+
+# %%
 # Get Guardian search results
-df_search_results = get_guardian_searches()
+# df_search_results = get_guardian_searches()
+
+# %%
+df_search_results.head(1)
+
+# %%
+df_precision.head(1)
 
 # %%
 # Get article counts for each term
@@ -64,22 +93,20 @@ df_counts = (
 df_counts[df_counts.counts == 0].sort_values("Sub Category")
 
 # %%
-# Most popular search terms
-scale = "log"
-# scale = 'linear'
+# # Most popular search terms
+# scale = "log"
+# # scale = 'linear'
 
-fig = (
-    alt.Chart(df_counts[df_counts.counts != 0])
-    .mark_circle(size=60)
-    .encode(
-        x=alt.X("counts:Q", scale=alt.Scale(type=scale)),
-        y=alt.Y("Terms:N", sort="-x"),
-        color="Sub Category",
-    )
-)
-
-# %%
-fig
+# fig = (
+#     alt.Chart(df_counts[df_counts.counts != 0])
+#     .mark_circle(size=60)
+#     .encode(
+#         x=alt.X("counts:Q", scale=alt.Scale(type=scale)),
+#         y=alt.Y("Terms:N", sort="-x"),
+#         color="Sub Category",
+#     )
+# )
+# fig
 
 # %% [markdown]
 # # Checking technology trends
@@ -113,7 +140,7 @@ def get_ts(df_id_to_term, category="Category"):
 
 
 # %%
-terms_to_remove = ["supply chain"]
+terms_to_remove = ["supply chain"] + imprecise_terms
 
 # %%
 assert df_search_results.id.duplicated().sum() == 0
@@ -139,7 +166,15 @@ df_id_to_term = df_id_to_term[
 ].reset_index(drop=True)
 
 # %%
-df_id_to_term
+new_terms = list(df_id_to_term[df_id_to_term.Category.isnull()].Terms.unique())
+
+# %%
+df_id_to_term.loc[df_id_to_term.Terms.isin(new_terms), "Category"] = "Innovative food"
+df_id_to_term.loc[df_id_to_term.Terms.isin(new_terms), "Sub Category"] = "Reformulation"
+df_id_to_term.loc[df_id_to_term.Terms.isin(new_terms), "Tech area"] = "Reformulation"
+
+# %%
+df_id_to_term = df_id_to_term[df_id_to_term.id.str.contains("australia") == False]
 
 # %%
 ts_category = get_ts(df_id_to_term, "Category")
@@ -242,12 +277,245 @@ importlib.reload(au)
     df_id_to_term.sort_values(["year", "Tech area", "Sub Category", "Category"])
     .merge(df_search_results[["id", "Headline", "URL"]])
     .to_csv(
-        PROJECT_DIR / "outputs/foodtech/interim/public_discourse/guardian_to_check.csv"
+        PROJECT_DIR
+        / "outputs/foodtech/interim/public_discourse/guardian_to_check_V2.csv"
     )
 )
 
 # %% [markdown]
-# ## Checking obesity/health trends
+# ## Magnitude and growth trends
+
+# %%
+categories_to_check = ts_category.Category.unique()
+
+# %%
+magnitude_growth = []
+for tech_area in categories_to_check:
+    df = ts_category.query("Category == @tech_area").drop("Category", axis=1)[
+        ["year", "counts"]
+    ]
+    df_trends = au.estimate_magnitude_growth(df, 2017, 2021)
+    magnitude_growth.append(
+        [
+            df_trends.query('trend == "magnitude"').iloc[0].counts,
+            df_trends.query('trend == "growth"').iloc[0].counts,
+            tech_area,
+        ]
+    )
+magnitude_growth_df = pd.DataFrame(
+    magnitude_growth, columns=["magnitude", "growth", "tech_area"]
+).assign(growth=lambda df: df.growth / 100)
+
+# %%
+domain = [
+    "Health",
+    "Innovative food",
+    "Logistics",
+    "Restaurants and retail",
+    "Cooking and kitchen",
+    "Food waste",
+]
+range_ = pu.NESTA_COLOURS[0 : len(domain)]
+
+# %%
+magnitude_growth_df
+
+# %%
+baseline_magnitude_growth = au.estimate_magnitude_growth(guardian_baseline, 2017, 2021)
+baseline_growth = (
+    baseline_magnitude_growth.query("trend == 'growth'").iloc[0].counts / 100
+)
+
+# %%
+baseline_growth
+
+# %%
+# make the plot...
+import altair as alt
+from innovation_sweet_spots.utils import plotting_utils as pu
+
+colour_field = "tech_area"
+text_field = "tech_area"
+horizontal_scale = "linear"
+# horizontal_scale = "log"
+horizontal_title = f"Average number of articles"
+legend = alt.Legend()
+
+title_text = "News article trends (2017-2021)"
+subtitle_text = [
+    # "Data: Dealroom. Showing data on early stage deals (eg, seed and series funding)",
+    # "Late stage deals, such as IPOs, acquisitions, and debt financing not included.",
+]
+
+fig = (
+    alt.Chart(
+        magnitude_growth_df,
+        width=400,
+        height=400,
+    )
+    .mark_circle(size=80)
+    .encode(
+        x=alt.X(
+            "magnitude:Q",
+            axis=alt.Axis(
+                title=horizontal_title,
+                tickCount=5,
+            ),
+            scale=alt.Scale(
+                type=horizontal_scale,
+                # domain=(0, 40),
+            ),
+        ),
+        y=alt.Y(
+            "growth:Q",
+            axis=alt.Axis(
+                title="Growth",
+                format="%",
+                tickCount=5,
+            ),
+            scale=alt.Scale(
+                # domain=(-1, 2.5),
+            ),
+        ),
+        color=alt.Color(
+            f"{colour_field}:N",
+            legend=None,
+            scale=alt.Scale(domain=domain, range=range_),
+        ),
+        tooltip=[
+            alt.Tooltip("tech_area", title="Category"),
+            alt.Tooltip("magnitude", title=horizontal_title),
+            alt.Tooltip("growth", title="Growth", format=".0%"),
+        ],
+    )
+    .properties(
+        title={
+            "anchor": "start",
+            "text": title_text,
+            "subtitle": subtitle_text,
+            "subtitleFont": pu.FONT,
+            "fontSize": 15,
+        },
+    )
+)
+
+text = fig.mark_text(
+    align="left", baseline="middle", font=pu.FONT, dx=7, fontSize=15
+).encode(text=text_field)
+
+yrule = (
+    alt.Chart(pd.DataFrame({"y": [baseline_growth]}))
+    .mark_rule(strokeDash=[5, 7], size=1)
+    .encode(y="y:Q")
+)
+
+fig_final = (
+    (fig + yrule + text)
+    .configure_axis(
+        grid=False,
+        gridDash=[5, 7],
+        # gridColor="grey",
+        labelFontSize=pu.FONTSIZE_NORMAL,
+        titleFontSize=pu.FONTSIZE_NORMAL,
+    )
+    .configure_legend(
+        titleFontSize=pu.FONTSIZE_NORMAL,
+        labelFontSize=pu.FONTSIZE_NORMAL,
+    )
+    .configure_view(strokeWidth=0)
+)
+
+fig_final
+
+# %%
+AltairSaver.save(
+    fig_final, f"Guardian_articles_magnitude_growth", filetypes=["html", "svg", "png"]
+)
+
+# %%
+ts_subcategory.head(1)
+
+# %%
+cats = ["Reformulation", "Alt protein"]
+ts_df = ts_subcategory.query("`Sub Category` in @cats")
+
+# %%
+# scale = 'log'
+scale = "linear"
+
+fig = (
+    alt.Chart(ts_df)
+    .mark_line(size=3, interpolate="monotone")
+    .encode(
+        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
+        y=alt.Y("counts:Q", title="Number of articles"),
+        color=alt.Color("Sub Category:N"),
+        # size=alt.Size('magnitude'),
+        # color='Category',
+        # tooltip=["year", "counts", "query", alt.Tooltip("fraction:Q", format="%")],
+    )
+)
+fig = pu.configure_plots(fig)
+fig
+
+# %%
+AltairSaver.save(
+    fig, f"Guardian_articles_per_year_InnovativeFood", filetypes=["html", "svg", "png"]
+)
+
+# %%
+cats = ["Delivery", "Supply chain"]
+ts_df = ts_subcategory.query("`Sub Category` in @cats")
+
+# %%
+# scale = 'log'
+scale = "linear"
+
+fig = (
+    alt.Chart(ts_df)
+    .mark_line(size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3])
+    .encode(
+        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
+        y=alt.Y("counts:Q", title="Number of articles"),
+        color=alt.Color("Sub Category:N"),
+        # size=alt.Size('magnitude'),
+        # color='Category',
+        # tooltip=["year", "counts", "query", alt.Tooltip("fraction:Q", format="%")],
+    )
+)
+fig = pu.configure_plots(fig)
+fig
+
+# %%
+AltairSaver.save(
+    fig, f"Guardian_articles_per_year_Delivery", filetypes=["html", "svg", "png"]
+)
+
+# %%
+cats = ["Restaurants and retail"]
+ts_df = ts_subcategory.query("`Sub Category` in @cats")
+
+# %%
+# scale = 'log'
+scale = "linear"
+
+fig = (
+    alt.Chart(ts_df)
+    .mark_line(size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3])
+    .encode(
+        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
+        y=alt.Y("counts:Q", title="Number of articles"),
+        color=alt.Color("Sub Category:N"),
+        # size=alt.Size('magnitude'),
+        # color='Category',
+        # tooltip=["year", "counts", "query", alt.Tooltip("fraction:Q", format="%")],
+    )
+)
+fig = pu.configure_plots(fig)
+fig
+
+# %% [markdown]
+# g.document_mentions## Checking obesity/health trends
 
 # %%
 from innovation_sweet_spots.utils.pd import pd_analysis_utils as pdau
@@ -319,7 +587,7 @@ fig = (
         color=alt.Color("query:N"),
         # size=alt.Size('magnitude'),
         # color='Category',
-        tooltip=["year", "counts", "query"],
+        tooltip=["year", "counts", "query", alt.Tooltip("fraction:Q", format="%")],
     )
 )
 fig
@@ -341,6 +609,160 @@ fig = (
     )
 )
 fig
+
+# %%
+ts_df_obesity = ts_df.query("query=='obesity'")
+# ts_df_obesity = ts_df.query("query=='food_environment'")
+
+# %%
+# scale = 'log'
+scale = "linear"
+
+fig = (
+    alt.Chart(ts_df_obesity)
+    .mark_line(size=3, color=pu.NESTA_COLOURS[0], interpolate="monotone")
+    .encode(
+        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
+        y=alt.Y("counts:Q", title="Number of articles"),
+        # color=alt.Color("query:N"),
+        # size=alt.Size('magnitude'),
+        # color='Category',
+        tooltip=["year", "counts", "query"],
+    )
+)
+fig = pu.configure_plots(fig)
+fig
+
+# %%
+AltairSaver.save(
+    fig, f"Guardian_articles_per_year_Obesity", filetypes=["html", "svg", "png"]
+)
+
+# %%
+# scale = 'log'
+scale = "linear"
+
+fig = (
+    alt.Chart(ts_df_obesity)
+    .mark_line(size=3, color=pu.NESTA_COLOURS[0], interpolate="monotone")
+    .encode(
+        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
+        y=alt.Y(
+            "fraction:Q",
+            title="Percentage of articles",
+            axis=alt.Axis(
+                format="%",
+                tickCount=5,
+            ),
+        ),
+        # color=alt.Color("query:N"),
+        # size=alt.Size('magnitude'),
+        # color='Category',
+        tooltip=["year", "counts", "query", alt.Tooltip("fraction:Q", format=".2%")],
+    )
+)
+fig = pu.configure_plots(fig)
+fig
+
+# %%
+AltairSaver.save(
+    fig, f"Guardian_proportion_per_year_Obesity", filetypes=["html", "svg", "png"]
+)
+
+# %%
+au.estimate_magnitude_growth(ts_df_obesity, 2017, 2021)
+
+# %%
+ts_df_environment = ts_df.query("query=='food_environment'")
+
+# %%
+# scale = 'log'
+scale = "linear"
+
+fig = (
+    alt.Chart(ts_df_environment)
+    .mark_line(size=3, color=pu.NESTA_COLOURS[0], interpolate="monotone")
+    .encode(
+        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
+        y=alt.Y("counts:Q", title="Number of articles"),
+        # color=alt.Color("query:N"),
+        # size=alt.Size('magnitude'),
+        # color='Category',
+        tooltip=["year", "counts", "query"],
+    )
+)
+fig = pu.configure_plots(fig)
+fig
+
+# %%
+au.estimate_magnitude_growth(ts_df_environment, 2017, 2021)
+
+# %% [markdown]
+# ### Overlap of obesity and food tech articles
+
+# %%
+query_id = "obesity"
+g = pdau.DiscourseAnalysis(
+    search_terms=queries[query_id],
+    required_terms=queries[query_id],
+    banned_terms=banned_terms,
+    use_cached=True,
+    query_identifier=query_id,
+)
+
+# %%
+obesity_ids = list(g.metadata.keys())
+years = [int(g.metadata[key]["webPublicationDate"][0:4]) for key in g.metadata]
+obesity_ids = set(
+    [x for i, x in enumerate(obesity_ids) if ((years[i] < 2022) and (years[i] >= 2017))]
+)
+
+
+# %%
+len(obesity_ids)
+
+# %%
+foodtech_ids = set(df_id_to_term.query("year >= 2017 and year < 2022").id.to_list())
+
+# %%
+common_articles = len(obesity_ids.intersection(foodtech_ids))
+
+# %%
+common_articles / len(obesity_ids)
+
+# %%
+common_articles / len(foodtech_ids)
+
+# %%
+for cat in df_id_to_term.Category.unique():
+    foodtech_ids = set(
+        df_id_to_term.query("year >= 2017 and year < 2022")
+        .query("Category==@cat")
+        .id.to_list()
+    )
+    common_articles = len(obesity_ids.intersection(foodtech_ids))
+    print(cat)
+    print(common_articles / len(foodtech_ids))
+
+# %%
+query_id = "healthy_eating"
+g = pdau.DiscourseAnalysis(
+    search_terms=queries[query_id],
+    required_terms=[],
+    banned_terms=banned_terms,
+    use_cached=True,
+    query_identifier=query_id,
+)
+
+# %%
+ids = set(list(g.metadata.keys()))
+
+# %%
+for cat in df_id_to_term.Category.unique():
+    foodtech_ids = set(df_id_to_term.query("Category==@cat").id.to_list())
+    common_articles = len(ids.intersection(foodtech_ids))
+    print(cat)
+    print(common_articles / len(foodtech_ids))
 
 # %% [markdown]
 # ## Check mentions of Obesity AND food environment related terms

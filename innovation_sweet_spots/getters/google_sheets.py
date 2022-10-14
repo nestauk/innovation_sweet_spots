@@ -109,6 +109,7 @@ def get_foodtech_reviewed_vc(from_local=True, save_locally=True):
             logging.info(f"Search terms saved locally to {local_path}")
         return data_df
 
+
 def get_foodtech_reviewed_gtr(from_local=True, save_locally=True):
     """"""
     local_path = PROJECT_DIR / "outputs/foodtech/interim/foodtech_reviewed_gtr.csv"
@@ -145,4 +146,21 @@ def get_foodtech_reviewed_nihr(from_local=True, save_locally=True):
             data_df.to_csv(local_path, index=False)
             logging.info(f"Search terms saved locally to {local_path}")
         return data_df
-        
+
+
+def get_foodtech_heat_map(from_local=True, data_range="heatmap", save_locally=True):
+    """"""
+    local_path = PROJECT_DIR / "outputs/foodtech/interim/foodtech_heatmap.csv"
+    # Google sheets info
+    scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+    spreadsheet_id = "1SX_5jBSNtegyxVFo4CGvBoV0pPykZ0EKz8hui0kpLSo"
+    if from_local:
+        logging.info(f"Loading search terms from {local_path}")
+        return pd.read_csv(local_path)
+    else:
+        data = pull_sheet_data(scopes, spreadsheet_id, data_range)
+        data_df = pd.DataFrame(data[1:], columns=data[0])
+        if save_locally:
+            data_df.to_csv(local_path, index=False)
+            logging.info(f"Search terms saved locally to {local_path}")
+        return data_df
