@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ---
 # jupyter:
 #   jupytext:
@@ -32,47 +33,6 @@ import innovation_sweet_spots.utils.altair_save_utils as alt_save
 AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
 
 # %%
-import altair as alt
-import pandas as pd
-
-source = pd.DataFrame(
-    {
-        "Signal": ["Investment", "Research", "News", "Parliament"],
-        "shape": ["round", "long", "round"],
-        "weight": [0.3, 0.1, 0.25],
-    }
-)
-
-alt.Chart(source).transform_fold(["shape", "weight"]).mark_rect().encode(
-    x="fruits:N", y="key:N", color=alt.Color("value:N", legend=None)
-)
-
-# %%
-source = pd.DataFrame(
-    {
-        "Signal": ["Investment", "Research", "News", "Parliament"],
-        "shape": ["round", "long", "round"],
-        "weight": [0.3, 0.1, 0.25],
-    }
-)
-
-# %%
-from innovation_sweet_spots.getters import google_sheets
-
-df = google_sheets.get_foodtech_heat_map(from_local=False)
-
-# %%
-df_melt = df.melt(
-    ["Category"], ["Investment", "Research", "News", "Parliament"]
-).rename(columns={"variable": "Signal"})
-
-# %%
-df_melt
-
-# %%
-import importlib
-
-importlib.reload(google_sheets)
 df_melt = google_sheets.get_foodtech_heat_map(
     from_local=False, data_range="heatmap_melt"
 )
@@ -95,8 +55,6 @@ trend_to_value = {
     "Hot": 4,
 }
 
-# df_melt['Trend'] = df_melt.Value.apply(lambda x: value_to_trend[x])
-# df_melt['Size'] = df_melt['Trend'].apply(lambda x: trend_to_value[x])
 
 # %%
 # Colour scale
@@ -178,7 +136,8 @@ df_melt.to_csv(PROJECT_DIR / "outputs/foodtech/interim/heatmap_data.csv", index=
 # %%
 AltairSaver.save(fig, f"v2022_10_14_Heat_map", filetypes=["html", "png"])
 
-# %%
+# %% [markdown]
+# ## Experimenting with text comments
 
 # %%
 import pandas as pd

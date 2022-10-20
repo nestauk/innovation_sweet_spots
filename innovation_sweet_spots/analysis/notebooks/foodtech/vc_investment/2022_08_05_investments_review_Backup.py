@@ -2160,7 +2160,7 @@ text = fig.mark_text(
 ).encode(text=text_field)
 
 yrule = (
-    alt.Chart(pd.DataFrame({"y": [0.57183185]}))
+    alt.Chart(pd.DataFrame({"y": [1.2806]}))
     .mark_rule(strokeDash=[5, 7], size=1)
     .encode(y="y:Q")
 )
@@ -2215,7 +2215,7 @@ category_ts.head(1)
 
 # %%
 # category = "cooking and kitchen"
-# category = "retail and restaurants"
+category = "retail and restaurants"
 # category = "logistics"
 # category = 'innovative food'
 # category = 'health'
@@ -2506,6 +2506,22 @@ ids = company_to_taxonomy_df.query("Category == @category")
 # %%
 category_ids = get_category_ids(taxonomy_df, rejected_tags, DR, "Minor")
 category_ts = get_category_ts(category_ids, DR)
+
+# %%
+category_ts.head(1)
+
+# %%
+au.moving_average(
+    category_ts.query('Category == "dark kitchen"').assign(
+        year=lambda df: df.time_period.dt.year
+    )
+)
+
+# %%
+(438.244533 - 5.160308) / 5.160308
+
+# %%
+438.244533 / 5.160308
 
 # %%
 short_term_trend_df = (

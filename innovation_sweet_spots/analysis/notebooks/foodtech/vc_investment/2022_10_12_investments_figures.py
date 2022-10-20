@@ -900,7 +900,7 @@ fig = (
         tooltip=tooltip,
         color=alt.Color(
             "deal_type",
-            sort=["Late", "Early"],
+            sort=["Early", "Late"],
             # legend=None,
             legend=alt.Legend(title="Deal type"),
         ),
@@ -915,6 +915,21 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
+au.percentage_change(
+    data.query("`Year`==2011 and deal_type == 'Early'")[values_label].iloc[0],
+    data.query("`Year`==2021 and deal_type == 'Early'")[values_label].iloc[0],
+)
+
+# %%
+data.query("`Year`==2021 and deal_type == 'Early'")[values_label].iloc[0] / data.query(
+    "`Year`==2011 and deal_type == 'Early'"
+)[values_label].iloc[0]
+
+# %%
+au.percentage_change(
+    data.query("`Year`==2020 and deal_type == 'Early'")[values_label].iloc[0],
+    data.query("`Year`==2021 and deal_type == 'Early'")[values_label].iloc[0],
+)
 
 # %% [markdown]
 # ## Early vs late deals per major category
