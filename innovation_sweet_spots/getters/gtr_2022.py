@@ -5,28 +5,21 @@ Module for easy access to downloaded GtR data (updated for summer 2022)
 
 """
 import pandas as pd
-from innovation_sweet_spots import logging
 from innovation_sweet_spots.utils.io import load_json
-from innovation_sweet_spots.getters.path_utils import GTR_2022_PATH, PILOT_OUTPUTS
-from typing import Iterable
-
-PATH = GTR_2022_PATH
+from innovation_sweet_spots.getters.path_utils import GTR_2022_PATH
 
 
-def get_gtr_projects() -> pd.DataFrame:
-    """Main GtR projects table"""
-    return pd.DataFrame(load_json(PATH / "gtr_projects-projects.json"))
+def get_gtr_file(filename: str) -> pd.DataFrame:
+    """Load Gateway to Research csv or json file as a dataframe
 
+    Args:
+        filename: For example 'gtr_projects-funds.json'
 
-def get_gtr_topics() -> pd.DataFrame:
-    """GtR topics table"""
-    return pd.DataFrame(load_json(PATH / "gtr_projects-topic.json"))
-
-
-def get_gtr_funds() -> pd.DataFrame:
-    """GtR topics table"""
-    return pd.DataFrame(load_json(PATH / "gtr_projects-funds.json"))
-
-
-def get_wrangled_projects() -> pd.DataFrame:
-    return pd.read_csv(GTR_2022_PATH / "gtr_projects-wrangled_project_data.csv")
+    Returns:
+        Dataframe of provided filename
+    """
+    filepath = GTR_2022_PATH / filename
+    if filepath.suffix == ".csv":
+        return pd.read_csv(filepath)
+    if filepath.suffix == ".json":
+        return pd.DataFrame(load_json(filepath))
