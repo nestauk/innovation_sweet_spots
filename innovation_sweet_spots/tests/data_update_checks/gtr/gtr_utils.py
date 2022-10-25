@@ -60,7 +60,8 @@ def gtr_funding_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
     fig.tight_layout()
 
     save_dir = (
-        PROJECT_DIR / "innovation_sweet_spots/tests/data_update_checks/gtr/plots/"
+        PROJECT_DIR
+        / f"innovation_sweet_spots/tests/data_update_checks/gtr/{cur_path.stem}_vs_{new_path.stem}_plots/"
     )
     if not save_dir.exists():
         save_dir.mkdir(parents=True)
@@ -120,7 +121,8 @@ def gtr_projects_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
     fig.tight_layout()
 
     save_dir = (
-        PROJECT_DIR / "innovation_sweet_spots/tests/data_update_checks/gtr/plots/"
+        PROJECT_DIR
+        / f"innovation_sweet_spots/tests/data_update_checks/gtr/{cur_path.stem}_vs_{new_path.stem}_plots/"
     )
     if not save_dir.exists():
         save_dir.mkdir(parents=True)

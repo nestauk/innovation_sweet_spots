@@ -57,7 +57,8 @@ def nihr_awarded_amount_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.
     fig.tight_layout()
 
     save_dir = (
-        PROJECT_DIR / "innovation_sweet_spots/tests/data_update_checks/nihr/plots/"
+        PROJECT_DIR
+        / f"innovation_sweet_spots/tests/data_update_checks/nihr/{cur_path.stem}_vs_{new_path.stem}_plots/"
     )
     if not save_dir.exists():
         save_dir.mkdir(parents=True)
@@ -115,7 +116,8 @@ def nihr_projects_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
     fig.tight_layout()
 
     save_dir = (
-        PROJECT_DIR / "innovation_sweet_spots/tests/data_update_checks/nihr/plots/"
+        PROJECT_DIR
+        / f"innovation_sweet_spots/tests/data_update_checks/nihr/{cur_path.stem}_vs_{new_path.stem}_plots/"
     )
     if not save_dir.exists():
         save_dir.mkdir(parents=True)

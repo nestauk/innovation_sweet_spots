@@ -58,7 +58,10 @@ def cb_raised_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
     ax[1].title.set_text(f"{new_path.stem}/ funding raised per year")
     fig.set_size_inches(9, 4)
     fig.tight_layout()
-    save_dir = PROJECT_DIR / "innovation_sweet_spots/tests/data_update_checks/cb/plots/"
+    save_dir = (
+        PROJECT_DIR
+        / f"innovation_sweet_spots/tests/data_update_checks/cb/{cur_path.stem}_vs_{new_path.stem}_plots/"
+    )
     if not save_dir.exists():
         save_dir.mkdir(parents=True)
 
@@ -108,7 +111,10 @@ def cb_companies_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
     ax[1].title.set_text(f"{new_path.stem}/ number of companies founded per year")
     fig.set_size_inches(9, 4)
     fig.tight_layout()
-    save_dir = PROJECT_DIR / "innovation_sweet_spots/tests/data_update_checks/cb/plots/"
+    save_dir = (
+        PROJECT_DIR
+        / f"innovation_sweet_spots/tests/data_update_checks/cb/{cur_path.stem}_vs_{new_path.stem}_plots/"
+    )
     if not save_dir.exists():
         save_dir.mkdir(parents=True)
 

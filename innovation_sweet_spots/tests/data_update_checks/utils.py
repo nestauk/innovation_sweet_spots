@@ -22,7 +22,7 @@ def find_filenames(
     path: pathlib.Path,
 ) -> list:
     """Return a set of filenames from path"""
-    return {file.name for file in path.iterdir()}
+    return {file.name for file in path.iterdir() if file.name != ".DS_Store"}
 
 
 def check_filenames_match(cur_files: set, new_files: set, cur_dir: str, new_dir: str):
@@ -140,7 +140,7 @@ def nan_plot(
         xlim=(0, 1),
     )
     save_lbl = filename.split(".")[0]
-    save_dir = DUC_DIR / f"{dataset}/plots/"
+    save_dir = DUC_DIR / f"{dataset}/{cur_dir}_vs_{new_dir}_plots/"
     if not save_dir.exists():
         save_dir.mkdir(parents=True)
     save_path = save_dir / f"{save_lbl}_nan_plot.png"
