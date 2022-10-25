@@ -10,4 +10,8 @@ In addition to the main Innovation Sweet Spots requirements, there are some addi
 
 Run: `python innovation_sweet_spots/tests/data_update_checks/data_update_checks.py [current_directory] [new_directory] [dataset]`
 
+`[current_directory]` and `[new_directory]` are assumed to be in `inputs/data`.
+
+`[dataset]` can be either `cb`, `gtr` or `nihr`.
+
 For example: `python innovation_sweet_spots/tests/data_update_checks/data_update_checks.py cb_2021 cb_2022_august cb`
