@@ -14,4 +14,4 @@ Run: `python innovation_sweet_spots/tests/data_update_checks/data_update_checks.
 
 `[dataset]` can be either `cb`, `gtr` or `nihr`.
 
-For example: `python innovation_sweet_spots/tests/data_update_checks/data_update_checks.py cb_2021 cb_2022_august cb`
+For example: `python innovation_sweet_spots/tests/data_update_checks/data_update_checks.py cb_2021 cb_2022_june cb`
