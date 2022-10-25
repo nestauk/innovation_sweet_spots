@@ -165,16 +165,8 @@ def run_data_checks(
         logger.info(f"Checking file {file}...")
         cur_df = load_file_as_df(cur_path, file)
         new_df = load_file_as_df(new_path, file)
-
         check_n_rows(cur_df, new_df, file, cur_path.stem, new_path.stem)
-
-        #### Remove this line... use for testing functions
-        new_df["extra_col"] = 100
-        cur_df["missing_col"] = 50
-        ###################
-
         check_cols_match(cur_df, new_df, file, cur_path.stem, new_path.stem)
-
         nan_data = combine_data_for_nan_plot(
             cur_df, new_df, cur_path.stem, new_path.stem
         )
