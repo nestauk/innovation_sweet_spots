@@ -128,3 +128,17 @@ def gtr_projects_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
     save_path = save_dir / "gtr_projects_per_year"
     fig.savefig(save_path)
     logger.info(f"GtR projects per year plots saved to {save_path}")
+
+
+def gtr_plots(cur_path: pathlib.Path, new_path: pathlib.Path):
+    """Run `gtr_funding_per_year_plot` and `gtr_projects_per_year_plot` functions
+    and except FileNotFoundErrors"""
+    try:
+        gtr_funding_per_year_plot(cur_path, new_path)
+    except FileNotFoundError as e:
+        logger.warning(f"{e}. Cannot make GtR funding per year plot.")
+
+    try:
+        gtr_projects_per_year_plot(cur_path, new_path)
+    except FileNotFoundError as e:
+        logger.warning(f"{e}. Cannot make GtR projects per year plot.")

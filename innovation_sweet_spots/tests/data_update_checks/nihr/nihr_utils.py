@@ -123,3 +123,17 @@ def nihr_projects_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
     save_path = save_dir / "nihr_projects_started_per_year"
     fig.savefig(save_path)
     logger.info(f"NIHR projects started per year plots saved to {save_path}")
+
+
+def nihr_plots(cur_path: pathlib.Path, new_path: pathlib.Path):
+    """Run `nihr_awarded_amount_per_year_plot` and `nihr_projects_per_year_plot` functions
+    and except FileNotFoundErrors"""
+    try:
+        nihr_awarded_amount_per_year_plot(cur_path, new_path)
+    except FileNotFoundError as e:
+        logger.warning(f"{e}. Cannot make NIHR awarded amount per year plot.")
+
+    try:
+        nihr_projects_per_year_plot(cur_path, new_path)
+    except FileNotFoundError as e:
+        logger.warning(f"{e}. Cannot make NIHR projects per year plot.")

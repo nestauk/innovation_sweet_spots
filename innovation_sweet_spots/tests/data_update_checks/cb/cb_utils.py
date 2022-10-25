@@ -117,3 +117,17 @@ def cb_companies_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
     logger.info(
         f"Crunchbase number of companies founded per year plots saved to {save_path}"
     )
+
+
+def cb_plots(cur_path: pathlib.Path, new_path: pathlib.Path):
+    """Run `cb_companies_per_year_plot` and `cb_raised_per_year_plot` functions
+    and except FileNotFoundErrors"""
+    try:
+        cb_raised_per_year_plot(cur_path, new_path)
+    except FileNotFoundError as e:
+        logger.warning(f"{e}. Cannot make Crunchbase raised per year plot.")
+
+    try:
+        cb_companies_per_year_plot(cur_path, new_path)
+    except FileNotFoundError as e:
+        logger.warning(f"{e}. Cannot make Crunchbase companies founded per year plot.")
