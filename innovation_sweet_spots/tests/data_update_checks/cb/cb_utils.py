@@ -11,7 +11,7 @@ sns.set_theme(style="darkgrid")
 
 def get_cb_raised_per_year(path: pathlib.Path):
     """Group funding raised amount by year and process into format
-    that can be used in the function `raised_per_year_plot`"""
+    that can be used in the function `cb_raised_per_year_plot`"""
     return (
         load_file_as_df(path, "crunchbase_funding_rounds.csv")[
             ["announced_on", "raised_amount_usd"]
@@ -69,7 +69,7 @@ def cb_raised_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
 
 def get_cb_companies_founded(path: pathlib.Path):
     """Group number of companies founded by year and process into format
-    that can be used in the function `companies_per_year_plot`"""
+    that can be used in the function `cb_companies_per_year_plot`"""
     return (
         load_file_as_df(path, "crunchbase_orgs.csv")[["founded_on", "id"]]
         .assign(founded_on=lambda x: pd.to_datetime(x.founded_on, errors="coerce"))

@@ -11,7 +11,7 @@ sns.set_theme(style="darkgrid")
 
 def get_gtr_funding_per_year(path: pathlib.Path):
     """Group gtr funding by year and process into format
-    that can be used in the function `funding_per_year_plot`"""
+    that can be used in the function `gtr_funding_per_year_plot`"""
     return (
         load_file_as_df(path, "gtr_projects-wrangled_project_data.csv")[
             ["fund_start", "amount"]
@@ -72,7 +72,7 @@ def gtr_funding_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
 
 def get_gtr_projects_per_year(path: pathlib.Path):
     """Group gtr count of projects by year and process into format
-    that can be used in the function `projects_per_year_plot`"""
+    that can be used in the function `gtr_projects_per_year_plot`"""
     return (
         load_file_as_df(path, "gtr_projects-wrangled_project_data.csv")[
             ["fund_start", "project_id"]
