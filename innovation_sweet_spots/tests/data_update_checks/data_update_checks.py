@@ -20,7 +20,7 @@ def run_update_checks(cur_dir: str, new_dir: str, dataset: str):
     """
     cur_path = DATA_PATH / cur_dir
     new_path = DATA_PATH / new_dir
-    # run_filename_and_data_checks(cur_path, new_path, dataset)
+    run_filename_and_data_checks(cur_path, new_path, dataset)
     if dataset == "cb":
         cb_plots(cur_path, new_path)
     elif dataset == "gtr":
