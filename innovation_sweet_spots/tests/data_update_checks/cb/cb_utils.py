@@ -67,7 +67,7 @@ def cb_raised_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
     logger.info(f"Crunchbase funding raised per year plots saved to {save_path}")
 
 
-def get_cb_companies_founded(path):
+def get_cb_companies_founded(path: pathlib.Path):
     """Group number of companies founded by year and process into format
     that can be used in the function `companies_per_year_plot`"""
     return (

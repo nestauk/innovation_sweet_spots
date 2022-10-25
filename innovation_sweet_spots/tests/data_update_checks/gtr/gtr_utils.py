@@ -9,7 +9,7 @@ import pathlib
 sns.set_theme(style="darkgrid")
 
 
-def get_gtr_funding_per_year(path):
+def get_gtr_funding_per_year(path: pathlib.Path):
     """Group gtr funding by year and process into format
     that can be used in the function `funding_per_year_plot`"""
     return (
@@ -70,7 +70,7 @@ def gtr_funding_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.Path):
     logger.info(f"GtR funding per year plots saved to {save_path}")
 
 
-def get_gtr_projects_per_year(path):
+def get_gtr_projects_per_year(path: pathlib.Path):
     """Group gtr count of projects by year and process into format
     that can be used in the function `projects_per_year_plot`"""
     return (

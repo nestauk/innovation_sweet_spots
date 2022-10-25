@@ -9,7 +9,7 @@ import pathlib
 sns.set_theme(style="darkgrid")
 
 
-def get_nihr_funding_per_year(path):
+def get_nihr_funding_per_year(path: pathlib.Path):
     return (
         load_file_as_df(path, "nihr_summary_data.csv")[["start_date", "award_amount_m"]]
         .assign(start_date=lambda x: pd.to_datetime(x.start_date, errors="coerce"))
@@ -65,7 +65,7 @@ def nihr_awarded_amount_per_year_plot(cur_path: pathlib.Path, new_path: pathlib.
     logger.info(f"NIHR amounts awarded per year plots saved to {save_path}")
 
 
-def get_nihr_projects_per_year(path):
+def get_nihr_projects_per_year(path: pathlib.Path):
     return (
         load_file_as_df(path, "nihr_summary_data.csv")[["start_date", "project_id"]]
         .assign(start_date=lambda x: pd.to_datetime(x.start_date, errors="coerce"))
