@@ -156,10 +156,9 @@ def get_flat_sentence_mentions(search_terms, sentence_collection):
     """
     base = r"{}"
     expr = "(?:\s|^){}(?:,?\s|\.|$)"
-    for term in search_terms:
-        combined_expressions = [
-            base.format("".join(expr.format(term))) for term in search_terms
-        ]
+    combined_expressions = [
+        base.format("".join(expr.format(term))) for term in search_terms
+    ]
     joined_expressions = "|".join(combined_expressions)
 
     year_flat_sentences = dict()
