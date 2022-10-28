@@ -5,11 +5,9 @@ Created on Tue Oct  5 14:37:14 2021
 
 @author: jdjumalieva
 """
-import os
 from collections import defaultdict
 import pandas as pd
 import re
-from typing import Iterator
 
 from innovation_sweet_spots.utils import text_cleaning_utils as tcu
 from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
@@ -220,7 +218,7 @@ def view_collocations(
     sentence_record_dict,
     url_field="webUrl",
     title_field="webTitle",
-    print_sentences=True,
+    print_sentences=False,
     output_to_file=True,
     output_path=OUTPUT_DATA_PATH,
 ):
@@ -236,19 +234,18 @@ def view_collocations(
     """
     results = []
     for year, group in grouped_sentences:
-        if print_sentences:
+        if print_sentences and metadata_dict:
             print(year)
         for ix, row in group.iterrows():
             sentence = row["sentence"]
             sent_id = sentence_record_dict[sentence]
-            web_url = metadata_dict[sent_id][url_field]
-            article_title = metadata_dict[sent_id][title_field]
-            if print_sentences:
-                print(article_title)
-                print(sentence, end="\n\n")
-                print(web_url, end="\n\n")
-                print("----------")
             results.append([year, sent_id, sentence])
+            if print_sentences and metadata_dict:
+                print(metadata_dict[sent_id][title_field])
+                print(sentence, end="\n\n")
+                print(metadata_dict[sent_id][url_field], end="\n\n")
+                print("----------")
+
     results_df = pd.DataFrame.from_records(results, columns=["year", "id", "sentence"])
     if output_to_file:
         results_df.to_csv(output_path / "sentences_w_collocations.csv", index=False)
@@ -327,7 +324,7 @@ def view_mentions(
     sentence_record_dict,
     url_field="webUrl",
     title_field="webTitle",
-    print_sentences=True,
+    print_sentences=False,
     output_to_file=True,
     output_path=OUTPUT_DATA_PATH,
 ):
@@ -343,19 +340,18 @@ def view_mentions(
     """
     results = []
     for year, group in grouped_sentences:
-        if print_sentences:
+        if print_sentences and metadata_dict:
             print(year)
         for ix, row in group.iterrows():
             sentence = row["sentence"]
             sent_id = sentence_record_dict[sentence]
-            web_url = metadata_dict[sent_id][url_field]
-            article_title = metadata_dict[sent_id][title_field]
-            if print_sentences:
-                print(article_title)
-                print(sentence, end="\n\n")
-                print(web_url, end="\n\n")
-                print("----------")
             results.append([year, sent_id, sentence])
+            if print_sentences and metadata_dict:
+                print(metadata_dict[sent_id][title_field])
+                print(sentence, end="\n\n")
+                print(metadata_dict[sent_id][url_field], end="\n\n")
+                print("----------")
+
     results_df = pd.DataFrame.from_records(results, columns=["year", "id", "sentence"])
     if output_to_file:
         results_df.to_csv(output_path / "sentences_w_mentions.csv", index=False)

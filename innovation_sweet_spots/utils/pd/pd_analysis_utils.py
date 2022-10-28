@@ -20,7 +20,6 @@ import itertools
 import spacy
 from collections import defaultdict
 from typing import Iterator
-import pickle
 import altair as alt
 
 MIN_YEAR = 2000
@@ -630,7 +629,7 @@ class DiscourseAnalysis:
         return self._flat_sentences
 
     def view_mentions(
-        self, term, print_sentences: bool = True, output_to_file: bool = False
+        self, term, print_sentences: bool = False, output_to_file: bool = True
     ):
         """"""
         return dpu.view_mentions(
@@ -639,10 +638,11 @@ class DiscourseAnalysis:
             self.sentence_record_dict,
             output_to_file=output_to_file,
             print_sentences=print_sentences,
+            output_path=self.outputs_path,
         )
 
     def view_collocations(
-        self, term: str, print_sentences: bool = True, output_to_file: bool = False
+        self, term: str, print_sentences: bool = False, output_to_file: bool = True
     ):
         """"""
         return dpu.view_collocations(
@@ -651,6 +651,7 @@ class DiscourseAnalysis:
             self.sentence_record_dict,
             output_to_file=output_to_file,
             print_sentences=print_sentences,
+            output_path=self.outputs_path,
         )
 
     def view_phrase_sentences(
