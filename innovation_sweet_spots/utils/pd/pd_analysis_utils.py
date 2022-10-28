@@ -140,7 +140,7 @@ class DiscourseAnalysis:
         self._processed_articles_by_year = None
         self._term_sentences = None
         self._combined_term_sentences = None
-        self._self_noun_chunks_all_years = None
+        self._noun_chunks_all_years = None
         self._flat_sentences = None
         # Load precomputed intermediate outputs
         if self.use_cached and (os.path.isdir(self.outputs_path)):
@@ -354,14 +354,14 @@ class DiscourseAnalysis:
         """"""
         # Use spacy functionality to identify noun phrases in all sentences in the corpus.
         # These often provide a useful starting point for analysing language used around a given technology.
-        if self._self_noun_chunks_all_years is None:
+        if self._noun_chunks_all_years is None:
             self._noun_chunks_all_years = {
                 str(year): dpu.get_noun_chunks(
                     processed_articles, remove_det_articles=True
                 )
                 for year, processed_articles in self.processed_articles_by_year.items()
             }
-        return self._self_noun_chunks_all_years
+        return self._noun_chunks_all_years
 
     ### Analysing
     @property
