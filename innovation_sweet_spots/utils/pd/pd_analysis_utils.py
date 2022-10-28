@@ -134,6 +134,7 @@ class DiscourseAnalysis:
         self._document_text = None
         self._metadata = None
         self.load_documents()
+        self.load_metadata()
         # Intermediate outputs
         self._sentence_records = None
         self._sentence_record_dict = None
@@ -177,21 +178,36 @@ class DiscourseAnalysis:
         self,
         load_cached: bool = True,
         document_text: pd.DataFrame = None,
-        metadata: dict = None,
     ):
-        """Loads document texts and metadata"""
-        if (load_cached) and (document_text is None) and (metadata is None):
+        """Loads document texts"""
+        if load_cached and document_text is None:
             try:
-                self._all_document_text = pd.read_csv(
-                    self.outputs_path / f"document_text_{self.q_id}.csv",
-                ).assign(date=lambda df: pd.to_datetime(df.date))
-                self._metadata = load_pickle(
-                    self.outputs_path / f"metadata_dict_{self.q_id}.pkl"
+                document_path = self.outputs_path / f"document_text_{self.q_id}.csv"
+                self._all_document_text = pd.read_csv(document_path).assign(
+                    date=lambda df: pd.to_datetime(df.date)
                 )
-            except:
-                logging.warning("Please provide documents and metadata")
+            except FileNotFoundError as e:
+                logging.warning(
+                    f"{e}. Either create {document_path} or run load_documents with document_text variable assigned."
+                )
         else:
             self._all_document_text = document_text
+
+    def load_metadata(
+        self,
+        load_cached: bool = True,
+        metadata: dict = None,
+    ):
+        """Loads metadata"""
+        if load_cached and metadata is None:
+            try:
+                metadata_path = self.outputs_path / f"metadata_dict_{self.q_id}.pkl"
+                self._metadata = load_pickle(metadata_path)
+            except FileNotFoundError as e:
+                logging.warning(
+                    f"{e}. Either create {metadata_path} or run load_metadata with metadata variable assigned."
+                )
+        else:
             self._metadata = metadata
 
     def load_preprocessed_data(self):
