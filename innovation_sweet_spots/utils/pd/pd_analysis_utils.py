@@ -628,19 +628,6 @@ class DiscourseAnalysis:
             )
         return self._flat_sentences
 
-    def view_mentions(
-        self, term, print_sentences: bool = False, output_to_file: bool = True
-    ):
-        """"""
-        return dpu.view_mentions(
-            dpu.check_mentions(self.flat_sentences, term),
-            self.metadata,
-            self.sentence_record_dict,
-            output_to_file=output_to_file,
-            print_sentences=print_sentences,
-            output_path=self.outputs_path,
-        )
-
     def view_collocations(
         self, term: str, print_sentences: bool = False, output_to_file: bool = True
     ):
