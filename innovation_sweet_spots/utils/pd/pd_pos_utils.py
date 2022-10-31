@@ -109,7 +109,6 @@ def aggregate_matches(phrase_dict, sort_phrases=True):
         sorted_results = sorted(Counter(flat_results).items())
         agg_results[year_period] = sorted_results
     return agg_results
-    return agg_results
 
 
 def view_phrase_sentences(
