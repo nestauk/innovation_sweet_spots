@@ -93,7 +93,7 @@ def match_patterns_across_years(
     return phrases
 
 
-def aggregate_matches(phrase_dict, sort_phrases=True):
+def aggregate_matches(phrase_dict):
     """Combines phrase matches over a time period and and counts frequency.
 
     Args:
@@ -190,7 +190,9 @@ def view_phrase_sentences_period(
             if len(year_subset) > 0:
                 year_subset_df = pd.concat(year_subset)
                 dpu.view_collocations(
-                    year_subset_df.groupby("year"), metadata_dict, sentence_record_dict
+                    year_subset_df.groupby(year_field),
+                    metadata_dict,
+                    sentence_record_dict,
                 )
             else:
                 print("No results")
