@@ -1,7 +1,6 @@
 """
 
 """
-from innovation_sweet_spots import logging
 from innovation_sweet_spots.getters import guardian
 from innovation_sweet_spots.utils.pd import (
     pd_data_collection_utils as dcu,
@@ -21,6 +20,9 @@ import spacy
 from collections import defaultdict
 from typing import Iterator
 import altair as alt
+from tqdm import tqdm
+from typing import List
+from innovation_sweet_spots import logger
 
 MIN_YEAR = 2000
 MAX_YEAR = 2022
@@ -88,7 +90,7 @@ def get_guardian_articles(
             index=False,
             quoting=csv.QUOTE_NONNUMERIC,
         )
-        logging.info(f"Saved a table in {outputs_path / filename}")
+        logger.info(f"Saved a table in {outputs_path / filename}")
         save_pickle(metadata, outputs_path / f"metadata_dict_{query_identifier}.pkl")
     return document_text, metadata
 
@@ -186,7 +188,7 @@ class DiscourseAnalysis:
                     date=lambda df: pd.to_datetime(df.date)
                 )
             except FileNotFoundError as e:
-                logging.warning(
+                logger.warning(
                     f"{e}. Either create {document_path} or run load_documents with document_text variable assigned."
                 )
         else:
@@ -203,7 +205,7 @@ class DiscourseAnalysis:
                 metadata_path = self.outputs_path / f"metadata_dict_{self.q_id}.pkl"
                 self._metadata = load_pickle(metadata_path)
             except FileNotFoundError as e:
-                logging.warning(
+                logger.warning(
                     f"{e}. Either create {metadata_path} or run load_metadata with metadata variable assigned."
                 )
         else:
@@ -231,7 +233,7 @@ class DiscourseAnalysis:
                 self.outputs_path / f"combined_sentences_{self.q_id}.pkl"
             )
         except:
-            logging.warning(
+            logger.warning(
                 f"Intermediate outputs were not found in {self.outputs_path}"
             )
 
@@ -509,16 +511,36 @@ class DiscourseAnalysis:
             self._term_temporal_rank = cu.analyse_rank_pmi_over_time(self._term_rank)
         return self._term_temporal_rank
 
-    @property
-    def phrase_patterns(self):
-        """"""
+    def make_combined_phrase_patterns(self) -> List[dict]:
+        combined_phrase_patterns = {}
+        for search_term in self.search_terms:
+            phrase_pattern_to_add = pos.make_phrase_patterns(search_term)
+            combined_phrase_patterns = {
+                **combined_phrase_patterns,
+                **phrase_pattern_to_add,
+            }
+        return combined_phrase_patterns
+
+    def set_phrase_patterns(self, load_patterns, make_patterns):
+        """Set phrase patterns by loading from json file or by making patterns
+        using function pd_pod_utils.make_phrase_patterns"""
         if self._phrase_patterns is None:
-            try:
-                self._phrase_patterns = load_json(
-                    self.outputs_path / f"phrase_patterns_{self.q_id}.json"
+            if make_patterns and load_patterns:
+                logger.warning(
+                    "Both make_patterns and load cannot be True. Rerun with only one variable set to True"
                 )
-            except:
-                return None
+            elif make_patterns:
+                self._phrase_patterns = self.make_combined_phrase_patterns()
+            elif load_patterns:
+                try:
+                    phrase_patterns_json_path = (
+                        self.outputs_path / f"phrase_patterns_{self.q_id}.json"
+                    )
+                    self._phrase_patterns = load_json(phrase_patterns_json_path)
+                except FileNotFoundError as e:
+                    logger.warning(
+                        f"{e}. Create missing file or use make_patterns=True and rerun this function."
+                    )
         return self._phrase_patterns
 
     def term_phrases(self):
@@ -529,41 +551,52 @@ class DiscourseAnalysis:
         """
         return pos.noun_chunks_w_term(self.noun_chunks_all_years, self.search_terms)
 
-    def get_phrases(self, pattern="noun_phrase", period_length: int = 1):
-        """"""
-        return pos.save_phrases(
-            [
-                pos.aggregate_matches(
-                    pos.match_patterns_across_years(
-                        self.combined_term_sentences,
-                        NLP,
-                        self.phrase_patterns[pattern],
-                        period_length,
+    def get_phrases_based_on_pattern(self, pattern: str) -> pd.DataFrame:
+        """Get phrases based on specified pattern
+
+        Args:
+            pattern: pattern label key in self.phrase_patterns
+                e.g 'heat_pumps_adj_phrase'
+
+        Returns:
+            Dataframe containing columns for:
+                year, phrase, number_of_mentions, pattern
+        """
+        try:
+            return pos.phrase_results(
+                [
+                    pos.aggregate_matches(
+                        pos.match_patterns_across_years(
+                            self.combined_term_sentences,
+                            NLP,
+                            self._phrase_patterns[pattern],
+                            self.pos_period_length,
+                        )
                     )
-                )
-            ]
-        )
+                ],
+                pattern,
+            )
+        except TypeError as e:
+            logger.warning(
+                f"{e}. There are no phrases set yet, run function set_phrase_patterns first."
+            )
 
     @property
-    def pos_phrases(self):
-        """"""
+    def pos_phrases(self) -> pd.DataFrame:
+        """Finds POS phrases that match all phrase patterns
+        from within combined_term_sentences"""
         if self._pos_phrases is None:
-            if self.phrase_patterns is not None:
-                self._pos_phrases = pos.save_phrases(
+            try:
+                self._pos_phrases = pd.concat(
                     [
-                        pos.aggregate_matches(
-                            pos.match_patterns_across_years(
-                                self.combined_term_sentences,
-                                NLP,
-                                self.phrase_patterns[pattern],
-                                self.pos_period_length,
-                            )
-                        )
-                        for pattern in self.phrase_patterns
+                        self.get_phrases_based_on_pattern(pattern)
+                        for pattern in tqdm(self._phrase_patterns)
                     ]
+                ).reset_index(drop=True)
+            except TypeError as e:
+                logger.warning(
+                    f"{e}. There are no phrases set yet, run function set_phrase_patterns first."
                 )
-            else:
-                self._pos_phrases = pd.DataFrame()
         return self._pos_phrases
 
     @property
@@ -600,7 +633,7 @@ class DiscourseAnalysis:
                 self._object_phrase_triples[year] = object_phrases
 
     def save_analysis_results(self):
-        """"""
+        """Saves analys to outputs path"""
         self.document_mentions.to_csv(
             self.outputs_path / f"document_mentions_{self.q_id}.csv", index=False
         )
