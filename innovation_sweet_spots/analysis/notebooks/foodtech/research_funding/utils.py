@@ -7,6 +7,7 @@ def get_time_series(
     categories_to_check,
     taxonomy_level="Category",
     id_column="project_id",
+    max_year=2021,
 ):
     """Creates time series"""
     category_ts = []
@@ -30,7 +31,7 @@ def get_time_series(
                     "year": (lambda df: df.time_period.dt.year),
                 }
             )
-            .query("time_period <= '2021'")
+            .query(f"time_period <= '{max_year}'")
         )
         category_ts.append(df_ts)
     category_ts = pd.concat(category_ts, ignore_index=False)

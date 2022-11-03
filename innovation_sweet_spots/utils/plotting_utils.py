@@ -590,3 +590,123 @@ def cb_deals_per_year(
             ],
         )
     )
+
+
+# Figures
+_line_width = 3
+_stroke_dash_none = [0]
+_stroke_dash_default = [5, 5]
+
+
+def ts_smooth(
+    ts,
+    categories_to_show,
+    variable: str = "amount_total",
+    variable_title: str = "Funding (£ millions)",
+    category_column: str = "Sub Category",
+    amount_div: int = 1000,
+    width: int = 400,
+    height: int = 150,
+    stroke_dash=_stroke_dash_none,
+    tooltip=True,
+    line_width=_line_width,
+):
+    """"""
+    if variable == "no_of_projects":
+        _format = ".0f"
+    else:
+        _format = ".3f"
+
+    if tooltip:
+        tooltip = [
+            alt.Tooltip("year:O", title="Year"),
+            alt.Tooltip(f"{category_column}:N"),
+            alt.Tooltip(f"{variable}:Q", title=variable_title, format=_format),
+        ]
+    else:
+        tooltip = []
+
+    # Convert amounts (specific to GtR data, should improve this)
+    if "amount_total" in ts.columns:
+        ts = ts.copy().assign(amount_total=lambda df: df.amount_total / amount_div)
+
+    return (
+        alt.Chart(
+            (
+                ts
+                # Subselect time series
+                .query(f"`{category_column}` in @categories_to_show")
+            ),
+            width=width,
+            height=height,
+        )
+        .mark_line(
+            interpolate="monotone",
+            size=line_width,
+            strokeDash=stroke_dash,
+        )
+        .encode(
+            x=alt.X("year:O", title=""),
+            y=alt.Y(f"{variable}:Q", title=variable_title),
+            color=alt.Color(f"{category_column}:N", legend=alt.Legend(orient="top")),
+            tooltip=tooltip,
+        )
+    )
+
+
+def ts_smooth_incomplete(
+    ts,
+    categories_to_show,
+    variable: str = "amount_total",
+    variable_title: str = "Funding (£ millions)",
+    category_column: str = "Sub Category",
+    amount_div: int = 1000,
+    width: int = 400,
+    height: int = 150,
+    max_complete_year=2021,
+):
+    fig_solid = ts_smooth(
+        ts,
+        categories_to_show,
+        variable,
+        variable_title,
+        category_column,
+        amount_div,
+        width,
+        height,
+    ).transform_filter(f"datum.year <= {max_complete_year}")
+
+    fig_dashed = ts_smooth(
+        ts,
+        categories_to_show,
+        variable,
+        variable_title,
+        category_column,
+        amount_div,
+        width,
+        height,
+        stroke_dash=_stroke_dash_default,
+        line_width=2.5,
+    ).transform_filter(f"datum.year >= {max_complete_year}")
+
+    return fig_solid + fig_dashed
+
+
+def ts_funding_projects(ts, categories_to_show, width: int = 400, height: int = 150):
+    fig_funding = ts_smooth(
+        ts,
+        categories_to_show,
+        "amount_total",
+        "Funding (£ millions)",
+        width=width,
+        height=height,
+    )
+    fig_projects = ts_smooth(
+        ts,
+        categories_to_show,
+        "no_of_projects",
+        "Number of projects",
+        width=width,
+        height=height,
+    )
+    return configure_plots(alt.vconcat(fig_funding, fig_projects))

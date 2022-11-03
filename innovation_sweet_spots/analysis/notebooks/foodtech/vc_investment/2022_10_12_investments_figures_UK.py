@@ -82,13 +82,10 @@ company_to_taxonomy_df = pd.read_csv(output_folder / "vc_company_to_taxonomy.csv
 company_to_taxonomy_df.id = company_to_taxonomy_df.id.astype(str)
 
 # %%
-VERSION_NAME = "October_VC"
-
-# %%
-# # In case the countries are in the UK
-# uk_ids = DR.company_data.query("country == 'United Kingdom'").id.to_list()
-# company_to_taxonomy_df = company_to_taxonomy_df.query("id in @uk_ids")
-# VERSION_NAME = "October_VC_UK"
+# In case the countries are in the UK
+uk_ids = DR.company_data.query("country == 'United Kingdom'").id.to_list()
+company_to_taxonomy_df = company_to_taxonomy_df.query("id in @uk_ids")
+VERSION_NAME = "October_VC_UK"
 
 # %%
 len(company_to_taxonomy_df)
@@ -107,11 +104,6 @@ for d in sorted(utils.LATE_DEAL_TYPES):
 # %%
 from collections import defaultdict
 import itertools
-
-# %% [markdown]
-# #### Check deal types:
-# - Early vs mature
-# - "Large" vs "small"
 
 # %%
 importlib.reload(utils)
@@ -190,6 +182,31 @@ len(foodtech_ids)
     .query('announced_on > "2020-12-31" and announced_on < "2022-01-01"')
     .raised_amount_gbp.sum()
 )
+
+# %%
+ids = ["2461", "20812"]
+df = (
+    DR.funding_rounds.query("id in @foodtech_ids")
+    .query("`EACH ROUND TYPE` in @utils.LATE_DEAL_TYPES")
+    .query("id in @ids")
+)
+df
+
+# %%
+df = (
+    DR.funding_rounds.query("id in @foodtech_ids")
+    .query("`EACH ROUND TYPE` in @utils.LATE_DEAL_TYPES")
+    .query('announced_on > "2016-12-31" and announced_on < "2022-01-01"')
+    .groupby("id")
+    .sum()
+    .reset_index()
+    .merge(DR.company_data[["id", "NAME"]])
+    .sort_values("raised_amount_gbp", ascending=False)
+)
+df.head(15)
+
+# %%
+(5758.030697 + 2941.984171 + 1730.000000) / df.raised_amount_gbp.sum()
 
 # %% [markdown]
 # ### Global foodtech investment
@@ -282,12 +299,12 @@ fig
 
 # %%
 horizontal_label = "Year"
-values_label = "Investment (bn GBP)"
+values_label = "Investment (£ millions)"
 tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
 
 data = (
     foodtech_ts_early.assign(
-        raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
+        raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total
     )
     .query("time_period < 2022")
     .rename(
@@ -311,7 +328,7 @@ fig = (
         alt.X(f"{horizontal_label}:O", title=""),
         alt.Y(
             f"sum({values_label}):Q",
-            title="Investment (£ billions)"
+            title="Investment (£ millions)"
             # scale=alt.Scale(domain=[0, 1200])
             # stack='normalize',
         ),
@@ -328,12 +345,19 @@ fig
 
 # %%
 AltairSaver.save(
-    fig, f"v{VERSION_NAME}_total_early_investment", filetypes=["html", "png"]
+    fig, f"v{VERSION_NAME}_total_early_investment", filetypes=["html", "svg", "png"]
 )
+
 
 # %%
 au.smoothed_growth(
     data.query("deal_type == 'Early'").drop(["Year", "deal_type"], axis=1), 2011, 2021
+)
+
+
+# %%
+au.smoothed_growth(
+    data.query("deal_type == 'Early'").drop(["Year", "deal_type"], axis=1), 2017, 2021
 )
 
 
@@ -674,9 +698,9 @@ foodtech_ids_cat = list(
 
 
 # %%
-foodtech_ids_cat = list(
-    company_to_taxonomy_df.query("Category == 'Health'").id.astype(str).unique()
-)
+# foodtech_ids_cat = list(
+#     company_to_taxonomy_df.query("Category == 'Health'").id.astype(str).unique()
+# )
 
 # %%
 foodtech_ids_agritech = list(
@@ -742,7 +766,77 @@ category_ids = utils.get_category_ids(
 magnitude_vs_growth = utils.get_trends(
     taxonomy_df, utils.rejected_tags, "Category", company_to_taxonomy_df, DR
 )
-magnitude_vs_growth.sort_values("growth")
+order = magnitude_vs_growth.sort_values("Magnitude", ascending=False).Category.to_list()
+
+# %%
+magnitude_vs_growth
+
+# %%
+fig_1 = pu.configure_plots(
+    alt.Chart(magnitude_vs_growth, height=200)
+    .mark_bar(color=pu.NESTA_COLOURS[0])
+    .encode(
+        y=alt.Y("Category", sort=order, title=""),
+        x=alt.X(
+            "Magnitude",
+            title="Yearly average investment (£ millions)",
+            axis=alt.Axis(labelFlush=False),
+        ),
+        tooltip=[
+            "Category",
+            alt.Tooltip(
+                "Magnitude",
+                format=".1f",
+                title="Yearly average investment (£ millions)",
+            ),
+        ],
+    )
+)
+
+fig_2_bars = (
+    alt.Chart(magnitude_vs_growth, height=200)
+    .mark_bar(color=pu.NESTA_COLOURS[0])
+    .encode(
+        y=alt.Y("Category", sort=order, title=""),
+        x=alt.X(
+            "growth",
+            title="Growth",
+            axis=alt.Axis(labelFlush=False, format="%"),
+        ),
+        tooltip=[
+            "Category",
+            alt.Tooltip("growth", format=".0%", title="Growth"),
+        ],
+    )
+)
+
+fig_2_rule = (
+    alt.Chart(pd.DataFrame({"x": [1.64]}))
+    .mark_rule(strokeDash=[5, 7], size=1)
+    .encode(x="x:Q")
+)
+
+fig_2 = pu.configure_plots(fig_2_rule + fig_2_bars)
+
+# %%
+fig_1
+
+# %%
+AltairSaver.save(
+    fig_1,
+    f"v{VERSION_NAME}_total_investment_categories",
+    filetypes=["html", "svg", "png"],
+)
+
+# %%
+fig_2
+
+# %%
+AltairSaver.save(
+    fig_2,
+    f"v{VERSION_NAME}_total_investment_categories_growth",
+    filetypes=["html", "svg", "png"],
+)
 
 # %%
 # fig_growth_vs_magnitude(
@@ -767,15 +861,12 @@ from innovation_sweet_spots.utils import chart_trends
 chart_trends._epsilon = 0.05
 
 # %%
-magnitude_vs_growth_plot
-
-# %%
 fig = chart_trends.mangitude_vs_growth_chart(
     magnitude_vs_growth_plot,
-    x_limit=16,
-    y_limit=6.5,
-    mid_point=1.3,
-    baseline_growth=1.28,
+    x_limit=0.4,
+    y_limit=21,
+    mid_point=0.065,
+    baseline_growth=1.64,
     values_label="Average investment per year (£ billions)",
     text_column="Category",
     width=425,
@@ -1272,6 +1363,117 @@ df_export.to_csv(
 )
 
 # %% [markdown]
+# ## Success predictions
+
+# %%
+folder = PROJECT_DIR / "inputs/data/dr_cb_lookup"
+dr_cb_lookup = pd.read_csv(folder / "dr_cb_lookup.csv")
+company_predictions = pd.read_csv(folder / "all_uk_companies_success_preds.csv")
+
+# %%
+len(company_predictions)
+
+# %%
+company_predictions.success_pred_prob.mean()
+
+# %%
+company_predictions.success_pred_prob.median()
+
+# %%
+company_predictions.info()
+
+# %%
+dr_cb_lookup.head(1)
+
+# %%
+len(company_to_taxonomy_df)
+
+# %%
+company_to_taxonomy_df_cb = company_to_taxonomy_df.merge(
+    dr_cb_lookup.assign(id_dr=lambda df: df.id_dr.astype(str)),
+    left_on="id",
+    right_on="id_dr",
+    how="left",
+)
+
+# %%
+# Coverage
+1 - (
+    company_to_taxonomy_df_cb.drop_duplicates("id").id_cb.isnull().sum()
+    / len(company_to_taxonomy_df_cb)
+)
+
+# %%
+foodtech_predictions = company_to_taxonomy_df_cb.merge(
+    company_predictions.rename(columns={"id": "id_cb"}), on="id_cb", how="left"
+).merge(DR.company_data[["id", "NAME"]], how="left")
+
+# %%
+foodtech_predictions_ = foodtech_predictions[
+    [
+        "id",
+        "id_cb",
+        "NAME",
+        "name",
+        "Category",
+        "level",
+        "success_pred_prob",
+        "success_pred_binary",
+    ]
+].copy()
+foodtech_predictions_ = foodtech_predictions_[
+    foodtech_predictions_.success_pred_prob.isnull() == False
+]
+
+# %%
+foodtech_predictions_.head(5)
+
+# %%
+cat = "Category"
+alt.Chart(
+    foodtech_predictions_.drop_duplicates(["id", cat]).query("level == 'Sub Category'")
+).mark_boxplot(extent="min-max").encode(
+    y=alt.Y(f"{cat}:O", sort="-x"), x="success_pred_prob:Q"
+)
+
+# %%
+(
+    foodtech_predictions_.query("level == 'Category'")
+    .drop_duplicates(["id", "Category"])
+    .groupby("Category")
+    .agg(
+        success_fract=("success_pred_binary", "mean"),
+        success_count=("success_pred_binary", "sum"),
+        total=("id", "count"),
+    )
+    .reset_index()
+    .sort_values("success_count", ascending=False)
+)
+
+# %%
+(
+    foodtech_predictions[foodtech_predictions.success_pred_binary.isnull()]
+    .query("level == 'Category'")
+    .drop_duplicates(["id", "Category"])
+    .groupby("Category")
+    .agg(
+        total=("id", "count"),
+    )
+    .reset_index()
+)
+
+# %%
+foodtech_predictions_.drop_duplicates(["id"]).success_pred_binary.mean()
+
+# %%
+foodtech_predictions_.drop_duplicates(["id"]).success_pred_prob.mean()
+
+# %%
+foodtech_predictions_.drop_duplicates(["id"]).success_pred_prob.median()
+
+# %%
+
+# %% [markdown]
 # # Country performance
 
 # %%
@@ -1283,16 +1485,13 @@ data = (
     .query("`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES")
     .query("announced_on >= '2017-01-01' and announced_on < '2022-01-01'")
     .merge(DR.company_data[["id", "country"]])
-    .merge(company_to_taxonomy_df.query("level == 'Category'"))
+    .merge(company_to_taxonomy_df.query("level == 'Major'"))
     .groupby(["country"], as_index=False)
     .agg(raised_amount_gbp=("raised_amount_gbp", "sum"))
     .assign(raised_amount_gbp=lambda df: df.raised_amount_gbp / 1000)
     .sort_values("raised_amount_gbp", ascending=False)
 )
 data.head(10)
-
-# %%
-data_countries_early = data.copy()
 
 # %%
 data.query("country in @EU_countries").sum()
@@ -1329,7 +1528,7 @@ data = (
     .query("`EACH ROUND TYPE` in @utils.LATE_DEAL_TYPES")
     .query("announced_on >= '2017-01-01' and announced_on < '2022-01-01'")
     .merge(DR.company_data[["id", "country"]])
-    .merge(company_to_taxonomy_df.query("level == 'Category'"))
+    .merge(company_to_taxonomy_df.query("level == 'Major'"))
     .groupby(["country"], as_index=False)
     .agg(raised_amount_gbp=("raised_amount_gbp", "sum"))
     .assign(raised_amount_gbp=lambda df: df.raised_amount_gbp / 1000)
@@ -1373,7 +1572,7 @@ data = (
     .query("`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES")
     .query("announced_on >= '2017-01-01' and announced_on < '2022-01-01'")
     .merge(DR.company_data[["id", "country"]])
-    .merge(company_to_taxonomy_df.query("level == 'Category'"))
+    .merge(company_to_taxonomy_df.query("level == 'Major'"))
     .groupby(["country", "Category"], as_index=False)
     .agg(raised_amount_gbp=("raised_amount_gbp", "sum"))
     .assign(raised_amount_gbp=lambda df: df.raised_amount_gbp / 1000)
@@ -1391,15 +1590,7 @@ data = (
     # .query("country in @countries")
 )
 
-cats = [
-    "Logistics",
-    "Innovative food",
-    "Health",
-    "Retail and restaurants",
-    "Cooking and kitchen",
-    "Food waste",
-    "Agritech",
-]
+cats = ["innovative food", "health", "cooking and kitchen", "logistics"]
 data_final = []
 for cat in cats:
     data_final.append(
@@ -1420,16 +1611,13 @@ df_check = (
     .query("`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES")
     .query("announced_on >= '2017-01-01' and announced_on < '2022-01-01'")
     .merge(DR.company_data[["id", "NAME", "country"]])
-    .merge(company_to_taxonomy_df.query("level == 'Category'"))
+    .merge(company_to_taxonomy_df.query("level == 'Major'"))
     # .groupby(['country', 'Category'], as_index=False)
     # .agg(raised_amount_gbp=('raised_amount_gbp', 'sum'))
     .assign(raised_amount_gbp=lambda df: df.raised_amount_gbp / 1000)
     # .query('country== "United Kingdom"')
     # .query('Category== "cooking and kitchen"')
 )
-
-# %%
-# df_check
 
 # %%
 fig = (
@@ -1458,151 +1646,46 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
-AltairSaver.save(
-    fig, f"v{VERSION_NAME}_countries_major_early", filetypes=["html", "png"]
-)
+AltairSaver.save(fig, f"vJuly18_countries_major_early", filetypes=["html", "png"])
 
 # %%
-# (
-#     DR.company_data.merge(company_to_taxonomy_df)
-#     .query("Category=='health'")
-#     .query("country=='United Kingdom'")
-#     .sort_values("TOTAL FUNDING (EUR M)", ascending=False)
-# )[["NAME", "PROFILE URL", "TOTAL FUNDING (EUR M)"]].sum()
+(
+    DR.company_data.merge(company_to_taxonomy_df)
+    .query("Category=='health'")
+    .query("country=='United Kingdom'")
+    .sort_values("TOTAL FUNDING (EUR M)", ascending=False)
+)[["NAME", "PROFILE URL", "TOTAL FUNDING (EUR M)"]].sum()
 
 # %%
-# (
-#     DR.funding_rounds.merge(company_to_taxonomy_df)
-#     .query(
-#         "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES or `EACH ROUND TYPE` in @utils.LATE_DEAL_TYPES"
-#     )
-#     .query("announced_on >= '2017-01-01' and announced_on < '2022-01-01'")
-#     .merge(DR.company_data[["id", "NAME", "PROFILE URL", "country"]])
-#     .query("Category=='health'")
-#     .query("country=='United Kingdom'")
-#     .groupby(["NAME", "PROFILE URL"], as_index=False)
-#     .sum()
-#     .sort_values("raised_amount_gbp", ascending=False)
-# )[["NAME", "PROFILE URL", "raised_amount_gbp"]].iloc[1:].sum()
-
-# %%
-# (
-#     DR.funding_rounds.merge(company_to_taxonomy_df)
-#     .query(
-#         "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES or `EACH ROUND TYPE` in @utils.LATE_DEAL_TYPES"
-#     )
-#     .query("announced_on >= '2017-01-01' and announced_on < '2022-01-01'")
-#     .merge(DR.company_data[["id", "NAME", "PROFILE URL", "country"]])
-#     .query("Category=='logistics'")
-#     # .query("country=='United Kingdom'")
-#     .groupby(["NAME", "PROFILE URL"], as_index=False)
-#     .sum()
-#     .sort_values("raised_amount_gbp", ascending=False)
-# )[["NAME", "PROFILE URL", "raised_amount_gbp"]]
-
-# %% [markdown]
-# ## Growth by countries
-
-# %%
-country = "United Kingdom"
-
-# %%
-countries = data_countries_early.country.head(10).to_list()
-
-# %%
-growth = []
-for country in countries:
-    df_companies = DR.company_data.query("id in @foodtech_ids").query(
-        "country == @country"
+(
+    DR.funding_rounds.merge(company_to_taxonomy_df)
+    .query(
+        "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES or `EACH ROUND TYPE` in @utils.LATE_DEAL_TYPES"
     )
-    df_companies_id = df_companies.id.astype(str).to_list()
+    .query("announced_on >= '2017-01-01' and announced_on < '2022-01-01'")
+    .merge(DR.company_data[["id", "NAME", "PROFILE URL", "country"]])
+    .query("Category=='health'")
+    .query("country=='United Kingdom'")
+    .groupby(["NAME", "PROFILE URL"], as_index=False)
+    .sum()
+    .sort_values("raised_amount_gbp", ascending=False)
+)[["NAME", "PROFILE URL", "raised_amount_gbp"]].iloc[1:].sum()
 
-    country_ts_early = (
-        au.cb_get_all_timeseries(
-            df_companies,
-            (
-                DR.funding_rounds.query("id in @df_companies_id").query(
-                    "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES"
-                )
-            ),
-            period="year",
-            min_year=2010,
-            max_year=2022,
-        )
-        .assign(year=lambda df: df.time_period.dt.year)
-        .assign(deal_type="Early")
+# %%
+(
+    DR.funding_rounds.merge(company_to_taxonomy_df)
+    .query(
+        "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES or `EACH ROUND TYPE` in @utils.LATE_DEAL_TYPES"
     )
-    growth.append(
-        au.smoothed_growth(
-            country_ts_early.query("deal_type == 'Early'").drop(
-                ["time_period"], axis=1
-            ),
-            2017,
-            2021,
-        ).raised_amount_gbp_total
-    )
+    .query("announced_on >= '2017-01-01' and announced_on < '2022-01-01'")
+    .merge(DR.company_data[["id", "NAME", "PROFILE URL", "country"]])
+    .query("Category=='logistics'")
+    # .query("country=='United Kingdom'")
+    .groupby(["NAME", "PROFILE URL"], as_index=False)
+    .sum()
+    .sort_values("raised_amount_gbp", ascending=False)
+)[["NAME", "PROFILE URL", "raised_amount_gbp"]]
 
-
-# %%
-countries_growth = pd.DataFrame(
-    {
-        "country": countries,
-        "growth": growth,
-    }
-)
-
-# %%
-countries_growth.sort_values("growth")
-
-# %%
-countries_growth_magnitude = countries_growth.merge(
-    data_countries_early, how="left"
-).assign(
-    growth=lambda df: df.growth / 100,
-    magnitude=lambda df: df.raised_amount_gbp,
-)
-countries_growth_magnitude.sort_values("growth")
-
-# %%
-countries_growth_magnitude.raised_amount_gbp.median()
-
-# %%
-fig = chart_trends.mangitude_vs_growth_chart(
-    countries_growth_magnitude,
-    x_limit=45,
-    y_limit=20,
-    mid_point=3.6,
-    baseline_growth=1.28,
-    values_label="Investment (£ billions)",
-    text_column="country",
-    width=425,
-)
-fig.interactive()
-
-# %%
-fig = (
-    alt.Chart(
-        countries_growth_magnitude,
-        width=200,
-        height=300,
-    )
-    .mark_bar(color=pu.NESTA_COLOURS[0])
-    .encode(
-        alt.Y(f"country:N", sort="-x", title=""),
-        alt.X(
-            f"growth:Q",
-            title="Growth",
-            axis=alt.Axis(format="%"),
-            # scale=alt.Scale(domain=[0, 1200])
-        ),
-        # tooltip=["country", "raised_amount_gbp"],
-    )
-)
-fig = pu.configure_plots(fig)
-fig
-
-
-# %%
 
 # %% [markdown]
 # # Maturation of companies

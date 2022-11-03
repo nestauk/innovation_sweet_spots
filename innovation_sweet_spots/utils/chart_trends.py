@@ -15,6 +15,7 @@ _color_emerging = "#FFD47F"
 _color_hot = "#F56688"
 _color_dormant = "#E4DED9"
 _color_stabilising = "#94D8E4"
+_epsilon = 0.1
 # Fonts
 _font_size = 15
 # Axes fine tuning
@@ -119,6 +120,11 @@ def gradient_chart(
         # Bottom: Gradient block ranges from -100% growth to 0%
         y_values = 0
         y2 = "y2"
+
+    alpha = mid_point / x_limit
+    offset_1 = alpha - _epsilon
+    offset_2 = alpha + _epsilon
+
     return (
         alt.Chart(data)
         .mark_area(
@@ -127,10 +133,12 @@ def gradient_chart(
                 gradient="linear",
                 stops=[
                     alt.GradientStop(color=color_start, offset=0),
+                    alt.GradientStop(color=color_start, offset=offset_1),
+                    alt.GradientStop(color=color_end, offset=offset_2),
                     alt.GradientStop(color=color_end, offset=1),
                 ],
                 x1=0,
-                x2=mid_point / x_limit,
+                x2=1,
                 y1=y_values,
                 y2=y_values,
             ),
@@ -197,7 +205,6 @@ def scatter_chart(
         .encode(
             y=alt.Y(
                 "y:Q",
-                scale=alt.Scale(domain=(0, x_limit)),
             )
         )
     )
@@ -208,7 +215,6 @@ def scatter_chart(
         .encode(
             y=alt.Y(
                 "y:Q",
-                scale=alt.Scale(domain=(0, x_limit)),
             )
         )
     )
@@ -231,7 +237,7 @@ def configure_trends_chart(fig):
     return fig.configure_axis(
         grid=False,
         labelFontSize=pu.FONTSIZE_NORMAL,
-        titleFontSize=pu.FONTSIZE_NORMAL,
+        titleFontSize=pu.FONTSIZE_NORMAL + 2,
     ).configure_view(strokeWidth=0)
 
 

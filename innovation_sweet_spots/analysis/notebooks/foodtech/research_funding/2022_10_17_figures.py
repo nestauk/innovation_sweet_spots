@@ -69,6 +69,40 @@ nihr_df = pd.read_csv(NIHR_DIR)
 gtr_projects = gtr.get_wrangled_projects()
 
 # %% [markdown]
+# ## Innovate UK vs others
+
+# %%
+df = research_project_funding.merge(
+    gtr_df[["id", "leadFunder"]], left_on="project_id", right_on="id", how="left"
+)
+
+# %%
+df = df.query('start_date > "2016-12-31" and start_date < "2022-01-01"')
+
+# %%
+df_ = (
+    df.query("Category != 'Health'")
+    .drop_duplicates("project_id")
+    .groupby("leadFunder")
+    .count()
+)
+df_ / len(df.query("Category != 'Health'").drop_duplicates("project_id"))
+
+# %%
+df_ = (
+    df.query("Category != 'Health'")
+    .drop_duplicates("project_id")
+    .groupby("leadFunder")
+    .sum()
+)
+df_ / df.query("Category != 'Health'").drop_duplicates("project_id").amount.sum()
+
+# %%
+df.query("Category == 'Health'").drop_duplicates("project_id").groupby(
+    "leadFunder"
+).count()
+
+# %% [markdown]
 # # Baseline funding
 
 # %%
@@ -163,7 +197,7 @@ df_.amount.sum() / 1e6
 
 # %%
 vertical_axis_values = "amount_total"
-vertical_axis_label = "Research funding (million GBP)"
+vertical_axis_label = "Research funding (£ millions)"
 horizontal_axis_values = "year"
 horizontal_axis_label = ""
 horizontal_tooltip_label = "Year"
@@ -317,7 +351,7 @@ yearly_funding_df = (
     .agg(amount_total=("amount", "sum"))
     .reset_index()
     .groupby(["Category"])
-    .agg(amount_total=("amount_total", "mean"))
+    .agg(amount_total=("amount_total", "sum"))
     .assign(amount_total=lambda df: df.amount_total / 1e6)
     .reset_index()
 )
@@ -356,7 +390,7 @@ yearly_projects = (
     .agg(counts=("project_id", "count"))
     .reset_index()
     .groupby(["Category"])
-    .agg(counts=("counts", "mean"))
+    .agg(counts=("counts", "sum"))
     .reset_index()
 )
 
@@ -372,7 +406,7 @@ fig_1 = (
     .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
         y=alt.Y("Category", sort=order, title=""),
-        x=alt.X("amount_total", title="Research funding (million GBP)"),
+        x=alt.X("amount_total", title="Research funding (£ millions)"),
     )
 )
 
@@ -393,7 +427,7 @@ final_fig
 # %%
 AltairSaver.save(
     final_fig,
-    f"v{fig_version_name}_2017_2021_average_major",
+    f"v{fig_version_name}_2017_2021_sum_major",
     filetypes=["html", "svg", "png"],
 )
 
@@ -447,107 +481,151 @@ domain = [
 range_ = pu.NESTA_COLOURS[0 : len(domain)]
 
 # %%
-import altair as alt
-from innovation_sweet_spots.utils import plotting_utils as pu
+# import altair as alt
+# from innovation_sweet_spots.utils import plotting_utils as pu
 
-colour_field = "Category"
-text_field = "Category"
-horizontal_scale = "linear"
-# horizontal_scale = "log"
-horizontal_title = f"Average yearly funding (million GBP)"
-legend = alt.Legend()
+# colour_field = "Category"
+# text_field = "Category"
+# horizontal_scale = "linear"
+# # horizontal_scale = "log"
+# horizontal_title = f"Average yearly funding (million GBP)"
+# legend = alt.Legend()
 
-title_text = "Research funding trends (2017-2021)"
-subtitle_text = [
-    # "Data: Dealroom. Showing data on early stage deals (eg, seed and series funding)",
-    # "Late stage deals, such as IPOs, acquisitions, and debt financing not included.",
-]
+# title_text = "Research funding trends (2017-2021)"
+# subtitle_text = [
+#     # "Data: Dealroom. Showing data on early stage deals (eg, seed and series funding)",
+#     # "Late stage deals, such as IPOs, acquisitions, and debt financing not included.",
+# ]
 
-fig = (
-    alt.Chart(
-        category_amount_magnitude_growth,
-        width=400,
-        height=400,
-    )
-    .mark_circle(size=80)
-    .encode(
-        x=alt.X(
-            "magnitude:Q",
-            axis=alt.Axis(
-                title=horizontal_title,
-                tickCount=10,
-                labelFlush=False,
-            ),
-            scale=alt.Scale(
-                type=horizontal_scale,
-                domain=(0.2, 40),
-            ),
-        ),
-        y=alt.Y(
-            "growth:Q",
-            axis=alt.Axis(
-                title="Growth",
-                format="%",
-                tickCount=5,
-            ),
-            scale=alt.Scale(
-                domain=(-1, 2.5),
-            ),
-        ),
-        color=alt.Color(
-            f"{colour_field}:N",
-            legend=None,
-            scale=alt.Scale(domain=domain, range=range_),
-        ),
-        tooltip=[
-            alt.Tooltip("Category", title="Category"),
-            alt.Tooltip("magnitude", title=horizontal_title),
-            alt.Tooltip("growth", title="Growth", format=".0%"),
-        ],
-    )
-    .properties(
-        title={
-            "anchor": "start",
-            "text": title_text,
-            "subtitle": subtitle_text,
-            "subtitleFont": pu.FONT,
-            "fontSize": 15,
-        },
-    )
+# fig = (
+#     alt.Chart(
+#         category_amount_magnitude_growth,
+#         width=400,
+#         height=400,
+#     )
+#     .mark_circle(size=80)
+#     .encode(
+#         x=alt.X(
+#             "magnitude:Q",
+#             axis=alt.Axis(
+#                 title=horizontal_title,
+#                 tickCount=10,
+#                 labelFlush=False,
+#             ),
+#             scale=alt.Scale(
+#                 type=horizontal_scale,
+#                 domain=(0.2, 40),
+#             ),
+#         ),
+#         y=alt.Y(
+#             "growth:Q",
+#             axis=alt.Axis(
+#                 title="Growth",
+#                 format="%",
+#                 tickCount=5,
+#             ),
+#             scale=alt.Scale(
+#                 domain=(-1, 2.5),
+#             ),
+#         ),
+#         color=alt.Color(
+#             f"{colour_field}:N",
+#             legend=None,
+#             scale=alt.Scale(domain=domain, range=range_),
+#         ),
+#         tooltip=[
+#             alt.Tooltip("Category", title="Category"),
+#             alt.Tooltip("magnitude", title=horizontal_title),
+#             alt.Tooltip("growth", title="Growth", format=".0%"),
+#         ],
+#     )
+#     .properties(
+#         title={
+#             "anchor": "start",
+#             "text": title_text,
+#             "subtitle": subtitle_text,
+#             "subtitleFont": pu.FONT,
+#             "fontSize": 15,
+#         },
+#     )
+# )
+
+# text = fig.mark_text(
+#     align="left", baseline="middle", font=pu.FONT, dx=7, fontSize=15
+# ).encode(text=text_field)
+
+# yrule = (
+#     alt.Chart(pd.DataFrame({"y": [0.11417]}))
+#     .mark_rule(strokeDash=[5, 7], size=1)
+#     .encode(y="y:Q")
+# )
+
+# fig_final = (
+#     (fig + yrule + text)
+#     .configure_axis(
+#         grid=False,
+#         gridDash=[5, 7],
+#         # gridColor="grey",
+#         labelFontSize=pu.FONTSIZE_NORMAL,
+#         titleFontSize=pu.FONTSIZE_NORMAL,
+#     )
+#     .configure_legend(
+#         titleFontSize=pu.FONTSIZE_NORMAL,
+#         labelFontSize=pu.FONTSIZE_NORMAL,
+#     )
+#     .configure_view(strokeWidth=0)
+# )
+
+# fig_final
+
+# %%
+from innovation_sweet_spots.utils import chart_trends
+import importlib
+
+importlib.reload(chart_trends)
+
+# %%
+category_amount_magnitude_growth.magnitude.median()
+
+# %%
+category_amount_magnitude_growth.magnitude.mean()
+
+# %%
+chart_trends._epsilon = 0.075
+fig = chart_trends.mangitude_vs_growth_chart(
+    category_amount_magnitude_growth,
+    x_limit=45,
+    y_limit=2.5,
+    mid_point=4.5,
+    baseline_growth=0.11417,
+    values_label="Average new funding per year (£ millions)",
+    text_column="Category",
 )
-
-text = fig.mark_text(
-    align="left", baseline="middle", font=pu.FONT, dx=7, fontSize=15
-).encode(text=text_field)
-
-yrule = (
-    alt.Chart(pd.DataFrame({"y": [0.11417]}))
-    .mark_rule(strokeDash=[5, 7], size=1)
-    .encode(y="y:Q")
-)
-
-fig_final = (
-    (fig + yrule + text)
-    .configure_axis(
-        grid=False,
-        gridDash=[5, 7],
-        # gridColor="grey",
-        labelFontSize=pu.FONTSIZE_NORMAL,
-        titleFontSize=pu.FONTSIZE_NORMAL,
-    )
-    .configure_legend(
-        titleFontSize=pu.FONTSIZE_NORMAL,
-        labelFontSize=pu.FONTSIZE_NORMAL,
-    )
-    .configure_view(strokeWidth=0)
-)
-
-fig_final
+fig
 
 # %%
 AltairSaver.save(
-    fig_final,
-    f"v{fig_version_name}_major_magnitude_vs_growth",
+    fig,
+    f"v{fig_version_name}_major_magnitude_vs_growth_colour",
+    filetypes=["html", "svg", "png"],
+)
+
+# %%
+fig = chart_trends.mangitude_vs_growth_chart(
+    category_amount_magnitude_growth.query("Category != 'Health'"),
+    x_limit=10,
+    y_limit=2.5,
+    mid_point=4.5,
+    baseline_growth=0.11417,
+    values_label="Average new funding per year (£ millions)",
+    text_column="Category",
+)
+fig
+
+# %%
+AltairSaver.save(
+    fig,
+    f"v{fig_version_name}_major_magnitude_vs_growth_colour_woutHealth",
     filetypes=["html", "svg", "png"],
 )
 
@@ -649,18 +727,6 @@ AltairSaver.save(
 # ## Sub-category trends
 
 # %%
-# research_project_funding_ = research_project_funding.copy()
-# for cat in ["Fermentation", "Lab meat", "Plant-based"]:
-#     research_project_funding_.loc[
-#         research_project_funding_.consolidated_category == cat, "consolidated_category"
-#     ] = "Alt protein"
-# research_project_funding_.loc[
-#     research_project_funding_.consolidated_category == "Innovative food",
-#     "consolidated_category",
-# ] = "Innovative food (other)"
-
-
-# %%
 yearly_projects_minor = (
     research_project_funding.query(
         'start_date >= "2017-01-01" and start_date < "2022-01-01"'
@@ -715,6 +781,16 @@ subcategory_magnitude_growth = utils.get_magnitude_vs_growth(
 subcategory_amount_magnitude_growth = utils.get_magnitude_vs_growth_plot(
     subcategory_magnitude_growth, "amount_total"
 ).merge(taxonomy_df, how="left")
+
+# %%
+subcategory_ts_2022 = utils.get_time_series(
+    research_project_funding,
+    categories_to_check,
+    taxonomy_level="Sub Category",
+    id_column="project_id",
+    max_year=2022,
+).merge(taxonomy_df, how="left")
+
 
 # %% [markdown]
 # #### Growth plots
@@ -838,50 +914,123 @@ alt.Chart(subcategory_ts, width=200, height=100).mark_line(
 )
 
 # %%
-cats = ["Reformulation", "Alt protein", "Innovative food (other)"]
-
+importlib.reload(pu)
 
 # %%
-fig = (
-    alt.Chart(
-        (
-            subcategory_ts.query("`Sub Category` in @cats").assign(
-                amount_total=lambda df: df.amount_total / 1e3
-            )
-        ),
-        width=400,
-    )
-    .mark_line(
-        interpolate="monotone",
-        size=3,
-    )
-    .encode(
-        x=alt.X("year:O"),
-        y=alt.Y("amount_total:Q", title="Funding (million GBP)"),
-        color=alt.Color(
-            "Sub Category:N"
-        ),  # , scale=alt.Scale(domain=domain, range=range_)),
+subcategory_ts_2022.head(1)
+
+# %%
+# fig = pu.ts_funding_projects(subcategory_ts, ['Delivery', 'Supply chain'], height=100)
+fig = pu.configure_plots(
+    pu.ts_smooth(
+        subcategory_ts_2022,
+        ["Delivery", "Supply chain"],
+        "amount_total",
+        "Funding (£ millions)",
+        height=125,
     )
 )
-# fig
-fig = pu.configure_plots(fig)
 fig
 
 # %%
-# alt.Chart(tech_area_ts_minor, width=200, height=100).mark_line(
-#     size=2.5,
-#     interpolate="monotone",
-# ).encode(
-#     x="year:O",
-#     y=alt.Y(
-#         "no_of_projects:Q",
-#     ),
-#     color=alt.Color("tech_area:N", scale=alt.Scale(scheme="dark2")),
-#     facet=alt.Facet("Category:N", columns=2),
-#     tooltip=["tech_area", "no_of_projects", "year"],
-# ).resolve_scale(
-#     y="independent"
-# )
+importlib.reload(pu)
+fig = pu.configure_plots(
+    pu.ts_smooth_incomplete(
+        subcategory_ts_2022,
+        ["Delivery", "Supply chain"],
+        "amount_total",
+        "Funding (£ millions)",
+        height=125,
+    )
+)
+fig
+
+# %%
+AltairSaver.save(
+    fig,
+    f"v{fig_version_name}_ts_subcategory_Logistics",
+    filetypes=["html", "svg", "png"],
+)
+
+# %%
+fig = pu.configure_plots(
+    pu.ts_smooth_incomplete(
+        subcategory_ts_2022,
+        ["Waste reduction", "Packaging"],
+        "amount_total",
+        "Funding (£ millions)",
+        height=125,
+    )
+)
+fig
+
+
+# %%
+AltairSaver.save(
+    fig,
+    f"v{fig_version_name}_ts_subcategory_Food_waste",
+    filetypes=["html", "svg", "png"],
+)
+
+# %%
+fig = pu.configure_plots(
+    pu.ts_smooth_incomplete(
+        subcategory_ts_2022,
+        ["Alt protein", "Innovative food (other)", "Reformulation"],
+        "amount_total",
+        "Funding (£ millions)",
+        height=125,
+    )
+)
+fig
+
+
+# %%
+AltairSaver.save(
+    fig,
+    f"v{fig_version_name}_ts_subcategory_Innovative_food",
+    filetypes=["html", "svg", "png"],
+)
+
+# %%
+fig = pu.configure_plots(
+    pu.ts_smooth_incomplete(
+        subcategory_ts_2022,
+        ["Restaurants", "Retail"],
+        "amount_total",
+        "Funding (£ millions)",
+        height=125,
+    )
+)
+fig
+
+
+# %%
+AltairSaver.save(
+    fig,
+    f"v{fig_version_name}_ts_subcategory_Restaurants_retail",
+    filetypes=["html", "svg", "png"],
+)
+
+# %%
+fig = pu.configure_plots(
+    pu.ts_smooth_incomplete(
+        subcategory_ts_2022,
+        ["Kitchen tech"],
+        "amount_total",
+        "Funding (£ millions)",
+        height=125,
+    )
+)
+fig
+
+
+# %%
+AltairSaver.save(
+    fig,
+    f"v{fig_version_name}_ts_subcategory_Kitchen_tech",
+    filetypes=["html", "svg", "png"],
+)
 
 # %%
 (
@@ -889,5 +1038,97 @@ fig
     .query('start_date >= "2019-01-01" and start_date < "2020-01-01"')
     .sort_values("amount", ascending=False)
 )[["title", "amount", "start_date"]]
+
+# %% [markdown]
+# ## Check alt protein
+
+# %%
+ukri_df_reviewed = google_sheets.get_foodtech_reviewed_gtr(from_local=False).query(
+    "tech_area_checked!='-'"
+)
+
+# %%
+# Between 2017 and 2021
+cats = ["Alt protein", "Plant-based", "Fermentation", "Lab meat"]
+(
+    ukri_df_reviewed[["id", "tech_area_checked"]]
+    .rename(columns={"id": "project_id"})
+    .merge(gtr_projects[["project_id", "fund_start", "amount"]])
+    .query("fund_start > '2016-12-31' and fund_start < '2022-01-01'")
+    .query("tech_area_checked in @cats")
+    .groupby("tech_area_checked")
+    .agg(counts=("project_id", "count"), amount=("amount", "sum"))
+    .assign(amount=lambda df: df.amount / 1e6)
+)
+
+# %%
+# In 2022 so far
+cats = ["Alt protein", "Plant-based", "Fermentation", "Lab meat"]
+(
+    ukri_df_reviewed[["id", "tech_area_checked"]]
+    .rename(columns={"id": "project_id"})
+    .merge(gtr_projects[["project_id", "fund_start", "amount"]])
+    .query("fund_start >= '2022-01-01'")
+    .query("tech_area_checked in @cats")
+    .groupby("tech_area_checked")
+    .agg(counts=("project_id", "count"), amount=("amount", "sum"))
+    .assign(amount=lambda df: df.amount / 1e6)
+)
+
+# %%
+# Since 2017 in total
+cats = ["Alt protein", "Plant-based", "Fermentation", "Lab meat"]
+(
+    ukri_df_reviewed[["id", "tech_area_checked"]]
+    .rename(columns={"id": "project_id"})
+    .merge(gtr_projects[["project_id", "fund_start", "title", "amount"]])
+    .query("fund_start >= '2017-01-01'")
+    .query("tech_area_checked in @cats")
+    .groupby("tech_area_checked")
+    .agg(counts=("project_id", "count"), amount=("amount", "sum"))
+    .assign(amount=lambda df: df.amount / 1e6)
+)
+
+# %%
+# Projects
+cats = ["Alt protein", "Plant-based", "Fermentation", "Lab meat"]
+df = (
+    ukri_df_reviewed[["id", "tech_area_checked"]]
+    .rename(columns={"id": "project_id"})
+    .merge(gtr_projects[["project_id", "fund_start", "title", "amount"]])
+    .query("fund_start >= '2017-01-01'")
+    .query("tech_area_checked in @cats")
+)
+
+# %%
+df.query("tech_area_checked == 'Plant-based'").sort_values("fund_start")
+
+# %%
+# Since 2017 in total
+cats = ["Reformulation", "Alt protein", "Innovative food (other)"]
+(
+    research_project_funding.query("start_date >= '2017-01-01'")
+    .query("start_date < '2022-01-01'")
+    .query("`Sub Category` in @cats")
+    .groupby("Sub Category")
+    .agg(counts=("project_id", "count"), amount=("amount", "sum"))
+    .assign(amount=lambda df: df.amount / 1e6)
+)
+
+# %%
+# Since 2017 in total
+cats = ["Reformulation", "Alt protein", "Innovative food (other)"]
+(
+    research_project_funding.query("start_date >= '2022-01-01'")
+    .query("`Sub Category` in @cats")
+    .groupby("Sub Category")
+    .agg(counts=("project_id", "count"), amount=("amount", "sum"))
+    .assign(amount=lambda df: df.amount / 1e6)
+)
+
+# %%
+research_project_funding.query("`Sub Category` == 'Reformulation'").sort_values(
+    "start_date"
+).tail(10)
 
 # %%

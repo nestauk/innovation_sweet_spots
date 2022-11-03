@@ -272,40 +272,46 @@ def get_trends(
     DR,
     deal_type=EARLY_DEAL_TYPES,
 ):
+    # Get company ids for each category
     category_ids = get_category_ids(
         taxonomy_df, rejected_tags, company_to_taxonomy_df, DR, taxonomy_level
     )
+    # Get company counts across categories
     company_counts = get_company_counts(category_ids)
+    # Get time series for each category
     category_ts = get_category_ts(category_ids, DR, deal_type)
 
+    # Define labels
     values_title_ = "raised_amount_gbp_total"
     values_title = "Growth"
-    category_title = "Category"
+    category_title = taxonomy_level
     colour_title = category_title
     horizontal_title = "year"
 
+    # specify relevant taxonomy levels
+    # if taxonomy_level == "Category":
+    #     tax_levels = ["Category", "Minor", "Major"]
+    if taxonomy_level == "Sub Category":
+        tax_levels = ["Sub Category", "Category"]
     if taxonomy_level == "Category":
-        tax_levels = ["Category", "Minor", "Major"]
-    if taxonomy_level == "Minor":
-        tax_levels = ["Minor", "Major"]
-    if taxonomy_level == "Major":
-        tax_levels = ["Major"]
+        tax_levels = ["Category"]
 
+    # Calculate magnitude and gowth trends
     return (
         get_magnitude_vs_growth(
             category_ts,
             value_column=values_title_,
             time_column=horizontal_title,
-            category_column=category_title,
+            category_column="Category",
         )
         .assign(growth=lambda df: df.Growth / 100)
         .merge(get_deal_counts(DR, category_ids), on="Category")
         .merge(company_counts, on="Category")
+        .rename(columns={"Category": taxonomy_level})
         .merge(
             taxonomy_df[tax_levels].drop_duplicates(taxonomy_level),
             how="left",
-            left_on="Category",
-            right_on=taxonomy_level,
+            on=taxonomy_level,
         )
     )
 
@@ -524,3 +530,12 @@ def fig_size_vs_magnitude(
     )
 
     return pu.configure_titles(pu.configure_axes(fig), "", "")
+
+
+def get_taxonomy_dict(taxonomy_df: pd.DataFrame) -> dict:
+    taxonomy_dict = dict()
+    for category in taxonomy_df["Category"].unique():
+        taxonomy_dict[category] = taxonomy_df.query("Category == @category")[
+            "Sub Category"
+        ].to_list()
+    return taxonomy_dict
