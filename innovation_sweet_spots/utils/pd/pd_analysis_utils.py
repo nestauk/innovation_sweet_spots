@@ -23,6 +23,7 @@ import altair as alt
 from tqdm import tqdm
 from typing import List
 from innovation_sweet_spots import logger
+from bertopic._bertopic import BERTopic
 
 MIN_YEAR = 2000
 MAX_YEAR = 2022
@@ -86,9 +87,7 @@ def get_guardian_articles(
         outputs_path.mkdir(parents=True, exist_ok=True)
         filename = f"document_text_{query_identifier}.csv"
         document_text.to_csv(
-            outputs_path / filename,
-            index=False,
-            quoting=csv.QUOTE_NONNUMERIC,
+            outputs_path / filename, index=False, quoting=csv.QUOTE_NONNUMERIC
         )
         logger.info(f"Saved a table in {outputs_path / filename}")
         save_pickle(metadata, outputs_path / f"metadata_dict_{query_identifier}.pkl")
@@ -144,6 +143,8 @@ class DiscourseAnalysis:
         self._combined_term_sentences = None
         self._noun_chunks_all_years = None
         self._flat_sentences = None
+        self._list_of_flat_sentences = None
+        self._list_of_pos_phrases = None
         # Load precomputed intermediate outputs
         if self.use_cached and (os.path.isdir(self.outputs_path)):
             self.load_preprocessed_data()
@@ -176,9 +177,7 @@ class DiscourseAnalysis:
         return self._metadata
 
     def load_documents(
-        self,
-        load_cached: bool = True,
-        document_text: pd.DataFrame = None,
+        self, load_cached: bool = True, document_text: pd.DataFrame = None
     ):
         """Loads document texts"""
         if load_cached and document_text is None:
@@ -194,11 +193,7 @@ class DiscourseAnalysis:
         else:
             self._all_document_text = document_text
 
-    def load_metadata(
-        self,
-        load_cached: bool = True,
-        metadata: dict = None,
-    ):
+    def load_metadata(self, load_cached: bool = True, metadata: dict = None):
         """Loads metadata"""
         if load_cached and metadata is None:
             try:
@@ -521,7 +516,7 @@ class DiscourseAnalysis:
             }
         return combined_phrase_patterns
 
-    def set_phrase_patterns(self, load_patterns, make_patterns):
+    def set_phrase_patterns(self, load_patterns: bool, make_patterns: bool) -> dict:
         """Set phrase patterns by loading from json file or by making patterns
         using function pd_pod_utils.make_phrase_patterns"""
         if self._phrase_patterns is None:
@@ -600,6 +595,13 @@ class DiscourseAnalysis:
         return self._pos_phrases
 
     @property
+    def list_of_pos_phrases(self):
+        """List of POS phrases. This format is suitable for BERTopic analysis"""
+        if self._list_of_pos_phrases is None:
+            self._list_of_pos_phrases = self.pos_phrases.phrase.to_list()
+        return self._list_of_pos_phrases
+
+    @property
     def subject_phrase_triples(self):
         """"""
         if self._subject_phrase_triples is None:
@@ -661,6 +663,13 @@ class DiscourseAnalysis:
             )
         return self._flat_sentences
 
+    @property
+    def list_of_flat_sentences(self):
+        """List of flat sentencs. This format is suitable for BERTopic analysis"""
+        if self._list_of_flat_sentences is None:
+            self._list_of_flat_sentences = self.flat_sentences.sentence.to_list()
+        return self._list_of_flat_sentences
+
     def view_collocations(
         self, term: str, print_sentences: bool = False, output_to_file: bool = True
     ):
@@ -687,6 +696,23 @@ class DiscourseAnalysis:
                 self.sentence_record_dict,
                 output_data=False,
             )
+
+    def fit_topic_model(self, use_phrases: bool = False) -> BERTopic:
+        """Fits a BERTopic model on specified documents
+
+        Args:
+            use_phrases: If set to True, use POS phrases. If set to False use
+                sentences containing search terms.
+
+        Returns:
+            topic_model: BERTopic model
+            docs: list of docs (either from POS phrases or sentences
+                containing search terms)
+        """
+        docs = self.list_of_pos_phrases if use_phrases else self.list_of_flat_sentences
+        topic_model = BERTopic()
+        topic_model.fit_transform(docs)
+        return topic_model, docs
 
     ### Visualising
 
