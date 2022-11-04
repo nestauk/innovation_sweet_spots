@@ -13,7 +13,6 @@ from spacy.matcher import Matcher
 from spacy.util import filter_spans
 from innovation_sweet_spots import logger
 from innovation_sweet_spots.utils.pd import pd_data_processing_utils as dpu
-from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
 
 
 def noun_chunks_w_term(noun_chunks_dict, search_terms):
@@ -112,14 +111,7 @@ def aggregate_matches(phrase_dict):
 
 
 def view_phrase_sentences(
-    year,
-    agg_phrases,
-    sentence_collection_df,
-    metadata_dict,
-    sentence_record_dict,
-    year_field="year",
-    output_data=False,
-    output_path=OUTPUT_DATA_PATH,
+    year, agg_phrases, sentence_collection_df, metadata_dict, sentence_record_dict
 ):
     """Prints out the original sentences in which phrases were were used.
 

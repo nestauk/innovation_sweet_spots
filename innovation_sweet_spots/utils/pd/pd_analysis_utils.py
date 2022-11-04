@@ -18,10 +18,9 @@ import pandas as pd
 import itertools
 import spacy
 from collections import defaultdict
-from typing import Iterator
+from typing import Iterator, List
 import altair as alt
 from tqdm import tqdm
-from typing import List
 from innovation_sweet_spots import logger
 from bertopic._bertopic import BERTopic
 
