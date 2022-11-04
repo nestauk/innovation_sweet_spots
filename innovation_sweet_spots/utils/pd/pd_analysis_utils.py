@@ -164,7 +164,10 @@ class DiscourseAnalysis:
         """Documents filtered by required and banned terms"""
         if self._document_text is None:
             self._document_text = self.subset_documents(
-                self.required_terms, self._all_document_text
+                self.search_terms, self._all_document_text
+            )
+            self._document_text = self.subset_documents(
+                self.required_terms, self._document_text
             )
             self._document_text = self.remove_documents(
                 self.banned_terms, self._document_text
