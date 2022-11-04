@@ -391,8 +391,8 @@ class DiscourseAnalysis:
             # Collect into a single dataframe and specify column names
             mentions_df = pd.concat(mentions_s, axis=1)
             mentions_df.columns = self.search_terms
-            self._sentence_mentions = mentions_df.reset_index().rename(
-                columns={"index": "year"}
+            self._sentence_mentions = (
+                mentions_df.reset_index().rename(columns={"index": "year"}).astype(int)
             )
         return self._sentence_mentions
 
@@ -718,14 +718,28 @@ class DiscourseAnalysis:
 
     ### Visualising
 
-    def plot_document_mentions(self):
-        """"""
+    def plot_mentions(self, use_documents: bool = True):
+        """Plot the number of mentions for documents/sentences
+        containing the search terms over time.
+
+        Set `use_documents` to True to use document_mentions and
+        to False to use sentence_mentions.
+        """
+        if use_documents:
+            title_lbl = "documents"
+            data = self.document_mentions
+        else:
+            title_lbl = "sentences"
+            data = self.sentence_mentions
+        cols = list(data.columns)
         return (
-            alt.Chart(self.document_mentions)
+            alt.Chart(data)
             .mark_bar()
             .encode(
                 x=alt.X("year:O", title="Year"),
-                y=alt.Y("documents", title="Number of documents"),
-                tooltip=["year", "documents"],
+                y=alt.Y(
+                    cols[1], title=f"Number of {title_lbl} containing search terms"
+                ),
+                tooltip=cols,
             )
         )
