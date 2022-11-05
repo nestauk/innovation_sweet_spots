@@ -125,7 +125,7 @@ class DiscourseAnalysis:
         self.banned_terms = banned_terms
         self.q_id = query_identifier
         self.outputs_path = outputs_path / query_identifier
-        self.outputs_path.mkdir(parents=True, exists_ok=True)
+        self.outputs_path.mkdir(parents=True, exist_ok=True)
         self.v = verbose
         if not self.v:
             innovation_sweet_spots.utils.io.VERBOSE = False
