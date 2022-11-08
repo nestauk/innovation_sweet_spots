@@ -61,7 +61,7 @@ df_search_results = pd.read_csv(df_search_results_path)
 df_precision = pd.read_csv(df_precision_path)
 
 # %%
-imprecise_terms = df_precision.query("proportion_correct < 0.5").terms.to_list()
+imprecise_terms = df_precision.query("proportion_correct <= 0.5").terms.to_list()
 
 # %%
 # Get Guardian search results
@@ -90,23 +90,91 @@ df_counts = (
 
 # %%
 # Terms without any hits
-df_counts[df_counts.counts == 0].sort_values("Sub Category")
+# df_counts[df_counts.counts == 0].sort_values(["Sub Category", "Tech area"])
 
 # %%
-# # Most popular search terms
-# scale = "log"
-# # scale = 'linear'
+# Terms without any hits
+# df_counts[df_counts.counts > 0].sort_values(["Sub Category", "Tech area"]).iloc[101:]
 
-# fig = (
-#     alt.Chart(df_counts[df_counts.counts != 0])
-#     .mark_circle(size=60)
-#     .encode(
-#         x=alt.X("counts:Q", scale=alt.Scale(type=scale)),
-#         y=alt.Y("Terms:N", sort="-x"),
-#         color="Sub Category",
-#     )
-# )
-# fig
+# %%
+terms_to_remove = ["supply chain"] + imprecise_terms
+
+# %%
+assert df_search_results.id.duplicated().sum() == 0
+
+# %%
+# Link articles to categories, sub categories and tech areas
+non_search_term_columns = ["year", "text", "date", "URL", "Headline", "Unnamed: 0"]
+df_id_to_term = df_search_results.drop(
+    set(non_search_term_columns).difference({"year"}), axis=1
+).copy()
+
+df_id_to_term = (
+    pd.melt(df_id_to_term, id_vars=["id", "year"])
+    .query("value==1")
+    .rename(columns={"variable": "Terms"})
+    .drop("value", axis=1)
+    .merge(
+        df_search_terms[["Category", "Sub Category", "Tech area", "Terms"]], how="left"
+    )
+)
+
+
+# %%
+# # Remove articles with imprecise terms
+# df_id_to_term = df_id_to_term[
+#     df_id_to_term.Terms.isin(terms_to_remove) == False
+# ].reset_index(drop=True)
+
+# %%
+n_terms_per_article = df_id_to_term.groupby("id", as_index=False).agg(
+    counts=("Terms", "count")
+)
+article_has_imprecise_term = (
+    df_id_to_term.copy()
+    .assign(has_imprecise_term=lambda df: df.Terms.isin(terms_to_remove))
+    .merge(n_terms_per_article, on="id", how="left")
+)
+
+# %%
+articles_to_keep = article_has_imprecise_term.assign(
+    keep=lambda df: (df.has_imprecise_term == False) | (df.counts > 1)
+)
+
+# %%
+articles_to_keep.keep.sum()
+
+# %%
+df_id_to_term = articles_to_keep[articles_to_keep.keep == True].copy()
+
+# %%
+len(df_id_to_term)
+
+# %%
+new_terms = list(df_id_to_term[df_id_to_term.Category.isnull()].Terms.unique())
+
+# %%
+df_id_to_term.loc[df_id_to_term.Terms.isin(new_terms), "Category"] = "Innovative food"
+df_id_to_term.loc[df_id_to_term.Terms.isin(new_terms), "Sub Category"] = "Reformulation"
+df_id_to_term.loc[df_id_to_term.Terms.isin(new_terms), "Tech area"] = "Reformulation"
+
+# %%
+# Remove articles containing Australia in the title
+df_id_to_term = df_id_to_term[df_id_to_term.id.str.contains("australia") == False]
+df_id_to_term = df_id_to_term[df_id_to_term.id.str.contains("Australia") == False]
+
+# %%
+## Check terms that made the final selection
+
+# %%
+counts_df = (
+    df_id_to_term.drop_duplicates(["Terms", "id"])
+    .groupby(["Terms", "Category", "Sub Category"], as_index=False)
+    .agg(counts=("id", "count"))
+)
+
+# %%
+counts_df.sort_values(["Category", "Sub Category", "Terms"]).iloc[51:]
 
 # %% [markdown]
 # # Checking technology trends
@@ -138,43 +206,6 @@ def get_ts(df_id_to_term, category="Category"):
         .assign(fraction=lambda df: df.counts / df.total_counts)
     )
 
-
-# %%
-terms_to_remove = ["supply chain"] + imprecise_terms
-
-# %%
-assert df_search_results.id.duplicated().sum() == 0
-
-# %%
-# Link articles to categories, sub categories and tech areas
-non_search_term_columns = ["year", "text", "date", "URL", "Headline", "Unnamed: 0"]
-df_id_to_term = df_search_results.drop(
-    set(non_search_term_columns).difference({"year"}), axis=1
-).copy()
-
-df_id_to_term = (
-    pd.melt(df_id_to_term, id_vars=["id", "year"])
-    .query("value==1")
-    .rename(columns={"variable": "Terms"})
-    .drop("value", axis=1)
-    .merge(
-        df_search_terms[["Category", "Sub Category", "Tech area", "Terms"]], how="left"
-    )
-)
-df_id_to_term = df_id_to_term[
-    df_id_to_term.Terms.isin(terms_to_remove) == False
-].reset_index(drop=True)
-
-# %%
-new_terms = list(df_id_to_term[df_id_to_term.Category.isnull()].Terms.unique())
-
-# %%
-df_id_to_term.loc[df_id_to_term.Terms.isin(new_terms), "Category"] = "Innovative food"
-df_id_to_term.loc[df_id_to_term.Terms.isin(new_terms), "Sub Category"] = "Reformulation"
-df_id_to_term.loc[df_id_to_term.Terms.isin(new_terms), "Tech area"] = "Reformulation"
-
-# %%
-df_id_to_term = df_id_to_term[df_id_to_term.id.str.contains("australia") == False]
 
 # %%
 ts_category = get_ts(df_id_to_term, "Category")
@@ -273,17 +304,26 @@ from innovation_sweet_spots.analysis import analysis_utils as au
 importlib.reload(au)
 
 # %%
-(
-    df_id_to_term.sort_values(["year", "Tech area", "Sub Category", "Category"])
-    .merge(df_search_results[["id", "Headline", "URL"]])
-    .to_csv(
-        PROJECT_DIR
-        / "outputs/foodtech/interim/public_discourse/guardian_to_check_V2.csv"
-    )
+# Export articles to check
+
+# %%
+df_to_check = df_id_to_term.sort_values(
+    ["year", "Tech area", "Sub Category", "Category"]
+).merge(df_search_results[["id", "Headline", "URL"]])
+
+# %%
+df_to_check.to_csv(
+    PROJECT_DIR / "outputs/foodtech/interim/public_discourse/guardian_to_check_V2.csv"
 )
+
+# %%
+len(df_to_check)
 
 # %% [markdown]
 # ## Magnitude and growth trends
+
+# %%
+from innovation_sweet_spots.utils import chart_trends
 
 # %%
 categories_to_check = ts_category.Category.unique()
@@ -428,6 +468,21 @@ fig_final = (
 fig_final
 
 # %%
+magnitude_growth_df.magnitude.median()
+
+# %%
+fig = chart_trends.mangitude_vs_growth_chart(
+    data=magnitude_growth_df,
+    x_limit=300,
+    y_limit=1.50,
+    mid_point=108,
+    baseline_growth=-0.25,
+    values_label="Average number of articles",
+    text_column="tech_area",
+)
+fig
+
+# %%
 AltairSaver.save(
     fig_final, f"Guardian_articles_magnitude_growth", filetypes=["html", "svg", "png"]
 )
@@ -493,6 +548,29 @@ AltairSaver.save(
 
 # %%
 cats = ["Restaurants and retail"]
+ts_df = ts_subcategory.query("`Sub Category` in @cats")
+
+# %%
+# scale = 'log'
+scale = "linear"
+
+fig = (
+    alt.Chart(ts_df)
+    .mark_line(size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3])
+    .encode(
+        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
+        y=alt.Y("counts:Q", title="Number of articles"),
+        color=alt.Color("Sub Category:N"),
+        # size=alt.Size('magnitude'),
+        # color='Category',
+        # tooltip=["year", "counts", "query", alt.Tooltip("fraction:Q", format="%")],
+    )
+)
+fig = pu.configure_plots(fig)
+fig
+
+# %%
+cats = ["Kitchen tech"]
 ts_df = ts_subcategory.query("`Sub Category` in @cats")
 
 # %%
