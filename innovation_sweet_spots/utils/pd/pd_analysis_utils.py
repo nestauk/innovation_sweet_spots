@@ -730,18 +730,36 @@ class DiscourseAnalysis:
         if use_documents:
             title_lbl = "documents"
             data = self.document_mentions
+            return (
+                alt.Chart(data)
+                .mark_bar()
+                .encode(
+                    x=alt.X("year:O", title="Year"),
+                    y=alt.Y(
+                        "documents:Q",
+                        title=f"Number of {title_lbl} containing search terms",
+                    ),
+                    tooltip="documents:O",
+                )
+            )
         else:
             title_lbl = "sentences"
-            data = self.sentence_mentions
-        cols = list(data.columns)
-        return (
-            alt.Chart(data)
-            .mark_bar()
-            .encode(
-                x=alt.X("year:O", title="Year"),
-                y=alt.Y(
-                    cols[1], title=f"Number of {title_lbl} containing search terms"
-                ),
-                tooltip=cols,
+            data = self.sentence_mentions.melt(
+                id_vars=["year"],
+                value_vars=self.sentence_mentions.columns[1:],
+                var_name="search_term",
+                value_name="mentions",
             )
-        )
+            return (
+                alt.Chart(data)
+                .mark_bar()
+                .encode(
+                    x=alt.X("year:O", title="Year"),
+                    y=alt.Y(
+                        "mentions:Q",
+                        title=f"Number of {title_lbl} containing search terms",
+                    ),
+                    color="search_term:O",
+                    tooltip="mentions:Q",
+                )
+            )
