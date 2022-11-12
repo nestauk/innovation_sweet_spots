@@ -600,7 +600,9 @@ class DiscourseAnalysis:
     def list_of_pos_phrases(self):
         """List of POS phrases. This format is suitable for BERTopic analysis"""
         if self._list_of_pos_phrases is None:
-            self._list_of_pos_phrases = self.pos_phrases.phrase.to_list()
+            self._list_of_pos_phrases = (
+                self.pos_phrases.phrase.drop_duplicates().to_list()
+            )
         return self._list_of_pos_phrases
 
     @property
