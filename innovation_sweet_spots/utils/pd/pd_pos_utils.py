@@ -274,6 +274,8 @@ def make_phrase_patterns(search_term: str) -> dict:
         for search_term_part in processed_term.split(" ")
     ]
     return {
+        f"{term_dict_lbl}_term_noun": text_phrase
+        + [{"POS": "NOUN"}, {"POS": "NOUN", "OP": "?"}],
         f"{term_dict_lbl}_noun_phrase": [
             {"POS": "ADJ", "OP": "*"},
             {"POS": "NOUN"},
