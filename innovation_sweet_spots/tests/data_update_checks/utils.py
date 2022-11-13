@@ -139,7 +139,8 @@ def nan_plot(
         title=f"Percentage of NaNs in {cur_dir} vs. {new_dir} for {filename}"
     )
     save_lbl = filename.split(".")[0]
-    save_dir = DUC_DIR / f"{dataset}/{cur_dir}_vs_{new_dir}_plots/"
+    parent_save_dir = dataset if dataset else "other"
+    save_dir = DUC_DIR / f"{parent_save_dir}/{cur_dir}_vs_{new_dir}_plots/"
     if not save_dir.exists():
         save_dir.mkdir(parents=True)
     save_path = save_dir / f"{save_lbl}_nan_plot.png"

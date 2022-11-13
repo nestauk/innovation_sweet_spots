@@ -5,12 +5,15 @@ from innovation_sweet_spots.tests.data_update_checks.cb.cb_utils import cb_plots
 from innovation_sweet_spots.tests.data_update_checks.gtr.gtr_utils import gtr_plots
 from innovation_sweet_spots.tests.data_update_checks.nihr.nihr_utils import nihr_plots
 from innovation_sweet_spots import PROJECT_DIR
+from typing import Optional
 import typer
 
 DATA_PATH = PROJECT_DIR / "inputs/data"
 
 
-def run_update_checks(cur_dir: str, new_dir: str, dataset: str):
+def run_update_checks(
+    cur_dir: str, new_dir: str, dataset: Optional[str] = typer.Argument(None)
+):
     """Run set of checks for current and new versions of a dataset.
 
     Args:
