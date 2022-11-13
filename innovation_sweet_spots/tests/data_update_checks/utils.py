@@ -136,8 +136,7 @@ def nan_plot(
         height=7,
         palette="Paired",
     ).set(
-        title=f"Percentage of NaNs in {cur_dir} vs. {new_dir} for {filename}",
-        xlim=(0, 1),
+        title=f"Percentage of NaNs in {cur_dir} vs. {new_dir} for {filename}"
     )
     save_lbl = filename.split(".")[0]
     save_dir = DUC_DIR / f"{dataset}/{cur_dir}_vs_{new_dir}_plots/"
