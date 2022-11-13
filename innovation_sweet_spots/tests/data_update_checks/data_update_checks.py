@@ -19,7 +19,9 @@ def run_update_checks(
     Args:
         cur_dir: Current version data directory
         new_dir: New version data directory
-        dataset: "cb", "gtr" or "nihr"
+        dataset: "cb", "gtr" or "nihr". If this argument is not
+            passed, only the first set of filename and data checks
+            will be run.
     """
     cur_path = DATA_PATH / cur_dir
     new_path = DATA_PATH / new_dir
