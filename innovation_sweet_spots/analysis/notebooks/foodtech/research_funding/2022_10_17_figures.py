@@ -80,6 +80,10 @@ df = research_project_funding.merge(
 df = df.query('start_date > "2016-12-31" and start_date < "2022-01-01"')
 
 # %%
+total_funding = df.drop_duplicates("project_id").amount.sum()
+total_funding
+
+# %%
 df_ = (
     df.query("Category != 'Health'")
     .drop_duplicates("project_id")
@@ -89,13 +93,13 @@ df_ = (
 df_ / len(df.query("Category != 'Health'").drop_duplicates("project_id"))
 
 # %%
-df_ = (
-    df.query("Category != 'Health'")
-    .drop_duplicates("project_id")
-    .groupby("leadFunder")
-    .sum()
-)
-df_ / df.query("Category != 'Health'").drop_duplicates("project_id").amount.sum()
+df_ = df.drop_duplicates("project_id").groupby("leadFunder").sum()
+df_ / total_funding
+
+# %%
+df.query("Category == 'Health'").drop_duplicates(
+    "project_id"
+).amount.sum() / total_funding
 
 # %%
 df.query("Category == 'Health'").drop_duplicates("project_id").groupby(
