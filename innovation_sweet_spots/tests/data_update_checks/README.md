@@ -1,6 +1,6 @@
 # Dataset Update Checks
 
-`data_update_checks.py` compares the current version of a dataset with a new version. It checks for missing/additional files, rows, columns, NaNs. It also creates some dataset specific plots to see how the coverage for each year has changed.
+`data_update_checks.py` compares two versions of a dataset (e.g. an old version with a new version). It checks for missing/additional files, rows, columns, NaNs. It also creates some dataset specific plots to see how the coverage for each year has changed.
 
 ## Requirements
 
