@@ -2,10 +2,6 @@
 
 `data_update_checks.py` compares two versions of a dataset (e.g. an old version with a new version). It checks for missing/additional files, rows, columns, NaNs. It also creates some dataset specific plots to see how the coverage for each year has changed.
 
-## Requirements
-
-In addition to the main Innovation Sweet Spots requirements, there are some additional requirements needed to run the dataset update checks. To install these, run: `pip install -r innovation_sweet_spots/tests/data_update_checks/requirements.txt`.
-
 ## Usage
 
 Run: `python innovation_sweet_spots/tests/data_update_checks/data_update_checks.py [old_version_directory] [new_version_directory] [dataset]`

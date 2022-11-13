@@ -1,7 +1,7 @@
 numpy
 scipy
 pandas
-matplotlib
+matplotlib==3.5.1
 altair
 metaflow
 python-dotenv
