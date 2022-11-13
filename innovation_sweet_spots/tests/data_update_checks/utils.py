@@ -74,7 +74,7 @@ def check_cols_match(
     new_dir: str,
 ):
     """Check that the number of columns in the current and new dataframes are
-    the ame. Log the outcome and provide additional information on the
+    the same. Log the outcome and provide additional information on the
     differences."""
     cur_cols = set(cur_df.columns)
     new_cols = set(new_df.columns)
