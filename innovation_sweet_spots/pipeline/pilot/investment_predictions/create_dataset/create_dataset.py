@@ -241,9 +241,9 @@ def create_dataset(
     cb_orgs = cb_orgs[KEEP_COLS]
 
     # Add dummy columns for industry information
-    if industries_or_groups is "industries":
+    if industries_or_groups == "industries":
         cb_orgs = cb_orgs.pipe(utils.add_industry_dummies)
-    if industries_or_groups is "groups":
+    if industries_or_groups == "groups":
         cb_orgs = cb_orgs.pipe(utils.add_group_dummies, industry_to_group_map)
 
     # Add founder info to people info
