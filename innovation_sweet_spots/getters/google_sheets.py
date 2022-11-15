@@ -164,3 +164,23 @@ def get_foodtech_heat_map(from_local=True, data_range="heatmap", save_locally=Tr
             data_df.to_csv(local_path, index=False)
             logging.info(f"Search terms saved locally to {local_path}")
         return data_df
+
+
+def get_foodtech_guardian(
+    from_local=True, data_range="guardian_final_hits", save_locally=True
+):
+    """"""
+    local_path = PROJECT_DIR / "outputs/foodtech/interim/guardian_final_hits.csv"
+    # Google sheets info
+    scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+    spreadsheet_id = "1UuYDhLtkMt7RFN2WR9AcXTOS5rUmokhD7Cqdam1Nrsk"
+    if from_local:
+        logging.info(f"Loading search terms from {local_path}")
+        return pd.read_csv(local_path)
+    else:
+        data = pull_sheet_data(scopes, spreadsheet_id, data_range)
+        data_df = pd.DataFrame(data[1:], columns=data[0])
+        if save_locally:
+            data_df.to_csv(local_path, index=False)
+            logging.info(f"Search terms saved locally to {local_path}")
+        return data_df

@@ -1892,3 +1892,286 @@ df = (
         "raised_amount_gbp",
     ]
 ]
+
+# %% [markdown]
+# # Segmenting the categories
+
+# %%
+clusters = cluster_analysis_utils.hdbscan_clustering(v_labels.vectors)
+
+# %%
+df_clusters = (
+    pd.DataFrame(clusters, columns=["cluster", "probability"])
+    .astype({"cluster": int, "probability": float})
+    .assign(text=v_labels.vector_ids)
+    .merge(labels, how="left")
+    .merge(category_counts, how="left")
+    .drop_duplicates("text")
+)
+
+# %%
+df_clusters
+
+# %%
+extra_stopwords = ["tech", "technology", "food"]
+stopwords = cluster_analysis_utils.DEFAULT_STOPWORDS + extra_stopwords
+
+
+cluster_keywords = cluster_analysis_utils.cluster_keywords(
+    df_clusters.text.apply(
+        lambda x: cluster_analysis_utils.simple_preprocessing(x, stopwords)
+    ).to_list(),
+    df_clusters.cluster.to_list(),
+    11,
+    max_df=0.7,
+    min_df=0.1,
+)
+
+# %%
+umap_viz_params = {
+    "n_components": 2,
+    "n_neighbors": 10,
+    "min_dist": 0.5,
+    "spread": 0.5,
+}
+
+reducer_2d = umap.UMAP(random_state=1, **umap_viz_params)
+embedding = reducer_2d.fit_transform(v_labels.vectors)
+
+# %%
+embedding.shape
+
+# %%
+len(v_labels.vector_ids)
+
+# %%
+df_viz = (
+    pd.DataFrame(v_labels.vector_ids, columns=["text"])
+    .merge(df_clusters, how="left")
+    .assign(
+        x=embedding[:, 0],
+        y=embedding[:, 1],
+        #         cluster=df_clusters.cluster,
+        #         cluster_prob=df_clusters.probability,
+        cluster_name=df_clusters.cluster.apply(lambda x: str(cluster_keywords[x])),
+        cluster_str=lambda df: df.cluster.astype(str),
+        log_counts=lambda df: np.log10(df.counts),
+    )
+    .sort_values(["cluster", "counts"], ascending=False)
+)
+
+# %%
+df_viz
+
+# %%
+# Visualise using altair
+fig = (
+    alt.Chart(df_viz, width=600, height=500)
+    .mark_circle(size=20, color=pu.NESTA_COLOURS[0])
+    .encode(
+        x=alt.X("x", axis=None),
+        y=alt.Y("y", axis=None),
+        size="log_counts",
+        tooltip=list(df_viz.columns),
+        #         color="label_type",
+        color="cluster_str",
+    )
+)
+
+# text = (
+#     alt.Chart(centroids)
+#     .mark_text(font=pu.FONT)
+#     .encode(x=alt.X("x_c:Q"), y=alt.Y("y_c:Q"), text=alt.Text("keywords"))
+# )
+
+fig_final = (
+    #     (fig + text)
+    (fig)
+    .configure_axis(
+        # gridDash=[1, 7],
+        gridColor="white",
+    )
+    .configure_view(strokeWidth=0, strokeOpacity=0)
+    .properties(
+        title={
+            "anchor": "start",
+            "text": ["Company labels"],
+            "subtitle": [
+                "All industry, sub-industry and tag labels.",
+                "1328-d sentence embeddings > 2-d UMAP",
+            ],
+            "subtitleFont": pu.FONT,
+        },
+    )
+    .interactive()
+)
+
+fig_final
+
+# %%
+from innovation_sweet_spots import PROJECT_DIR
+
+df_viz.to_csv(PROJECT_DIR / "outputs/foodtech/interim/dealroom_labels.csv", index=False)
+
+# %%
+# c=34
+# df_clusters.query("cluster == @c").label
+
+# %%
+ids = DR.company_labels.query("Category == 'taste'").id.to_list()
+DR.company_data.query("id in @ids")
+
+# %%
+ids = DR.company_labels.query("Category == 'meal kits'").id.to_list()
+DR.company_labels.query("id in @ids").groupby("Category").agg(
+    counts=("id", "count")
+).sort_values("counts", ascending=False)
+
+# %% [markdown]
+# ## Check health companies in detail
+
+# %%
+df_health = DR.get_companies_by_industry("health")
+
+# %%
+len(df_health)
+
+# %%
+df_health_labels = DR.company_tags.query("id in @df_health.id.to_list()")
+
+
+# %%
+# DR.company_labels.query("Category=='health'")
+
+# %%
+health_label_counts = (
+    df_health_labels.groupby("TAGS")
+    .agg(counts=("id", "count"))
+    .sort_values("counts", ascending=False)
+)
+
+# %%
+health_label_counts.head(15)
+
+# %%
+chosen_cat = DR.company_labels.query("Category in @health_Weight").id.to_list()
+
+# %%
+# company_labels_list = (
+#     DR.company_labels
+#     .assign(Category = lambda df: df.Category.apply(tcu.clean_dealroom_labels))
+#     .groupby("id")["Category"].apply(list)
+# )
+
+# %% [markdown]
+# ### Inspect companies using embeddings
+
+# %%
+alt.data_transformers.disable_max_rows()
+
+# %%
+importlib.reload(dlr)
+v_vectors = dlr.get_company_embeddings(
+    filename="foodtech_may2022_companies_tagline_labels"
+)
+
+# %%
+# Reduce the embedding to 2 dimensions
+reducer_low_dim = umap.UMAP(
+    n_components=2,
+    random_state=333,
+    n_neighbors=10,
+    min_dist=0.5,
+    spread=0.5,
+)
+embedding = reducer_low_dim.fit_transform(v_vectors.vectors)
+
+# %%
+category_ids_major = get_category_ids(taxonomy_df, rejected_tags, DR, "Major")
+category_ids_minor = get_category_ids(taxonomy_df, rejected_tags, DR, "Minor")
+
+# %%
+list(category_ids_major.keys())
+
+# %% [markdown]
+# ## Select a category
+
+# %%
+major_category = "health"
+ids = category_ids_major[major_category]
+minor_categories = list(taxonomy[major_category].keys())
+
+# %%
+df_viz = (
+    DR.company_data[["id", "NAME", "TAGLINE", "WEBSITE", "TOTAL FUNDING (EUR M)"]]
+    .copy()
+    .assign(x=embedding[:, 0])
+    .assign(y=embedding[:, 1])
+    .assign(minor="n/a")
+    .query("`TOTAL FUNDING (EUR M)` > 0")
+    .query("id in @ids")
+    .copy()
+    .merge(
+        pd.DataFrame(
+            DR.company_labels.groupby("id")["Category"].apply(list)
+        ).reset_index()
+    )
+)
+
+for cat in minor_categories:
+    df_viz.loc[df_viz.id.isin(category_ids_minor[cat]), "minor"] = cat
+
+# %%
+len(DR.company_data.query("id in @ids"))
+
+# %%
+len(DR.company_data.query("`TOTAL FUNDING (EUR M)` > 0").query("id in @ids"))
+
+# %%
+# df_viz
+
+# %%
+# Visualise using altair
+fig = (
+    alt.Chart(df_viz, width=500, height=500)
+    .mark_circle(size=40)
+    .encode(
+        x=alt.X("x", axis=None),
+        y=alt.Y("y", axis=None),
+        tooltip=list(df_viz.columns),
+        color="minor:N",
+        href="WEBSITE",
+        size=alt.Size("TOTAL FUNDING (EUR M)", scale=alt.Scale(range=[20, 2000])),
+    )
+)
+fig_final = (
+    (fig)
+    .configure_axis(
+        gridColor="white",
+    )
+    .configure_view(strokeWidth=0, strokeOpacity=0)
+    .properties(
+        title={
+            "anchor": "start",
+            "text": ["Landscape of companies"],
+            "subtitle": "",
+            #             [
+            #                 "Each circle is a course; courses with similar titles will be closer on this map",
+            #                 "Press Shift and click on a circle to go the course webpage",
+            #             ],
+            "subtitleFont": pu.FONT,
+        },
+    )
+    .interactive()
+)
+
+fig_final
+
+# %%
+company_to_taxonomy_dict["960205"]
+
+
+# %%
+AltairSaver.save(fig_final, f"foodtech_companies_{major_category}", filetypes=["html"])
+
+# %%

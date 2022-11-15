@@ -29,6 +29,7 @@ from innovation_sweet_spots import PROJECT_DIR
 import utils
 import importlib
 from innovation_sweet_spots.utils.pd import pd_analysis_utils as pd_au
+from innovation_sweet_spots.analysis import analysis_utils as au
 
 # %% [markdown]
 # # Plotting utils
@@ -318,7 +319,7 @@ df_id_to_term_filters = (
     .assign(has_imprecise_term=lambda df: df.Terms.isin(terms_to_remove))
     .merge(n_terms_per_article, on="id", how="left")
     # NB: Most important line
-    .assign(keep=lambda df: (df.has_imprecise_term == False) & (df.counts > 1))
+    .assign(keep=lambda df: (df.has_imprecise_term == False) & (df.counts > 0))
     # .assign(keep=lambda df: (df.has_imprecise_term == False))
 )
 
@@ -362,17 +363,17 @@ len(df_id_to_term_filtered_)
 # df_id_to_term.query("`Sub Category` == 'Alt protein'").to_csv(PROJECT_DIR / 'outputs/foodtech/interim/test_guardian_articles.csv', index=False)
 
 # %%
-df_id_to_term_filtered_.to_csv(
-    PROJECT_DIR
-    / "outputs/foodtech/interim/public_discourse/guardian_interim_articles.csv",
-    index=False,
-)
+# df_id_to_term_filtered_.to_csv(
+#     PROJECT_DIR
+#     / "outputs/foodtech/interim/public_discourse/guardian_interim_articles.csv",
+#     index=False,
+# )
 
 # %% [markdown]
 # ## Additional filtering for comma terms
 
 # %%
-importlib.reload(utils)
+# importlib.reload(utils)
 
 # %%
 # df_id_to_term_filtered_ = pd.read_csv(PROJECT_DIR / 'outputs/foodtech/interim/public_discourse/guardian_interim_articles.csv')
@@ -397,7 +398,7 @@ df_id_to_term_filtered_["has_terms_in_same_sent"] = has_terms_in_same_sentence
 
 # %%
 txt = (
-    df_id_to_term.query(
+    df_id_to_term_filtered_.query(
         "Terms == 'restaurant,technology' and has_terms_in_same_sent == True"
     )
     .iloc[35]
@@ -427,21 +428,97 @@ counts_df
 # %%
 counts_df = (
     df_id_to_term.drop_duplicates(["Terms", "id"])
-    .groupby(["Terms", "Category", "Sub Category"], as_index=False)
+    .groupby(["Category", "Sub Category"], as_index=False)
     .agg(counts=("id", "count"))
+)
+counts_df
+
+# %% [markdown]
+# ## Export for reviewing
+
+# %%
+cols = [
+    "id",
+    "URL",
+    "year",
+    "Terms",
+    "counts",
+    "Category",
+    "Sub Category",
+    "Tech area",
+    "has_food_terms",
+    "has_innovation_terms",
+    "has_terms_in_same_sent",
+]
+
+df_export = (
+    df_id_to_term.copy()
+    .assign(URL=lambda df: "https://www.theguardian.com/" + df.id)
+    .drop_duplicates(["id", "Sub Category"])
+)[cols]
+
+# %%
+df_id_to_term["Sub Category"].unique()
+
+# %%
+len(df_export)
+
+# %%
+df_export.to_csv(
+    PROJECT_DIR / "outputs/foodtech/public_discourse/guardian_to_check_FINAL_n1.csv",
+    index=False,
 )
 
 # %%
-# counts_df.sort_values(['Category', 'Sub Category', 'Terms']).iloc[51:]
-
-# %%
-# df_id_to_term
+df_id_to_term_copy = df_id_to_term.copy()
 
 # %% [markdown]
 # # Checking technology trends
 # - Combining terms by categories
 # - Time series with terms and categories
 # - Calculate magnitude and growth
+
+# %%
+from innovation_sweet_spots.getters import google_sheets
+
+importlib.reload(google_sheets)
+df_id_to_term_reviewed = google_sheets.get_foodtech_guardian(from_local=False)
+
+# %%
+df_id_to_term = (
+    df_id_to_term_reviewed.copy()
+    .query("checked_subcategory != '-'")
+    .assign(
+        **{
+            "Category": lambda df: df.checked_category,
+            "Sub Category": lambda df: df.checked_subcategory,
+        }
+    )
+    .astype({"year": int})
+)
+
+# %%
+df_id_to_term.year.unique()
+
+# %%
+df_id_to_text = (
+    df_id_to_term[["id", "year", "Category", "Sub Category"]]
+    .merge(df_id_to_term_copy[["id", "text"]], on="id", how="left")
+    .drop_duplicates(["id", "Sub Category"])
+    .fillna("")
+)
+
+# %%
+df_id_to_text.query('`Sub Category`=="Delivery"').to_csv(
+    PROJECT_DIR
+    / "outputs/foodtech/interim/public_discourse/guardian_articles_delivery.csv",
+    index=False,
+)
+df_id_to_text.query('`Sub Category`=="Reformulation"').to_csv(
+    PROJECT_DIR
+    / "outputs/foodtech/interim/public_discourse/guardian_articles_reformulation.csv",
+    index=False,
+)
 
 # %%
 from innovation_sweet_spots import PROJECT_DIR
@@ -478,20 +555,20 @@ ts_subcategory = get_ts(df_id_to_term, "Sub Category").merge(
 )
 
 # %%
-ts_tech_area = get_ts(df_id_to_term, "Tech area").merge(
-    df_search_terms[["Category", "Sub Category", "Tech area"]].drop_duplicates(
-        "Tech area"
-    ),
-    how="left",
-)
+# ts_tech_area = get_ts(df_id_to_term, "Tech area").merge(
+#     df_search_terms[["Category", "Sub Category", "Tech area"]].drop_duplicates(
+#         "Tech area"
+#     ),
+#     how="left",
+# )
 
 # %%
-ts_search_term = get_ts(df_id_to_term, "Terms").merge(
-    df_search_terms[["Category", "Sub Category", "Tech area", "Terms"]].drop_duplicates(
-        "Terms"
-    ),
-    how="left",
-)
+# ts_search_term = get_ts(df_id_to_term, "Terms").merge(
+#     df_search_terms[["Category", "Sub Category", "Tech area", "Terms"]].drop_duplicates(
+#         "Terms"
+#     ),
+#     how="left",
+# )
 
 # %%
 # scale = 'log'
@@ -522,66 +599,61 @@ alt.Chart(ts_subcategory, width=200, height=100).mark_line(size=3).encode(
 ).resolve_scale(y="independent")
 
 # %%
-alt.Chart(ts_tech_area, width=200, height=100).mark_line().encode(
-    x="year:O",
-    y=alt.Y(
-        "fraction:Q",
-    ),
-    color=alt.Color("Tech area:N", scale=alt.Scale(scheme="dark2")),
-    facet=alt.Facet("Category:N", columns=2),
-    tooltip=["Tech area", "counts", "year"],
-).resolve_scale(y="independent")
+# alt.Chart(ts_tech_area, width=200, height=100).mark_line().encode(
+#     x="year:O",
+#     y=alt.Y(
+#         "fraction:Q",
+#     ),
+#     color=alt.Color("Tech area:N", scale=alt.Scale(scheme="dark2")),
+#     facet=alt.Facet("Category:N", columns=2),
+#     tooltip=["Tech area", "counts", "year"],
+# ).resolve_scale(y="independent")
 
 # %%
-alt.Chart(ts_search_term, width=200, height=100).mark_line(
-    point=alt.OverlayMarkDef()
-).encode(
-    x="year:O",
-    y=alt.Y(
-        "fraction:Q",
-    ),
-    color=alt.Color("Terms:N", scale=alt.Scale(scheme="dark2")),
-    facet=alt.Facet("Category:N", columns=2),
-    tooltip=["Terms", "counts"],
-).resolve_scale(
-    y="independent"
-)
+# alt.Chart(ts_search_term, width=200, height=100).mark_line(
+#     point=alt.OverlayMarkDef()
+# ).encode(
+#     x="year:O",
+#     y=alt.Y(
+#         "fraction:Q",
+#     ),
+#     color=alt.Color("Terms:N", scale=alt.Scale(scheme="dark2")),
+#     facet=alt.Facet("Category:N", columns=2),
+#     tooltip=["Terms", "counts"],
+# ).resolve_scale(
+#     y="independent"
+# )
 
 # %%
-alt.Chart(ts_search_term, width=200, height=100).mark_line().encode(
-    x="year:O",
-    y=alt.Y(
-        "fraction:Q",
-    ),
-    color=alt.Color("Terms:N", scale=alt.Scale(scheme="dark2")),
-    facet=alt.Facet("Category:N", columns=2),
-    tooltip=["Terms", "counts"],
-).resolve_scale(y="independent")
+# alt.Chart(ts_search_term, width=200, height=100).mark_line().encode(
+#     x="year:O",
+#     y=alt.Y(
+#         "fraction:Q",
+#     ),
+#     color=alt.Color("Terms:N", scale=alt.Scale(scheme="dark2")),
+#     facet=alt.Facet("Category:N", columns=2),
+#     tooltip=["Terms", "counts"],
+# ).resolve_scale(y="independent")
 
 # %%
-import importlib
-from innovation_sweet_spots.analysis import analysis_utils as au
+# import importlib
 
-importlib.reload(au)
+
+# importlib.reload(au)
 
 # %%
 # Export articles to check
 
 # %%
-df_to_check = (
-    df_id_to_term.sort_values(["year", "Tech area", "Sub Category", "Category"])
-    .drop(["text", "text_lower"], axis=1)
-    .drop_duplicates(["Tech area", "id"])
-    .merge(df_search_results[["id", "Headline", "URL"]], how="left", on="id")
-)
-
-# %%
-df_to_check.to_csv(
-    PROJECT_DIR / "outputs/foodtech/interim/public_discourse/guardian_to_check_V3.csv"
-)
-
-# %%
-len(df_to_check)
+# df_to_check = (
+#     df_id_to_term.sort_values(["year", "Tech area", "Sub Category", "Category"])
+#     .drop(["text", "text_lower"], axis=1)
+#     .drop_duplicates(["Tech area", "id"])
+#     .merge(df_search_results[["id", "Headline", "URL"]], how="left", on="id")
+# )
+# df_to_check.to_csv(
+#     PROJECT_DIR / "outputs/foodtech/interim/public_discourse/guardian_to_check_V3.csv"
+# )
 
 # %% [markdown]
 # ## Magnitude and growth trends
@@ -593,22 +665,27 @@ from innovation_sweet_spots.utils import chart_trends
 categories_to_check = ts_category.Category.unique()
 
 # %%
+variable = "fraction"
 magnitude_growth = []
 for tech_area in categories_to_check:
+    print(tech_area)
     df = ts_category.query("Category == @tech_area").drop("Category", axis=1)[
-        ["year", "counts"]
+        ["year", variable]
     ]
     df_trends = au.estimate_magnitude_growth(df, 2017, 2021)
     magnitude_growth.append(
         [
-            df_trends.query('trend == "magnitude"').iloc[0].counts,
-            df_trends.query('trend == "growth"').iloc[0].counts,
+            df_trends.query('trend == "magnitude"').iloc[0][variable],
+            df_trends.query('trend == "growth"').iloc[0][variable],
             tech_area,
         ]
     )
 magnitude_growth_df = pd.DataFrame(
     magnitude_growth, columns=["magnitude", "growth", "tech_area"]
-).assign(growth=lambda df: df.growth / 100)
+).assign(
+    growth=lambda df: df.growth / 100,
+    magnitude=lambda df: df.magnitude * 100,
+)
 
 # %%
 domain = [
@@ -634,112 +711,59 @@ baseline_growth = (
 baseline_growth
 
 # %%
-# make the plot...
-import altair as alt
-from innovation_sweet_spots.utils import plotting_utils as pu
-
-colour_field = "tech_area"
-text_field = "tech_area"
-horizontal_scale = "linear"
-# horizontal_scale = "log"
-horizontal_title = f"Average number of articles"
-legend = alt.Legend()
-
-title_text = "News article trends (2017-2021)"
-subtitle_text = [
-    # "Data: Dealroom. Showing data on early stage deals (eg, seed and series funding)",
-    # "Late stage deals, such as IPOs, acquisitions, and debt financing not included.",
-]
-
-fig = (
-    alt.Chart(
-        magnitude_growth_df,
-        width=400,
-        height=400,
-    )
-    .mark_circle(size=80)
-    .encode(
-        x=alt.X(
-            "magnitude:Q",
-            axis=alt.Axis(
-                title=horizontal_title,
-                tickCount=5,
-            ),
-            scale=alt.Scale(
-                type=horizontal_scale,
-                # domain=(0, 40),
-            ),
-        ),
-        y=alt.Y(
-            "growth:Q",
-            axis=alt.Axis(
-                title="Growth",
-                format="%",
-                tickCount=5,
-            ),
-            scale=alt.Scale(
-                # domain=(-1, 2.5),
-            ),
-        ),
-        color=alt.Color(
-            f"{colour_field}:N",
-            legend=None,
-            scale=alt.Scale(domain=domain, range=range_),
-        ),
-        tooltip=[
-            alt.Tooltip("tech_area", title="Category"),
-            alt.Tooltip("magnitude", title=horizontal_title),
-            alt.Tooltip("growth", title="Growth", format=".0%"),
-        ],
-    )
-    .properties(
-        title={
-            "anchor": "start",
-            "text": title_text,
-            "subtitle": subtitle_text,
-            "subtitleFont": pu.FONT,
-            "fontSize": 15,
-        },
-    )
-)
-
-text = fig.mark_text(
-    align="left", baseline="middle", font=pu.FONT, dx=7, fontSize=15
-).encode(text=text_field)
-
-yrule = (
-    alt.Chart(pd.DataFrame({"y": [baseline_growth]}))
-    .mark_rule(strokeDash=[5, 7], size=1)
-    .encode(y="y:Q")
-)
-
-fig_final = (
-    (fig + yrule + text)
-    .configure_axis(
-        grid=False,
-        gridDash=[5, 7],
-        # gridColor="grey",
-        labelFontSize=pu.FONTSIZE_NORMAL,
-        titleFontSize=pu.FONTSIZE_NORMAL,
-    )
-    .configure_legend(
-        titleFontSize=pu.FONTSIZE_NORMAL,
-        labelFontSize=pu.FONTSIZE_NORMAL,
-    )
-    .configure_view(strokeWidth=0)
-)
-
-fig_final
+magnitude_growth_df.magnitude.median()
 
 # %%
-magnitude_growth_df.magnitude.median()
+fig = chart_trends.mangitude_vs_growth_chart(
+    data=magnitude_growth_df,
+    x_limit=0.45,
+    y_limit=4,
+    mid_point=0.09,
+    baseline_growth=0,
+    values_label="Proportion of articles (%)",
+    text_column="tech_area",
+)
+fig
+
+# %%
+# fig = chart_trends.mangitude_vs_growth_chart(
+#     data=magnitude_growth_df,
+#     x_limit=0.2,
+#     y_limit=4,
+#     mid_point=0.053,
+#     baseline_growth=0,
+#     values_label="Proportion of articles (%)",
+#     text_column="tech_area",
+# )
+# fig
+
+# %%
+variable = "counts"
+magnitude_growth = []
+for tech_area in categories_to_check:
+    df = ts_category.query("Category == @tech_area").drop("Category", axis=1)[
+        ["year", variable]
+    ]
+    df_trends = au.estimate_magnitude_growth(df, 2017, 2021)
+    magnitude_growth.append(
+        [
+            df_trends.query('trend == "magnitude"').iloc[0][variable],
+            df_trends.query('trend == "growth"').iloc[0][variable],
+            tech_area,
+        ]
+    )
+magnitude_growth_df = pd.DataFrame(
+    magnitude_growth, columns=["magnitude", "growth", "tech_area"]
+).assign(
+    growth=lambda df: df.growth / 100,
+)
 
 # %%
 fig = chart_trends.mangitude_vs_growth_chart(
     data=magnitude_growth_df,
     x_limit=130,
     y_limit=3,
-    mid_point=32,
+    mid_point=42,
     baseline_growth=-0.25,
     values_label="Average number of articles",
     text_column="tech_area",
@@ -773,8 +797,8 @@ ts_df = ts_subcategory.query("`Sub Category` in @cats")
 scale = "linear"
 
 fig = (
-    alt.Chart(ts_df)
-    .mark_line(size=3, interpolate="monotone")
+    alt.Chart(ts_df.query("year > 2010")).mark_line(size=3, interpolate="monotone")
+    # .mark_bar(size=5, interpolate="monotone")
     .encode(
         x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
         y=alt.Y("counts:Q", title="Number of articles"),
@@ -793,7 +817,7 @@ AltairSaver.save(
 )
 
 # %%
-cats = ["Delivery", "Supply chain"]
+cats = ["Delivery"]
 ts_df = ts_subcategory.query("`Sub Category` in @cats")
 
 # %%
@@ -821,7 +845,7 @@ AltairSaver.save(
 )
 
 # %%
-cats = ["Retail"]
+cats = ["Restaurants", "Retail"]
 ts_df = ts_subcategory.query("`Sub Category` in @cats")
 
 # %%
@@ -829,8 +853,10 @@ ts_df = ts_subcategory.query("`Sub Category` in @cats")
 scale = "linear"
 
 fig = (
-    alt.Chart(ts_df)
-    .mark_line(size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3])
+    alt.Chart(ts_df).mark_line(
+        size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3]
+    )
+    # .mark_bar(size=5, interpolate="monotone", color=pu.NESTA_COLOURS[3])
     .encode(
         x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
         y=alt.Y("counts:Q", title="Number of articles"),

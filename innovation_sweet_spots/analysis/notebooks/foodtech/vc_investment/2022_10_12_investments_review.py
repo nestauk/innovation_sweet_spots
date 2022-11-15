@@ -15,6 +15,9 @@
 #     name: python3
 # ---
 
+# %% [markdown]
+# ## Investment
+
 # %%
 import innovation_sweet_spots.analysis.wrangling_utils as wu
 import importlib
