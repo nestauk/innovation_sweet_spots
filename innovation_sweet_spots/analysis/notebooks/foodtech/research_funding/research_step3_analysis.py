@@ -8,7 +8,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -39,7 +39,6 @@ import pandas as pd
 
 pd.options.display.float_format = "{:.3f}".format
 import importlib
-import numpy as np
 
 # %% [markdown]
 # ### Plotting utils
@@ -49,15 +48,19 @@ import numpy as np
 import altair as alt
 import innovation_sweet_spots.utils.altair_save_utils as alt_save
 from innovation_sweet_spots.utils import plotting_utils as pu
+from pathlib import Path
+import altair
 
-figure_folder = alt_save.FIGURE_PATH + "/foodtech"
+figure_folder = Path(alt_save.FIGURE_PATH + "/foodtech")
 AltairSaver = alt_save.AltairSaver(path=figure_folder)
+# Note this will open a chrome window, leave it open
 
 # %%
 # Figure version name
 fig_version_name = "Report_GTR_NIHR"
 # Folder for data tables
-tables_folder = figure_folder + "/tables"
+tables_folder = figure_folder / "tables/"
+tables_folder.mkdir(exist_ok=True, parents=True)
 
 # %% [markdown]
 # ### Load data
@@ -99,12 +102,7 @@ ukri_df_ref = (
     gtr_projects.merge(
         gtr_df[["id", "abstractText"]], left_on="project_id", right_on="id", how="left"
     )
-    .rename(
-        columns={
-            "fund_start": "start_date",
-            "abstractText": "description",
-        }
-    )
+    .rename(columns={"fund_start": "start_date", "abstractText": "description"})
     .assign(funder="ukri")
 )[cols]
 
@@ -114,12 +112,7 @@ nihr_df_ref = (
         amount=lambda df: df.award_amount_m.astype(float) * 1e6,
         project_id=lambda df: df.recordid,
         funder="nihr",
-    ).rename(
-        columns={
-            "project_title": "title",
-            "scientific_abstract": "description",
-        }
-    )
+    ).rename(columns={"project_title": "title", "scientific_abstract": "description"})
 )[cols]
 
 # Combine UKRI and NIHR funding data
@@ -169,6 +162,7 @@ au.estimate_magnitude_growth(
     2021,
 )
 
+
 # %% [markdown]
 # The total amount of funding has grown by about 11.4% between 2017 and 2021
 
@@ -178,6 +172,38 @@ au.estimate_magnitude_growth(
 # Combined growth all relevant projects
 
 # %%
+# Function for plotting funding over time
+def funding_over_time_chart(
+    data: pd.DataFrame,
+    vertical_axis_values: str,
+    vertical_axis_label: str,
+    horizontal_axis_values: str,
+    horizontal_axis_label: str,
+    horizontal_tooltip_label: str,
+    y_scale_upper: int,
+) -> altair.Chart:
+    return (
+        alt.Chart(data, width=400, height=250)
+        .mark_bar(color=pu.NESTA_COLOURS[0])
+        .encode(
+            x=alt.X(f"{horizontal_axis_values}:O", title=horizontal_axis_label),
+            y=alt.Y(
+                f"{vertical_axis_values}:Q",
+                title=vertical_axis_label,
+                scale=alt.Scale(domain=(0, y_scale_upper)),
+            ),
+            tooltip=[
+                alt.Tooltip(
+                    f"{horizontal_axis_values}:O", title=horizontal_tooltip_label
+                ),
+                alt.Tooltip(
+                    f"{vertical_axis_values}:Q", title=vertical_axis_label, format=".3f"
+                ),
+            ],
+        )
+    )
+
+
 # Define chart variables
 vertical_axis_values = "amount_total"
 vertical_axis_label = "Research funding (£ millions)"
@@ -203,31 +229,23 @@ data = (
     .query("year < 2022")
 )
 
-fig = (
-    alt.Chart(data, width=400, height=250)
-    .mark_bar(color=pu.NESTA_COLOURS[0])
-    .encode(
-        x=alt.X(f"{horizontal_axis_values}:O", title=horizontal_axis_label),
-        y=alt.Y(
-            f"{vertical_axis_values}:Q",
-            title=vertical_axis_label,
-            scale=alt.Scale(domain=(0, 120)),
-        ),
-        tooltip=[
-            alt.Tooltip(f"{horizontal_axis_values}:O", title=horizontal_tooltip_label),
-            alt.Tooltip(
-                f"{vertical_axis_values}:Q", title=vertical_axis_label, format=".3f"
-            ),
-        ],
-    )
+fig = funding_over_time_chart(
+    data,
+    vertical_axis_values,
+    vertical_axis_label,
+    horizontal_axis_values,
+    horizontal_axis_label,
+    horizontal_tooltip_label,
+    y_scale_upper=120,
 )
-fig = pu.configure_plots(fig)
+
+fig = pu.configure_plots(fig, chart_title="Food tech research funding over time")
 fig
 
 # %%
 chart_name = f"v{fig_version_name}_total_funding_per_year"
 AltairSaver.save(fig, chart_name, filetypes=["html", "svg", "png"])
-data.to_csv(tables_folder + "/" + chart_name + ".csv", index=False)
+data.to_csv(tables_folder / f"{chart_name}.csv", index=False)
 
 # %%
 # Magnitude and growth of the total funding
@@ -261,25 +279,19 @@ data = (
     .query("year < 2022")
 )
 
-fig = (
-    alt.Chart(data, width=400, height=250)
-    .mark_bar(color=pu.NESTA_COLOURS[0])
-    .encode(
-        x=alt.X(f"{horizontal_axis_values}:O", title=horizontal_axis_label),
-        y=alt.Y(
-            f"{vertical_axis_values}:Q",
-            title=vertical_axis_label,
-            scale=alt.Scale(domain=(0, 30)),
-        ),
-        tooltip=[
-            alt.Tooltip(f"{horizontal_axis_values}:O", title=horizontal_tooltip_label),
-            alt.Tooltip(
-                f"{vertical_axis_values}:Q", title=vertical_axis_label, format=".3f"
-            ),
-        ],
-    )
+fig = funding_over_time_chart(
+    data,
+    vertical_axis_values,
+    vertical_axis_label,
+    horizontal_axis_values,
+    horizontal_axis_label,
+    horizontal_tooltip_label,
+    y_scale_upper=30,
 )
-fig = pu.configure_plots(fig)
+
+fig = pu.configure_plots(
+    fig, chart_title="Food tech (excl. 'health') research funding over time"
+)
 fig
 
 # %%
@@ -288,6 +300,9 @@ au.estimate_magnitude_growth(
     2017,
     2021,
 )
+
+# %% [markdown]
+# Total funding has grown by about 51.6% ~ 52% between 2017 and 2021. Excluding health that growth increases to 70% suggesting health is growing slower than the rest of the food tech sector.
 
 # %%
 au.percentage_change(
@@ -298,7 +313,7 @@ au.percentage_change(
 # %%
 chart_name = f"v{fig_version_name}_total_funding_per_year_wout_health"
 AltairSaver.save(fig, chart_name, filetypes=["html", "svg", "png"])
-data.to_csv(tables_folder + "/" + chart_name + ".csv", index=False)
+data.to_csv(tables_folder / f"{chart_name}.csv", index=False)
 
 # %% [markdown]
 # ## Funders
@@ -358,7 +373,7 @@ major_categories_to_check = [
 # ### Major category totals
 
 # %%
-# Get total funding 2017-2021 by major innovation category
+# Get total funding 2017-2021 by major innovation category (excl. Social)
 category_funding_df = (
     research_project_funding.query(
         'start_date >= "2017-01-01" and start_date < "2022-01-01"'
@@ -368,10 +383,7 @@ category_funding_df = (
     #  Remove duplicates
     .drop_duplicates(["project_id", "Category"])
     .groupby(["Category"])
-    .agg(
-        amount_total=("amount", "sum"),
-        counts=("project_id", "count"),
-    )
+    .agg(amount_total=("amount", "sum"), counts=("project_id", "count"))
     .assign(amount_total=lambda df: df.amount_total / 1e6)
     .reset_index()
 )
@@ -380,6 +392,7 @@ category_funding_df = (
 category_funding_df
 
 # %%
+# Get total funding 2017-2021 for all categories
 total_funding = (
     research_project_funding.query(
         'start_date >= "2017-01-01" and start_date < "2022-01-01"'
@@ -387,15 +400,17 @@ total_funding = (
     .drop_duplicates(["project_id"])
     .amount.sum()
 ) / 1e6
-total_funding
+print(f"Total funding is {total_funding.round(2)} million")
 
 # %%
+# Calculate percentage of health related projects
 category_funding_df.query("Category == 'Health'").amount_total / total_funding
 
 # %% [markdown]
 # Health-related projects correspond to approximately 66% of total funding 2017-2021
 
 # %%
+# Plot research funding and number of projects for each category
 order = category_funding_df.sort_values(
     "amount_total", ascending=False
 ).Category.to_list()
@@ -453,13 +468,12 @@ chart_trends.estimate_trend_type(
 )
 
 # %%
-(
-    chart_trends.estimate_trend_type(
-        category_amount_magnitude_growth, magnitude_column="magnitude"
-    ).to_csv(
-        PROJECT_DIR
-        / f"outputs/foodtech/trends/research_{fig_version_name}_Categories.csv",
-        index=False,
+category_amount_magnitude_growth
+
+# %%
+au.moving_average(
+    category_ts.query('Category == "Innovative food"').assign(
+        year=lambda df: df.time_period.dt.year
     )
 )
 
@@ -535,10 +549,7 @@ fig = (
         ),
         width=400,
     )
-    .mark_line(
-        interpolate="monotone",
-        size=3,
-    )
+    .mark_line(interpolate="monotone", size=3)
     .encode(
         x=alt.X("year:O"),
         y=alt.Y("no_of_projects:Q", title="Number of new projects"),
@@ -710,11 +721,7 @@ text_field = "Sub Category"
 height = 500
 
 fig = (
-    alt.Chart(
-        data,
-        width=500,
-        height=height,
-    )
+    alt.Chart(data, width=500, height=height)
     .mark_circle(color=pu.NESTA_COLOURS[0], opacity=0.7, size=40)
     .encode(
         x=alt.X(
@@ -797,8 +804,7 @@ subcategory_ts
 
 # %%
 alt.Chart(subcategory_ts, width=200, height=100).mark_line(
-    size=2.5,
-    interpolate="monotone",
+    size=2.5, interpolate="monotone"
 ).encode(
     x="year:O",
     y=alt.Y("amount_total:Q", title="Funding (m GBP)"),
@@ -930,7 +936,9 @@ AltairSaver.save(
 
 # %%
 (
-    research_project_funding_.query('consolidated_category == "Reformulation"')
+    research_project_funding_.query(  # research_project_funding not defined yet...
+        'consolidated_category == "Reformulation"'
+    )
     .query('start_date >= "2019-01-01" and start_date < "2020-01-01"')
     .sort_values("amount", ascending=False)
 )[["title", "amount", "start_date"]]
