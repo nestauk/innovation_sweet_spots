@@ -54,6 +54,36 @@ LATE_DEAL_TYPES = [
 
 rejected_tags = ["pet food", "pet care", "pet", "veterinary"]
 
+EU_countries = [
+    "Austria",
+    "Belgium",
+    "Bulgaria",
+    "Croatia",
+    "Cyprus",
+    "Czech Republic",
+    "Denmark",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Hungary",
+    "Ireland",
+    "Italy",
+    "Latvia",
+    "Lithuania",
+    "Luxembourg",
+    "Malta",
+    "Netherlands",
+    "Poland",
+    "Portugal",
+    "Romania",
+    "Slovakia",
+    "Slovenia",
+    "Spain",
+    "Sweden",
+]
+
 
 def result_dict_to_dataframe(
     result_dict: dict, sort_by: str = "counts", category_name: str = "cluster"

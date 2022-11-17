@@ -16,76 +16,66 @@
 # ---
 
 # %% [markdown]
-# # Figures for the report
+# # Food tech: Venture funding trends
+# ## Step 3: Analysis and charts
+#
+# - Data has been fetched from Dealroom business intelligence database (step 1)
+# - Companies and their category assignments have been reviewed and processed (step 2)
+# - This notebook (step 3) produces charts for the report
+
+# %% [markdown]
+# ### Loading dependencies
 
 # %%
 import innovation_sweet_spots.analysis.wrangling_utils as wu
-import importlib
 import innovation_sweet_spots.analysis.analysis_utils as au
 from innovation_sweet_spots.utils import plotting_utils as pu
-import utils
 import innovation_sweet_spots.utils.text_cleaning_utils as tcu
-
-import altair as alt
-import pandas as pd
-import numpy as np
-
-COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
-
-# %%
-importlib.reload(au)
-importlib.reload(wu)
-importlib.reload(utils)
-
-# %%
 from innovation_sweet_spots import PROJECT_DIR
 from innovation_sweet_spots.utils.io import save_json, load_json
 
 output_folder = PROJECT_DIR / "outputs/foodtech/venture_capital"
 
+import altair as alt
+import pandas as pd
+import numpy as np
+import utils
+import importlib
+from collections import defaultdict
+import itertools
+
+COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
+
 # %%
-# Functionality for saving charts
+# Plotting utils
 import innovation_sweet_spots.utils.altair_save_utils as alt_save
 
 AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
+
+# Figure version name
+VERSION_NAME = "October_VC"
 
 # %%
 # Initialise a Dealroom wrangler instance
 DR = wu.DealroomWrangler()
 
-# Number of companies
+# Check the number of companies
 len(DR.company_data)
 
-# %%
-# from utils import (
-#     get_category_ids_,
-#     get_category_ids,
-#     get_category_ts,
-#     get_company_counts,
-#     get_deal_counts,
-#     get_trends,
-# )
-
 # %% [markdown]
-# ## Import reviewed data
+# ### Import reviewed data
 
 # %%
+# Taxonomy file for the VC data
 taxonomy_df = pd.read_csv(output_folder / "vc_tech_taxonomy.csv")
-
-# %%
+# Mapping from minor sub categories to major categories
 minor_to_major = load_json(output_folder / "vc_tech_taxonomy_minor_to_major.json")
-
-# %%
+# Mapping from companies to taxonomy categories
 company_to_taxonomy_df = pd.read_csv(output_folder / "vc_company_to_taxonomy.csv")
-
-# %%
 company_to_taxonomy_df.id = company_to_taxonomy_df.id.astype(str)
 
 # %%
-VERSION_NAME = "October_VC"
-
-# %%
-# # In case the countries are in the UK
+# # Uncomment if doing the analysis soley for the UK
 # uk_ids = DR.company_data.query("country == 'United Kingdom'").id.to_list()
 # company_to_taxonomy_df = company_to_taxonomy_df.query("id in @uk_ids")
 # VERSION_NAME = "October_VC_UK"
@@ -94,7 +84,7 @@ VERSION_NAME = "October_VC"
 len(company_to_taxonomy_df)
 
 # %% [markdown]
-# ## Deal types
+# ### Check the different investment deal types
 
 # %%
 for d in sorted(utils.EARLY_DEAL_TYPES):
@@ -103,15 +93,6 @@ for d in sorted(utils.EARLY_DEAL_TYPES):
 # %%
 for d in sorted(utils.LATE_DEAL_TYPES):
     print(d)
-
-# %%
-from collections import defaultdict
-import itertools
-
-# %% [markdown]
-# #### Check deal types:
-# - Early vs mature
-# - "Large" vs "small"
 
 # %%
 importlib.reload(utils)
@@ -175,26 +156,32 @@ alt
 early_vs_late_deals
 
 # %% [markdown]
-# ## Overall stats
+# ## Overall venture funding
+
+# %% [markdown]
+# ### Number of companies
 
 # %%
+# Get all unique company IDs
 foodtech_ids = [str(s) for s in list(company_to_taxonomy_df.id.unique())]
 
 # %%
+# Total number of unique companies
 len(foodtech_ids)
 
 # %%
-(
-    DR.funding_rounds.query("id in @foodtech_ids")
-    .query("`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES")
-    .query('announced_on > "2020-12-31" and announced_on < "2022-01-01"')
-    .raised_amount_gbp.sum()
+# Total number of companies, excluding agritech
+len(
+    company_to_taxonomy_df.query(
+        "level == 'Category' and Category != 'Agritech'"
+    ).id.unique()
 )
 
 # %% [markdown]
-# ### Global foodtech investment
+# ### Total foodtech investment
 
 # %%
+# Early stage deals time series
 foodtech_ts_early = (
     au.cb_get_all_timeseries(
         DR.company_data.query("id in @foodtech_ids"),
@@ -211,6 +198,7 @@ foodtech_ts_early = (
     .assign(deal_type="Early")
 )
 
+# Late stage deals time series
 foodtech_ts_late = (
     au.cb_get_all_timeseries(
         DR.company_data.query("id in @foodtech_ids"),
@@ -226,49 +214,43 @@ foodtech_ts_late = (
     .assign(year=lambda df: df.time_period.dt.year)
     .assign(deal_type="Late")
 )
-foodtech_ts = pd.concat([foodtech_ts_early, foodtech_ts_late])
+
+# Combined dataframe
+foodtech_ts = pd.concat([foodtech_ts_early, foodtech_ts_late], ignore_index=True).drop(
+    "time_period", axis=1
+)
 
 # %%
+# Chart showing both types of deals
 horizontal_label = "Year"
-values_label = "Investment (bn GBP)"
-tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
+horizontal_column = "year"
+values_label = "Investment (£ billions)"
+values_column = "raised_amount_gbp_total"
+tooltip = [
+    alt.Tooltip(f"{horizontal_column}:O", title=horizontal_label),
+    alt.Tooltip(f"{values_column}:Q", format=",.3f", title=values_column),
+]
 
-data = (
-    foodtech_ts.assign(
-        raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
-    )
-    .query("time_period < 2022")
-    .rename(
-        columns={
-            "time_period": horizontal_label,
-            "raised_amount_gbp_total": values_label,
-        }
-    )
-)
+data_early_late = foodtech_ts.assign(
+    raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
+).query("year < 2022")
 
 fig = (
     alt.Chart(
-        data.assign(
-            **{horizontal_label: pu.convert_time_period(data[horizontal_label], "Y")}
-        ),
+        data_early_late,
         width=400,
         height=200,
     )
     .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
-        alt.X(f"{horizontal_label}:O"),
+        alt.X(f"{horizontal_column}:O", title=""),
         alt.Y(
-            f"sum({values_label}):Q",
-            title="Raised investment (bn GBP)"
-            # scale=alt.Scale(domain=[0, 1200])
-            # stack='normalize',
+            f"{values_column}:Q",
+            title=values_label,
         ),
         tooltip=tooltip,
         color=alt.Color(
-            "deal_type",
-            sort=["Late", "Early"],
-            legend=None,
-            # legend=alt.Legend(title="Deal type")
+            "deal_type", sort=["Late", "Early"], legend=alt.Legend(title="Deal type")
         ),
         order=alt.Order(
             # Sort the segments of the bars by this field
@@ -281,45 +263,21 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
-horizontal_label = "Year"
-values_label = "Investment (bn GBP)"
-tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
-
-data = (
-    foodtech_ts_early.assign(
-        raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
-    )
-    .query("time_period < 2022")
-    .rename(
-        columns={
-            "time_period": horizontal_label,
-            "raised_amount_gbp_total": values_label,
-        }
-    )
-)
+# Chart with only the early stage deals
+data_early = data_early_late.query('deal_type == "Early"')
 
 fig = (
     alt.Chart(
-        data.assign(
-            **{horizontal_label: pu.convert_time_period(data[horizontal_label], "Y")}
-        ),
+        data_early,
         width=400,
         height=200,
     )
     .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
-        alt.X(f"{horizontal_label}:O", title=""),
+        alt.X(f"{horizontal_column}:O", title=""),
         alt.Y(
-            f"sum({values_label}):Q",
-            title="Investment (£ billions)"
-            # scale=alt.Scale(domain=[0, 1200])
-            # stack='normalize',
-        ),
-        tooltip=tooltip,
-        order=alt.Order(
-            # Sort the segments of the bars by this field
-            "deal_type",
-            sort="ascending",
+            f"{values_column}:Q",
+            title=values_label,
         ),
     )
 )
@@ -332,68 +290,44 @@ AltairSaver.save(
 )
 
 # %%
-au.smoothed_growth(
-    data.query("deal_type == 'Early'").drop(["Year", "deal_type"], axis=1), 2011, 2021
-)
+# Smoothed growth estimate from 2011 to 2021
+au.smoothed_growth(data_early.drop(["deal_type"], axis=1), 2011, 2021)
 
 
 # %%
+# Percentage difference between 2011 and 2021
 au.percentage_change(
-    data.query("`Year`==2011 and deal_type == 'Early'")[values_label].iloc[0],
-    data.query("`Year`==2021 and deal_type == 'Early'")[values_label].iloc[0],
+    data_early.query("`year`==2011")[values_column].iloc[0],
+    data_early.query("`year`==2021")[values_column].iloc[0],
 )
 
 # %%
+# Percentage difference between 2020 and 2021
 au.percentage_change(
-    data.query("`Year`==2020 and deal_type == 'Early'")[values_label].iloc[0],
-    data.query("`Year`==2021 and deal_type == 'Early'")[values_label].iloc[0],
+    data_early.query("`year`==2020")[values_column].iloc[0],
+    data_early.query("`year`==2021")[values_column].iloc[0],
 )
 
 # %%
-au.estimate_magnitude_growth(
-    data.query("deal_type == 'Early'").drop(["deal_type", "Year"], axis=1), 2017, 2021
-)
+# Magnitude and growth between 2017 and 2021
+au.estimate_magnitude_growth(data_early.drop(["deal_type"], axis=1), 2017, 2021)
 
 # %%
-horizontal_label = "Year"
-values_label = "Investment (bn GBP)"
-tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
-
-data = (
-    foodtech_ts_late.assign(
-        raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
-    )
-    .query("time_period < 2022")
-    .rename(
-        columns={
-            "time_period": horizontal_label,
-            "raised_amount_gbp_total": values_label,
-        }
-    )
-)
+# Chart with only the early stage deals
+data_late = data_early_late.query('deal_type == "Late"')
 
 fig = (
     alt.Chart(
-        data.assign(
-            **{horizontal_label: pu.convert_time_period(data[horizontal_label], "Y")}
-        ),
+        data_late,
         width=400,
         height=200,
     )
     .mark_bar(color=pu.NESTA_COLOURS[1])
     .encode(
-        alt.X(f"{horizontal_label}:O", title=""),
+        alt.X(f"{horizontal_column}:O", title=""),
         alt.Y(
-            f"sum({values_label}):Q",
-            title="Investment (£ billions)"
-            # scale=alt.Scale(domain=[0, 1200])
-            # stack='normalize',
-        ),
-        tooltip=tooltip,
-        order=alt.Order(
-            # Sort the segments of the bars by this field
-            "deal_type",
-            sort="ascending",
+            f"{values_column}:Q",
+            title=values_label,
         ),
     )
 )
@@ -406,41 +340,34 @@ AltairSaver.save(
 )
 
 # %%
+# Chart showing the number of both types of deals
 horizontal_label = "Year"
+horizontal_column = "year"
 values_label = "Number of rounds"
-tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.0f")]
+values_column = "no_of_rounds"
+tooltip = [
+    alt.Tooltip(f"{horizontal_column}:O", title=horizontal_label),
+    alt.Tooltip(f"{values_column}:Q", title=values_column),
+]
 
-data = (
-    foodtech_ts.assign(raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total)
-    .query("time_period < 2022")
-    .rename(
-        columns={
-            "time_period": horizontal_label,
-            "no_of_rounds": values_label,
-        }
-    )
-)
+data_early_late = foodtech_ts.query("year < 2022")
 
 fig = (
     alt.Chart(
-        data.assign(
-            **{horizontal_label: pu.convert_time_period(data[horizontal_label], "Y")}
-        ),
+        data_early_late,
         width=400,
         height=200,
     )
     .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
-        alt.X(f"{horizontal_label}:O"),
+        alt.X(f"{horizontal_column}:O", title=""),
         alt.Y(
-            f"sum({values_label}):Q",
-            title="Number of rounds",
-            # scale=alt.Scale(domain=[0, 1200])
-            # stack='normalize',
+            f"{values_column}:Q",
+            title=values_label,
         ),
         tooltip=tooltip,
         color=alt.Color(
-            "deal_type", sort=["Early", "Late"], legend=alt.Legend(title="Deal type")
+            "deal_type", sort=["Late", "Early"], legend=alt.Legend(title="Deal type")
         ),
         order=alt.Order(
             # Sort the segments of the bars by this field
@@ -452,53 +379,13 @@ fig = (
 fig = pu.configure_plots(fig)
 fig
 
-# %%
-# AltairSaver.save(fig, f"vAugust24_total_investment_rounds", filetypes=["html", "png"])
-
 # %% [markdown]
 # ### UK food tech investment
 
 # %%
-EU_countries = [
-    "Austria",
-    "Belgium",
-    "Bulgaria",
-    "Croatia",
-    "Cyprus",
-    "Czech Republic",
-    "Denmark",
-    "Estonia",
-    "Finland",
-    "France",
-    "Germany",
-    "Greece",
-    "Hungary",
-    "Ireland",
-    "Italy",
-    "Latvia",
-    "Lithuania",
-    "Luxembourg",
-    "Malta",
-    "Netherlands",
-    "Poland",
-    "Portugal",
-    "Romania",
-    "Slovakia",
-    "Slovenia",
-    "Spain",
-    "Sweden",
-]
-
-# %%
-df = DR.company_data.query("`HQ REGION` == 'Europe'")
-europe_countries = sorted(df[-df.country.isnull()].country.unique())
-
-# %%
 country = "United Kingdom"
-# country = "United States"
-df_uk = DR.company_data.query("id in @foodtech_ids").query("country == @country")
-# df_uk = DR.company_data.query("id in @foodtech_ids").query('country in @EU_countries')
-df_uk_rounds = DR.funding_rounds.query("id in @df_uk.id.to_list()")
+df_uk = DR.company_data.query("id in @foodtech_ids").query("country == @country").copy()
+df_uk_rounds = DR.funding_rounds.query("id in @df_uk.id.to_list()").copy()
 
 # %%
 foodtech_ts_early = (

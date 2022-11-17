@@ -21,66 +21,61 @@
 # %%
 from innovation_sweet_spots.getters import hansard
 import importlib
-
-importlib.reload(hansard)
-
-# %%
-import utils
-
-# %%
 from innovation_sweet_spots.analysis.query_terms import QueryTerms
 from innovation_sweet_spots.getters.preprocessed import get_hansard_corpus
-
-# %%
+import utils
 import innovation_sweet_spots.analysis.query_terms as query_terms
 
 importlib.reload(query_terms)
+importlib.reload(hansard)
+importlib.reload(utils)
 
 # %%
-# Load the updated search terms
+import altair as alt
+import pandas as pd
+
+# %%
+VERSION_NAME = "Report_Hansard"
 
 # %%
 from innovation_sweet_spots.utils.io import load_pickle
 from innovation_sweet_spots import PROJECT_DIR
 
-tech_area_terms = load_pickle(
-    PROJECT_DIR / "outputs/foodtech/interim/foodtech_search_terms_v2.pickle"
-)
-
-# %%
-# tech_area_terms['Biomedical']
-# tech_area_terms["Innovative food"]
-
-# %%
-# tech_area_terms["Supply chain"] = tech_area_terms["Supply chain"][1:]
-# tech_area_terms["Kitchen tech"] = tech_area_terms["Kitchen tech"][1:]
+# tech_area_terms = load_pickle(
+#     PROJECT_DIR / "outputs/foodtech/interim/foodtech_search_terms_v2.pickle"
+# )
 
 # %%
 from innovation_sweet_spots.getters.google_sheets import get_foodtech_search_terms
 
-df_search_terms = get_foodtech_search_terms(from_local=False)
+df_search_terms_table = get_foodtech_search_terms(from_local=False)
 
 # %%
-df_search_terms["Terms"] = df_search_terms["Terms"].apply(
-    utils.remove_space_after_comma
+terms_to_remove = [
+    "supply chain",
+    "delivery platform",
+    "meal box",
+    "smart kitchen",
+    "novel food",
+    "kitchen",
+]
+
+# %%
+df_search_terms = (
+    df_search_terms_table.query("Terms not in @terms_to_remove")
+    .assign(Terms=lambda df: df.Terms.apply(utils.remove_space_after_comma))
+    .pipe(utils.process_foodtech_terms)
 )
+
+# %%
+tech_area_terms = utils.compile_term_dict(df_search_terms)
 
 # %% [markdown]
 # # Speeches data
 
 # %%
-df_debates = hansard.get_debates()
-
-# %%
-df_debates = df_debates.drop_duplicates("id", keep="first")
-
-# %%
+df_debates = hansard.get_debates().drop_duplicates("id", keep="first")
 assert len(df_debates.id.unique()) == len(df_debates)
-
-# %%
-# df_debates[df_debates.id.duplicated(keep=False)].sort_values('id')
-
-# %%
 len(df_debates)
 
 # %% [markdown]
@@ -104,40 +99,24 @@ food_hits = Query_hansard.find_matches(
 )
 
 # %%
-# all_hits = Query_hansard.find_matches(
-#     [['']], return_only_matches=True
-# )
-
-# %%
-# len(gtr_query_results__)
-
-# %%
-# len(gtr_query_results)
-
-# %%
-# gtr_query_results__, gtr_all_hits__ = query_terms.get_document_hits(
-#     Query_hansard, tech_area_terms, tech_areas_to_check, all_hits
-# )
+innovation_hits = Query_hansard.find_matches(
+    tech_area_terms["Innovation terms"], return_only_matches=True
+)
 
 # %%
 gtr_query_results, gtr_all_hits = query_terms.get_document_hits(
     Query_hansard, tech_area_terms, tech_areas_to_check, food_hits
 )
 
-# %% [markdown]
-# 2022-09-14 09:54:24,455 - root - INFO - Found 31 documents with search terms ['food', 'reformulation']
-#
-# 2022-09-14 09:54:26,051 - root - INFO - Found 53 documents with search terms ['food', 'reformulat']
-#
-#
-# 2022-09-14 09:55:34,497 - root - INFO - Found 1471 documents with search terms ['obesity']
-#
-# 2022-09-14 09:55:35,512 - root - INFO - Found 225 documents with search terms ['overweight']
-#
-# 2022-09-14 09:55:37,061 - root - INFO - Found 301 documents with search terms ['obese']
-#
-# 2022-09-14 09:56:04,336 - root - INFO - Found 108 documents with search terms ['food environment']
-#
+# %%
+len(gtr_query_results)
+
+# %%
+gtr_query_results.query("id in @innovation_hits.id.to_list()")
+
+# %%
+importlib.reload(utils)
+from ast import literal_eval
 
 # %%
 hansard_query_export = gtr_query_results.merge(
@@ -145,22 +124,47 @@ hansard_query_export = gtr_query_results.merge(
 )
 
 # %%
-# for p in query_df_.speech:
-#     print(p)
-#     print('---')
+hansard_query_export["found_terms_list"] = hansard_query_export.found_terms.apply(
+    literal_eval
+)
 
 # %%
-# hansard_query_export.to_csv(
-#     PROJECT_DIR
-#     / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_10_10.csv",
-#     index=False,
-# )
+hansard_query_export_ = (
+    hansard_query_export.explode("found_terms_list")
+    .astype({"found_terms_list": str})
+    .merge(
+        df_search_terms[["terms_processed", "Terms"]].astype({"terms_processed": str}),
+        left_on="found_terms_list",
+        right_on="terms_processed",
+    )
+)
+
+# %%
+has_terms_in_same_sentence = [
+    utils.check_articles_for_comma_terms(row.speech, row.Terms)
+    for i, row in hansard_query_export_.iterrows()
+]
+
+# %%
+hansard_query_export_filtered = (
+    hansard_query_export_[has_terms_in_same_sentence]
+    .copy()
+    .merge(
+        df_search_terms[["Tech area", "Sub Category", "Category"]].drop_duplicates(
+            "Tech area"
+        ),
+        how="left",
+        left_on="tech_area",
+        right_on="Tech area",
+    )
+    .drop_duplicates(["id", "Sub Category"])
+)
+
+# %%
+len(hansard_query_export_filtered)
 
 # %% [markdown]
 # ## Baseline speeches
-
-# %%
-import altair as alt
 
 # %%
 hansard_baseline = df_debates.groupby("year", as_index=False).agg(
@@ -176,50 +180,40 @@ alt.Chart(hansard_baseline).mark_line().encode(x="year", y="total_counts")
 # - Time series across years of speeches per consolidated categories
 
 # %%
-import pandas as pd
+# hansard_query_export_.to_csv(
+#     PROJECT_DIR
+#     / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_10_10.csv",
+#     index=False,
+# )
 
 # %%
-# Add taxonomy to the hits
-hansard_query_export_ = hansard_query_export.merge(
-    df_search_terms[["Tech area", "Terms", "Sub Category", "Category"]].drop_duplicates(
-        "Tech area"
-    ),
-    how="left",
-    left_on="tech_area",
-    right_on="Tech area",
+(
+    hansard_query_export_filtered.astype({"year": int})
+    .query("year > 2017 and year < 2022")
+    .groupby(["Category"])
+    .agg(counts=("id", "count"))
+    .reset_index()
 )
 
 # %%
-hansard_query_export_.to_csv(
-    PROJECT_DIR
-    / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_10_10.csv",
-    index=False,
-)
-
-# %%
-hansard_query_export_ = pd.read_csv(
-    PROJECT_DIR
-    / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_10_10.csv",
-)
-
-# %%
-hansard_query_export_.groupby(["Sub Category"]).agg(
+hansard_query_export_filtered.groupby(["Category", "Sub Category"]).agg(
     counts=("id", "count")
 ).reset_index()
 
 # %%
-hansard_query_export_.groupby(["Category", "Sub Category", "Tech area"]).agg(
-    counts=("id", "count")
-).reset_index()
+hansard_query_export_filtered.groupby(
+    ["Category", "Sub Category", "Tech area", "Terms"]
+).agg(counts=("id", "count")).reset_index()
 
 # %%
 # Export data
 ts_category = (
-    hansard_query_export_.groupby(["year", "Category"])
+    hansard_query_export_filtered.groupby(["year", "Category"])
     .agg(counts=("id", "count"))
     .reset_index()
     .merge(hansard_baseline, how="left", on="year")
     .assign(fraction=lambda df: df.counts / df.total_counts)
+    .astype({"year": str})
 )
 
 # %%
@@ -243,6 +237,77 @@ fig = (
 fig
 
 # %%
+from innovation_sweet_spots.utils import plotting_utils as pu
+
+# %%
+# scale = 'log'
+scale = "linear"
+
+data = (
+    ts_category.copy()
+    .query("Category == 'Food waste'")
+    .assign(fraction=lambda df: df.fraction * 100)
+)
+
+fig = (
+    alt.Chart(data)
+    .mark_line(size=3, interpolate="monotone")
+    .encode(
+        x=alt.X("year:O"),
+        y=alt.Y("fraction:Q", sort="-x", scale=alt.Scale(type=scale)),
+        # size=alt.Size('magnitude'),
+        # color="Category",
+        tooltip=["year", "counts", "Category"],
+    )
+)
+pu.configure_plots(fig)
+
+# %%
+fig = pu.ts_smooth_incomplete(
+    data,
+    ["Food waste"],
+    "fraction",
+    "Proportion of speeches (%)",
+    "Category",
+    amount_div=1,
+)
+pu.configure_plots(fig)
+
+# %%
+data = (
+    ts_category.copy()
+    .query("Category == 'Health'")
+    .assign(fraction=lambda df: df.fraction * 100)
+)
+
+fig = pu.ts_smooth_incomplete(
+    data,
+    ["Health"],
+    "fraction",
+    "Proportion of speeches (%)",
+    "Category",
+    amount_div=1,
+)
+pu.configure_plots(fig)
+
+# %%
+data = (
+    ts_category.copy()
+    .query("Category == 'Innovative food'")
+    .assign(fraction=lambda df: df.fraction * 100)
+)
+
+fig = pu.ts_smooth_incomplete(
+    data,
+    ["Innovative food"],
+    "fraction",
+    "Proportion of speeches (%)",
+    "Category",
+    amount_div=1,
+)
+pu.configure_plots(fig)
+
+# %%
 # for i, row in hansard_query_export_.query('Category=="Innovative food"').iterrows():
 #     print(row.year, row.speech)
 #     print('/n')
@@ -261,6 +326,87 @@ fig
 # tech_area_ts = pd.concat(tech_area_ts, ignore_index=False)
 
 # %%
+ts_category.query("Category == 'Logistics'")
+
+# %%
+# ts_category_ = au.impute_empty_periods(
+#     ts_category
+#     .query("Category == @tech_area")
+#     .assign(period = lambda df: pd.to_datetime(df.year)),
+#     'period',
+#     'Y',
+#     2000,
+#     2021
+# ).assign(
+#     year = lambda df: df.period.dt.year,
+# Category = tech_area)
+
+
+# %%
+# ts_category_
+
+# %%
+from innovation_sweet_spots.analysis import analysis_utils as au
+
+categories_to_check = ts_category.Category.unique()
+variable = "fraction"
+magnitude_growth = []
+for tech_area in categories_to_check:
+    print(tech_area)
+    # Impute empty years
+    ts_category_ = au.impute_empty_periods(
+        ts_category.query("Category == @tech_area").assign(
+            period=lambda df: pd.to_datetime(df.year)
+        ),
+        "period",
+        "Y",
+        2000,
+        2021,
+    ).assign(year=lambda df: df.period.dt.year, Category=tech_area)
+
+    df = ts_category_.query("Category == @tech_area").drop(
+        ["Category", "total_counts", "counts"], axis=1
+    )[["year", variable]]
+    df_trends = au.estimate_magnitude_growth(df, 2017, 2021)
+    magnitude_growth.append(
+        [
+            df_trends.query('trend == "magnitude"').iloc[0][variable],
+            df_trends.query('trend == "growth"').iloc[0][variable],
+            tech_area,
+        ]
+    )
+magnitude_growth_df = pd.DataFrame(
+    magnitude_growth, columns=["magnitude", "growth", "tech_area"]
+).assign(
+    growth=lambda df: df.growth / 100,
+    magnitude=lambda df: df.magnitude * 100,
+)
+
+# %%
+from innovation_sweet_spots.utils import chart_trends
+
+# %%
+magnitude_growth_df
+
+# %%
+(
+    chart_trends.estimate_trend_type(
+        magnitude_growth_df, magnitude_column="magnitude", growth_column="growth"
+    ).to_csv(
+        PROJECT_DIR / f"outputs/foodtech/trends/hansard_{VERSION_NAME}_Categories.csv",
+        index=False,
+    )
+)
+
+# %%
+chart_trends
+
+# %%
+hansard_query_export_filtered.to_csv(
+    PROJECT_DIR
+    / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_11_15.csv",
+    index=False,
+)
 
 # %% [markdown]
 # ## Other checks
@@ -321,10 +467,10 @@ hits["sents"] = hits.speech.apply(
 # %%
 # df = Query_hansard.find_matches([["food", "reformulat"]], return_only_matches=True)
 df = Query_hansard.find_matches([["deliveroo"]], return_only_matches=True)
-df = Query_hansard.find_matches([["dark kitchen"]], return_only_matches=True)
-df = Query_hansard.find_matches(
-    [["alternative", "protein", "food"]], return_only_matches=True
-)
+# df = Query_hansard.find_matches([["dark kitchen"]], return_only_matches=True)
+# df = Query_hansard.find_matches(
+# [["alternative", "protein", "food"]], return_only_matches=True
+# )
 # df = Query_hansard.find_matches([["alternative", "protein"]], return_only_matches=True)
 
 # %%
@@ -334,7 +480,8 @@ df.head(1)
 df = df.merge(df_debates[["id", "speech", "speakername", "year"]], on="id")
 
 # %%
-k = 0
+k = -19
+print(df.iloc[k].year)
 print(df.iloc[k].speech)
 
 # %% [raw]

@@ -267,3 +267,40 @@ def mangitude_vs_growth_chart(
         height,
     )
     return configure_trends_chart(gradient_bg + scatter)
+
+
+def _estimate_trend_type(magnitude, growth, mid_point, tolerance=0.1):
+    # Flags to double check trend type if ambiguous
+    flag_1 = "*" if (abs(magnitude - mid_point) / mid_point) < tolerance else ""
+    flag_2 = "*" if abs(growth) < tolerance else ""
+    flags = flag_1 + flag_2
+
+    if (growth > 0) and (magnitude < mid_point):
+        return "emerging" + flags
+    if (growth > 0) and (magnitude >= mid_point):
+        return "hot" + flags
+    if (growth < 0) and (magnitude < mid_point):
+        return "dormant" + flags
+    if (growth < 0) and (magnitude >= mid_point):
+        return "stable" + flags
+    else:
+        return "n/a"
+
+
+def estimate_trend_type(
+    mangitude_vs_growth: pd.DataFrame,
+    mid_point=None,
+    magnitude_column="Magnitude",
+    growth_column="growth",
+    tolerance=0.1,
+):
+    """Suggests the trend type provided the magnitude and growth values"""
+    mid_point = mangitude_vs_growth[magnitude_column].median()
+    trend_types = []
+    for i, row in mangitude_vs_growth.iterrows():
+        trend_types.append(
+            _estimate_trend_type(
+                row[magnitude_column], row[growth_column], mid_point, tolerance
+            )
+        )
+    return mangitude_vs_growth.copy().assign(trend_type_suggestion=trend_types)

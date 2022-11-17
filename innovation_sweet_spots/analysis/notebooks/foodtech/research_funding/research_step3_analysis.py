@@ -32,7 +32,9 @@ from innovation_sweet_spots.getters.google_sheets import get_foodtech_search_ter
 from innovation_sweet_spots.getters import gtr_2022 as gtr
 from innovation_sweet_spots import PROJECT_DIR
 from innovation_sweet_spots.analysis import analysis_utils as au
+from innovation_sweet_spots.utils import chart_trends
 
+import importlib
 import pandas as pd
 
 pd.options.display.float_format = "{:.3f}".format
@@ -53,7 +55,7 @@ AltairSaver = alt_save.AltairSaver(path=figure_folder)
 
 # %%
 # Figure version name
-fig_version_name = "November_GTR_NIHR"
+fig_version_name = "Report_GTR_NIHR"
 # Folder for data tables
 tables_folder = figure_folder + "/tables"
 
@@ -82,9 +84,6 @@ gtr_projects = gtr.get_wrangled_projects()
 # Get NIHR project data
 NIHR_DIR = PROJECT_DIR / "inputs/data/nihr/nihr_summary_data.csv"
 nihr_df = pd.read_csv(NIHR_DIR)
-
-# %% [markdown]
-# # Analysis
 
 # %% [markdown]
 # ## Baseline funding growth
@@ -419,7 +418,7 @@ fig_2 = (
     )
 )
 
-final_fig = pu.configure_plots(fig_1 | fig_2)
+final_fig = pu.configure_plots(fig_1)
 
 # %%
 final_fig
@@ -432,12 +431,7 @@ AltairSaver.save(
 )
 
 # %% [markdown]
-# ## Major category trends
-
-# %%
-import utils
-
-importlib.reload(utils)
+# ### Major category trends
 
 # %%
 category_ts = utils.get_time_series(
@@ -454,20 +448,23 @@ category_amount_magnitude_growth = utils.get_magnitude_vs_growth_plot(
 )
 
 # %%
-category_amount_magnitude_growth
+chart_trends.estimate_trend_type(
+    category_amount_magnitude_growth, magnitude_column="magnitude"
+)
 
 # %%
-au.moving_average(
-    category_ts.query('Category == "Innovative food"').assign(
-        year=lambda df: df.time_period.dt.year
+(
+    chart_trends.estimate_trend_type(
+        category_amount_magnitude_growth, magnitude_column="magnitude"
+    ).to_csv(
+        PROJECT_DIR
+        / f"outputs/foodtech/trends/research_{fig_version_name}_Categories.csv",
+        index=False,
     )
 )
 
 # %% [markdown]
 # ### Major category trends chart
-
-# %%
-category_amount_magnitude_growth
 
 # %%
 domain = [
@@ -481,16 +478,7 @@ domain = [
 range_ = pu.NESTA_COLOURS[0 : len(domain)]
 
 # %%
-from innovation_sweet_spots.utils import chart_trends
-import importlib
-
-importlib.reload(chart_trends)
-
-# %%
-category_amount_magnitude_growth.magnitude.median()
-
-# %%
-category_amount_magnitude_growth.magnitude.mean()
+mid_point = category_amount_magnitude_growth.magnitude.median()
 
 # %%
 chart_trends._epsilon = 0.075
@@ -498,7 +486,7 @@ fig = chart_trends.mangitude_vs_growth_chart(
     category_amount_magnitude_growth,
     x_limit=45,
     y_limit=2.5,
-    mid_point=4.5,
+    mid_point=mid_point,
     baseline_growth=0.11417,
     values_label="Average new funding per year (£ millions)",
     text_column="Category",
@@ -517,7 +505,7 @@ fig = chart_trends.mangitude_vs_growth_chart(
     category_amount_magnitude_growth.query("Category != 'Health'"),
     x_limit=10,
     y_limit=2.5,
-    mid_point=4.5,
+    mid_point=mid_point,
     baseline_growth=0.11417,
     values_label="Average new funding per year (£ millions)",
     text_column="Category",
@@ -626,9 +614,10 @@ AltairSaver.save(
 )
 
 # %% [markdown]
-# ## Sub-category trends
+# ## Subcategory trends
 
 # %%
+# Number of projects per subcategory
 yearly_projects_minor = (
     research_project_funding.query(
         'start_date >= "2017-01-01" and start_date < "2022-01-01"'
@@ -636,9 +625,6 @@ yearly_projects_minor = (
     .assign(year=lambda df: df.start_date.apply(lambda x: x[0:4]))
     .groupby(["Sub Category"])
     .agg(counts=("project_id", "count"))
-    # .reset_index()
-    # .groupby(['Category'])
-    # .agg(counts = ('counts', 'mean'))
     .reset_index()
 )
 
@@ -650,11 +636,8 @@ categories_to_check = [
     "Alt protein",
     "Supply chain",
     "Retail",
-    # "Fermentation",
-    # "Dark kitchen",
-    # "Plant-based",
-    # "Lab meat",
-    # "Meal kits",
+    "Dark kitchen",
+    "Meal kits",
     "Kitchen tech",
     "Dietary supplements",
     "Diet",
@@ -683,6 +666,20 @@ subcategory_magnitude_growth = utils.get_magnitude_vs_growth(
 subcategory_amount_magnitude_growth = utils.get_magnitude_vs_growth_plot(
     subcategory_magnitude_growth, "amount_total"
 ).merge(taxonomy_df, how="left")
+
+# %%
+subcategory_amount_magnitude_growth
+
+# %%
+(
+    chart_trends.estimate_trend_type(
+        subcategory_amount_magnitude_growth, magnitude_column="magnitude"
+    ).to_csv(
+        PROJECT_DIR
+        / f"outputs/foodtech/trends/research_{fig_version_name}_SubCategories.csv",
+        index=False,
+    )
+)
 
 # %%
 subcategory_ts_2022 = utils.get_time_series(
@@ -715,11 +712,6 @@ height = 500
 fig = (
     alt.Chart(
         data,
-        # (
-        # data.assign(Increase=lambda df: df.growth > 0)
-        # .assign(Magnitude_log=lambda df: np.log10(df.Magnitude))
-        # .assign(Magnitude=lambda df: df.magnitude / 1e3)
-        # ),
         width=500,
         height=height,
     )
@@ -734,7 +726,6 @@ fig = (
                 labelExpr="datum.value < -1 ? null : datum.label",
                 tickCount=6,
             ),
-            #             scale=alt.Scale(domain=(-1, 37)),
         ),
         y=alt.Y(
             "Sub Category:N",
@@ -755,19 +746,6 @@ fig = (
             scale=alt.Scale(domain=domain, range=range_),
         ),
         tooltip=["growth", "magnitude", "Sub Category"],
-        # size="cluster_size:Q",
-        #         color=alt.Color(f"{colour_title}:N", legend=None),
-        # tooltip=[
-        #     alt.Tooltip("Category:N", title="Category"),
-        #     alt.Tooltip(
-        #         "Magnitude:Q",
-        #         format=",.3f",
-        #         title="Average yearly investment (billion GBP)",
-        #     ),
-        #     "Number of companies",
-        #     "Number of deals",
-        #     alt.Tooltip("growth:Q", format=",.0%", title="Growth"),
-        # ],
     )
 )
 
@@ -789,6 +767,22 @@ final_fig
 AltairSaver.save(
     final_fig, f"v{fig_version_name}_minor_growth", filetypes=["html", "svg", "png"]
 )
+
+# %%
+data.magnitude.median()
+
+# %%
+# chart_trends._epsilon = 0.075
+fig = chart_trends.mangitude_vs_growth_chart(
+    data,
+    x_limit=6,
+    y_limit=10,
+    mid_point=1.2,
+    baseline_growth=0.11417,
+    values_label="Average new funding per year (£ millions)",
+    text_column="Sub Category",
+)
+fig.interactive()
 
 # %% [markdown]
 # #### Time series plots
@@ -942,7 +936,21 @@ AltairSaver.save(
 )[["title", "amount", "start_date"]]
 
 # %% [markdown]
-# ## Check alt protein
+# ## Combining categories and subcategories
+
+# %%
+trends_combined = (
+    pd.concat([category_amount_magnitude_growth, subcategory_amount_magnitude_growth])
+    .fillna("n/a (category level)")
+    .sort_values(["Category", "Sub Category"])
+)
+trends_combined.to_csv(
+    PROJECT_DIR / f"outputs/foodtech/trends/research_{fig_version_name}_all.csv",
+    index=False,
+)
+
+# %% [markdown]
+# ## Checking alt protein
 
 # %%
 ukri_df_reviewed = google_sheets.get_foodtech_reviewed_gtr(from_local=False).query(
