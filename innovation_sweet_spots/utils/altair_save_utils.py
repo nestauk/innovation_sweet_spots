@@ -4,12 +4,10 @@ innovation_sweet_spots.utils.altair_save_utils
 Functions to save altair charts
 """
 from altair_saver import save
-from selenium import webdriver
-from webdriver_manager.chrome import ChromeDriverManager
+import chromedriver_autoinstaller
 import os
 from typing import Iterator
 from innovation_sweet_spots import PROJECT_DIR
-import logging
 
 FIGURE_PATH = f"{PROJECT_DIR}/outputs/figures"
 DEFAULT_FILETYPES = ["png", "svg", "html"]
@@ -17,8 +15,7 @@ DEFAULT_FILETYPES = ["png", "svg", "html"]
 
 def google_chrome_driver_setup():
     """Set up the driver to save figures"""
-    driver = webdriver.Chrome(ChromeDriverManager().install())
-    return driver
+    chromedriver_autoinstaller.install()
 
 
 def create_paths(
