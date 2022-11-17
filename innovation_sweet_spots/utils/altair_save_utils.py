@@ -8,14 +8,16 @@ import chromedriver_autoinstaller
 import os
 from typing import Iterator
 from innovation_sweet_spots import PROJECT_DIR
+from selenium import webdriver
 
 FIGURE_PATH = f"{PROJECT_DIR}/outputs/figures"
 DEFAULT_FILETYPES = ["png", "svg", "html"]
 
 
 def google_chrome_driver_setup():
-    """Set up the driver to save figures"""
+    """Set up and return the driver to save figures"""
     chromedriver_autoinstaller.install()
+    return webdriver.Chrome()
 
 
 def create_paths(
