@@ -963,12 +963,12 @@ trends_combined.to_csv(
 # ## Checking alt protein
 
 # %%
-ukri_df_reviewed = google_sheets.get_foodtech_reviewed_gtr(from_local=False).query(
+ukri_df_reviewed = google_sheets.get_foodtech_reviewed_gtr(from_local=True).query(
     "tech_area_checked!='-'"
 )
 
 # %%
-# Between 2017 and 2021
+# See number of projects and funding between 2017 and 2022 for subcategories Alt protein, Plant-based, Fermentation, Lab meat
 cats = ["Alt protein", "Plant-based", "Fermentation", "Lab meat"]
 (
     ukri_df_reviewed[["id", "tech_area_checked"]]
@@ -982,7 +982,7 @@ cats = ["Alt protein", "Plant-based", "Fermentation", "Lab meat"]
 )
 
 # %%
-# In 2022 so far
+# See number of projects and funding since 2022 for subcategories Alt protein, Plant-based, Fermentation, Lab meat
 cats = ["Alt protein", "Plant-based", "Fermentation", "Lab meat"]
 (
     ukri_df_reviewed[["id", "tech_area_checked"]]
@@ -996,7 +996,7 @@ cats = ["Alt protein", "Plant-based", "Fermentation", "Lab meat"]
 )
 
 # %%
-# Since 2017 in total
+# See number of projects and funding since 2017 for subcategories Alt protein, Plant-based, Fermentation, Lab meat
 cats = ["Alt protein", "Plant-based", "Fermentation", "Lab meat"]
 (
     ukri_df_reviewed[["id", "tech_area_checked"]]
@@ -1010,7 +1010,7 @@ cats = ["Alt protein", "Plant-based", "Fermentation", "Lab meat"]
 )
 
 # %%
-# Projects
+# Find projects since 2017 for subcategories Alt protein, Plant-based, Fermentation, Lab meat
 cats = ["Alt protein", "Plant-based", "Fermentation", "Lab meat"]
 df = (
     ukri_df_reviewed[["id", "tech_area_checked"]]
@@ -1021,10 +1021,11 @@ df = (
 )
 
 # %%
+# View Plant-based projects
 df.query("tech_area_checked == 'Plant-based'").sort_values("fund_start")
 
 # %%
-# Since 2017 in total
+# See number of projects and funding since 2017 for subcategories Reformulation, Alt protein, Innovative food
 cats = ["Reformulation", "Alt protein", "Innovative food (other)"]
 (
     research_project_funding.query("start_date >= '2017-01-01'")
@@ -1036,7 +1037,7 @@ cats = ["Reformulation", "Alt protein", "Innovative food (other)"]
 )
 
 # %%
-# Since 2017 in total
+# See number of projects and funding since 2022 for subcategories Reformulation, Alt protein, Innovative food
 cats = ["Reformulation", "Alt protein", "Innovative food (other)"]
 (
     research_project_funding.query("start_date >= '2022-01-01'")
@@ -1047,6 +1048,7 @@ cats = ["Reformulation", "Alt protein", "Innovative food (other)"]
 )
 
 # %%
+# View most recent Reformulation projects
 research_project_funding.query("`Sub Category` == 'Reformulation'").sort_values(
     "start_date"
 ).tail(10)
