@@ -32,8 +32,6 @@ from innovation_sweet_spots.getters import gtr_2022 as gtr
 from innovation_sweet_spots import PROJECT_DIR
 from innovation_sweet_spots.analysis import analysis_utils as au
 from innovation_sweet_spots.utils import chart_trends
-
-import importlib
 import pandas as pd
 
 pd.options.display.float_format = "{:.3f}".format
