@@ -28,7 +28,6 @@
 
 # %%
 from innovation_sweet_spots.getters import google_sheets
-from innovation_sweet_spots.getters.google_sheets import get_foodtech_search_terms
 from innovation_sweet_spots.getters import gtr_2022 as gtr
 from innovation_sweet_spots import PROJECT_DIR
 from innovation_sweet_spots.analysis import analysis_utils as au
@@ -152,7 +151,7 @@ df_reference
 
 # %%
 # Estimate the magnitude and growth of baseline funding
-au.estimate_magnitude_growth(
+baseline = au.estimate_magnitude_growth(
     (
         df_reference.assign(year=lambda df: df.time_period.dt.year).drop(
             "time_period", axis=1
@@ -161,6 +160,14 @@ au.estimate_magnitude_growth(
     2017,
     2021,
 )
+baseline
+
+# %%
+# Calculate baseline growth percentage to be used later
+baseline_growth_decimal = (
+    float(baseline.query("trend == 'growth'")["amount_total"]) / 100
+)
+baseline_growth_decimal
 
 
 # %% [markdown]
@@ -468,9 +475,6 @@ chart_trends.estimate_trend_type(
 )
 
 # %%
-category_amount_magnitude_growth
-
-# %%
 au.moving_average(
     category_ts.query('Category == "Innovative food"').assign(
         year=lambda df: df.time_period.dt.year
@@ -481,27 +485,52 @@ au.moving_average(
 # ### Major category trends chart
 
 # %%
+<<<<<<< HEAD
+=======
+category_amount_magnitude_growth
+
+# %%
+# In domain list, health is last item in the list so that
+# if domain_excl_health is used instead of domain
+# the colours will remain the same.
+>>>>>>> 0539d70 (Further changes to notebook step3)
 domain = [
-    "Health",
     "Innovative food",
     "Logistics",
     "Restaurants and retail",
     "Cooking and kitchen",
     "Food waste",
+    "Health",
 ]
 range_ = pu.NESTA_COLOURS[0 : len(domain)]
 
+<<<<<<< HEAD
 # %%
 mid_point = category_amount_magnitude_growth.magnitude.median()
 
 # %%
 chart_trends._epsilon = 0.075
+=======
+domain_excl_health = domain[:-1]
+range_excl_health = pu.NESTA_COLOURS[0 : len(domain_excl_health)]
+
+# %%
+baseline_growth_decimal
+
+# %%
+# Plot major categories magnitude vs. growth chart
+>>>>>>> 0539d70 (Further changes to notebook step3)
 fig = chart_trends.mangitude_vs_growth_chart(
     category_amount_magnitude_growth,
     x_limit=45,
     y_limit=2.5,
+<<<<<<< HEAD
     mid_point=mid_point,
     baseline_growth=0.11417,
+=======
+    mid_point=4.5,
+    baseline_growth=baseline_growth_decimal,
+>>>>>>> 0539d70 (Further changes to notebook step3)
     values_label="Average new funding per year (£ millions)",
     text_column="Category",
 )
@@ -515,12 +544,18 @@ AltairSaver.save(
 )
 
 # %%
+# Plot major categories magnitude vs. growth chart without Health category
 fig = chart_trends.mangitude_vs_growth_chart(
     category_amount_magnitude_growth.query("Category != 'Health'"),
     x_limit=10,
     y_limit=2.5,
+<<<<<<< HEAD
     mid_point=mid_point,
     baseline_growth=0.11417,
+=======
+    mid_point=4.5,
+    baseline_growth=baseline_growth_decimal,
+>>>>>>> 0539d70 (Further changes to notebook step3)
     values_label="Average new funding per year (£ millions)",
     text_column="Category",
 )
@@ -537,9 +572,7 @@ AltairSaver.save(
 # ### Time series
 
 # %%
-category_ts.head(1)
-
-# %%
+# Plot major projects timeseries without health
 fig = (
     alt.Chart(
         (
@@ -553,10 +586,12 @@ fig = (
     .encode(
         x=alt.X("year:O"),
         y=alt.Y("no_of_projects:Q", title="Number of new projects"),
-        color=alt.Color("Category:N", scale=alt.Scale(domain=domain, range=range_)),
+        color=alt.Color(
+            "Category:N",
+            scale=alt.Scale(domain=domain_excl_health, range=range_excl_health),
+        ),
     )
 )
-# fig
 fig = pu.configure_plots(fig)
 fig
 
@@ -570,7 +605,11 @@ AltairSaver.save(
 
 # %%
 def chart_funding_ts(
-    category_ts, taxonomy_level="Category", excluded_categories=["Health"]
+    category_ts,
+    domain,
+    colours,
+    taxonomy_level="Category",
+    excluded_categories=["Health"],
 ):
     fig1 = (
         alt.Chart(
@@ -595,7 +634,7 @@ def chart_funding_ts(
             color=alt.Color(
                 f"{taxonomy_level}:N",
                 title="Category",
-                scale=alt.Scale(domain=domain, range=range_),
+                scale=alt.Scale(domain=domain, range=colours),
                 # legend=alt.Legend(orient="top", columns=2),
             ),
             tooltip=["year", "amount_total"],
@@ -605,7 +644,10 @@ def chart_funding_ts(
 
 
 # %%
-fig_final = chart_funding_ts(category_ts)
+# Plot major funding timeseries without health
+fig_final = chart_funding_ts(
+    category_ts, domain=domain_excl_health, colours=range_excl_health
+)
 fig_final
 
 # %%
@@ -616,7 +658,10 @@ AltairSaver.save(
 )
 
 # %%
-fig_final = chart_funding_ts(category_ts, excluded_categories=[])
+# Plot major funding timeseries with health
+fig_final = chart_funding_ts(
+    category_ts, excluded_categories=[], domain=domain, colours=range_
+)
 fig_final
 
 # %%
