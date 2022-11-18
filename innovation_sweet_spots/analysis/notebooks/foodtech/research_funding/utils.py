@@ -71,4 +71,4 @@ def get_magnitude_vs_growth(
 
 def get_magnitude_vs_growth_plot(magnitude_growth, column="amount_total"):
     """Process the data for charts"""
-    return magnitude_growth.query(f"index==@column")
+    return magnitude_growth.query("index==@column")

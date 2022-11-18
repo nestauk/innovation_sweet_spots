@@ -137,6 +137,9 @@ for i, row in ukri_df_ref.merge(nihr_df_ref, on="title").iterrows():
 funding_ref = funding_ref.query("project_id not in @project_ids_to_remove")
 
 # %%
+funding_ref
+
+# %%
 # Calculate reference time series
 df_reference = au.gtr_get_all_timeseries_period(
     funding_ref,  # .query("funder == 'nihr'"),
@@ -485,15 +488,12 @@ au.moving_average(
 # ### Major category trends chart
 
 # %%
-<<<<<<< HEAD
-=======
 category_amount_magnitude_growth
 
 # %%
 # In domain list, health is last item in the list so that
 # if domain_excl_health is used instead of domain
 # the colours will remain the same.
->>>>>>> 0539d70 (Further changes to notebook step3)
 domain = [
     "Innovative food",
     "Logistics",
@@ -504,13 +504,11 @@ domain = [
 ]
 range_ = pu.NESTA_COLOURS[0 : len(domain)]
 
-<<<<<<< HEAD
 # %%
 mid_point = category_amount_magnitude_growth.magnitude.median()
 
 # %%
 chart_trends._epsilon = 0.075
-=======
 domain_excl_health = domain[:-1]
 range_excl_health = pu.NESTA_COLOURS[0 : len(domain_excl_health)]
 
@@ -519,18 +517,12 @@ baseline_growth_decimal
 
 # %%
 # Plot major categories magnitude vs. growth chart
->>>>>>> 0539d70 (Further changes to notebook step3)
 fig = chart_trends.mangitude_vs_growth_chart(
     category_amount_magnitude_growth,
     x_limit=45,
     y_limit=2.5,
-<<<<<<< HEAD
     mid_point=mid_point,
-    baseline_growth=0.11417,
-=======
-    mid_point=4.5,
     baseline_growth=baseline_growth_decimal,
->>>>>>> 0539d70 (Further changes to notebook step3)
     values_label="Average new funding per year (£ millions)",
     text_column="Category",
 )
@@ -549,13 +541,8 @@ fig = chart_trends.mangitude_vs_growth_chart(
     category_amount_magnitude_growth.query("Category != 'Health'"),
     x_limit=10,
     y_limit=2.5,
-<<<<<<< HEAD
     mid_point=mid_point,
-    baseline_growth=0.11417,
-=======
-    mid_point=4.5,
     baseline_growth=baseline_growth_decimal,
->>>>>>> 0539d70 (Further changes to notebook step3)
     values_label="Average new funding per year (£ millions)",
     text_column="Category",
 )
@@ -673,7 +660,7 @@ AltairSaver.save(
 # ## Subcategory trends
 
 # %%
-# Number of projects per subcategory
+# Calculate number of projects for each sub category
 yearly_projects_minor = (
     research_project_funding.query(
         'start_date >= "2017-01-01" and start_date < "2022-01-01"'
@@ -684,7 +671,7 @@ yearly_projects_minor = (
     .reset_index()
 )
 
-yearly_projects_minor
+yearly_projects_minor.sort_values("counts", ascending=False)
 
 # %%
 categories_to_check = [
@@ -707,18 +694,26 @@ categories_to_check = [
 ]
 
 # %%
-importlib.reload(utils)
+subcategory_magnitude_growth
 
 # %%
+subcategory_amount_magnitude_growth
+
+# %%
+# Calculate research funding timeseries data for the subcategories
 subcategory_ts = utils.get_time_series(
     research_project_funding,
     categories_to_check,
     taxonomy_level="Sub Category",
     id_column="project_id",
 ).merge(taxonomy_df, how="left")
+
+# Calculate research funding magnitude and growth for the subcategories
 subcategory_magnitude_growth = utils.get_magnitude_vs_growth(
     subcategory_ts, categories_to_check, taxonomy_level="Sub Category", verbose=True
 ).merge(taxonomy_df, how="left")
+
+# Select research funding amounts magnitude and growth for the subcategories
 subcategory_amount_magnitude_growth = utils.get_magnitude_vs_growth_plot(
     subcategory_magnitude_growth, "amount_total"
 ).merge(taxonomy_df, how="left")
@@ -748,7 +743,7 @@ subcategory_ts_2022 = utils.get_time_series(
 
 
 # %% [markdown]
-# #### Growth plots
+# ## Growth plots
 
 # %%
 major_sort_order = category_amount_magnitude_growth.sort_values("growth")[
@@ -761,6 +756,7 @@ data = data.sort_values(["Category", "growth"], ascending=False)
 data = data.merge(yearly_projects_minor, how="left")
 
 # %%
+# Plot subcategory growth
 colour_field = "Category"
 text_field = "Sub Category"
 height = 500
@@ -779,18 +775,12 @@ fig = (
                 tickCount=6,
             ),
         ),
-        y=alt.Y(
-            "Sub Category:N",
-            sort=data["Sub Category"].to_list(),
-            # axis=alt.Axis(title="", labels=False),
-            axis=None,
-        ),
+        y=alt.Y("Sub Category:N", sort=data["Sub Category"].to_list(), axis=None),
         size=alt.Size(
             "magnitude",
             title="Avg yearly funding (£ million)",
             legend=alt.Legend(orient="left"),
             scale=alt.Scale(range=[50, 500]),
-            # scale=alt.Scale(domain=[0.1, 4]),
         ),
         color=alt.Color(
             colour_field,
@@ -813,7 +803,6 @@ text = (
 
 final_fig = pu.configure_titles(pu.configure_axes((fig + text)), "", "")
 final_fig
-# fig
 
 # %%
 AltairSaver.save(
@@ -837,17 +826,10 @@ fig = chart_trends.mangitude_vs_growth_chart(
 fig.interactive()
 
 # %% [markdown]
-# #### Time series plots
+# ## Time series plots
 
 # %%
-# tech_area_ts_minor = tech_area_ts.copy().assign(
-#     amount_total=lambda df: df.amount_total / 1e3
-# )
-
-# %%
-subcategory_ts
-
-# %%
+# Plot funding over time for each sub category
 alt.Chart(subcategory_ts, width=200, height=100).mark_line(
     size=2.5, interpolate="monotone"
 ).encode(
@@ -861,25 +843,7 @@ alt.Chart(subcategory_ts, width=200, height=100).mark_line(
 )
 
 # %%
-importlib.reload(pu)
-
-# %%
-subcategory_ts_2022.head(1)
-
-# %%
-# fig = pu.ts_funding_projects(subcategory_ts, ['Delivery', 'Supply chain'], height=100)
-fig = pu.configure_plots(
-    pu.ts_smooth(
-        subcategory_ts_2022,
-        ["Delivery", "Supply chain"],
-        "amount_total",
-        "Funding (£ millions)",
-        height=125,
-    )
-)
-fig
-
-# %%
+# Plot funding for subcategories Delivery and Supply chain
 importlib.reload(pu)
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(
@@ -900,6 +864,7 @@ AltairSaver.save(
 )
 
 # %%
+# Plot funding for subcategories Packaging and Waste reduction
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(
         subcategory_ts_2022,
@@ -920,6 +885,7 @@ AltairSaver.save(
 )
 
 # %%
+# Plot funding for subcategories Alt protein, Innovative food and Reformulation
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(
         subcategory_ts_2022,
@@ -940,6 +906,7 @@ AltairSaver.save(
 )
 
 # %%
+# Plot funding for subcategories Restaurants and Retail
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(
         subcategory_ts_2022,
@@ -960,6 +927,7 @@ AltairSaver.save(
 )
 
 # %%
+# Plot funding for subcategory Kitchen tech
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(
         subcategory_ts_2022,
@@ -978,15 +946,6 @@ AltairSaver.save(
     f"v{fig_version_name}_ts_subcategory_Kitchen_tech",
     filetypes=["html", "svg", "png"],
 )
-
-# %%
-(
-    research_project_funding_.query(  # research_project_funding not defined yet...
-        'consolidated_category == "Reformulation"'
-    )
-    .query('start_date >= "2019-01-01" and start_date < "2020-01-01"')
-    .sort_values("amount", ascending=False)
-)[["title", "amount", "start_date"]]
 
 # %% [markdown]
 # ## Combining categories and subcategories
