@@ -5,7 +5,8 @@ used for predicting future investment sucess for companies.
 Run the following command in the terminal to see the options for creating the dataset:
 python innovation_sweet_spots/pipeline/pilot/investment_predictions/create_dataset/create_dataset.py --help
 
-On an M1 macbook it takes ~14 mins to run on the full dataset and ~1 mins 30 secs to run in test mode.
+On an M1 macbook it takes ~14 mins to run on the uk only dataset and ~2 days for the worldwide data.
+There is a test mode which on a small subset of the data that executes in a few mins.
 """
 import typer
 from innovation_sweet_spots import PROJECT_DIR
