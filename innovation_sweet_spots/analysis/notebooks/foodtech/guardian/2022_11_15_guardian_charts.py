@@ -76,6 +76,14 @@ df_id_to_term = (
 )
 
 # %%
+df_counts = (
+    df_id_to_term.query("year > 2016 and year < 2022")
+    .groupby(["Category", "Sub Category"], as_index=False)
+    .agg(counts=("id", "count"))
+)
+df_counts
+
+# %%
 # Note:Empty rows in for 'tech area' indicate manually added articles
 df_counts = (
     df_id_to_term.query("year > 2016 and year < 2022")
@@ -305,9 +313,9 @@ fig
 )
 
 # %%
-AltairSaver.save(
-    fig_final, f"Guardian_articles_magnitude_growth", filetypes=["html", "svg", "png"]
-)
+# AltairSaver.save(
+#     fig, f"Guardian_articles_magnitude_growth", filetypes=["html", "svg", "png"]
+# )
 
 # %%
 ts_subcategory.head(1)
@@ -346,6 +354,37 @@ AltairSaver.save(
 )
 
 # %%
+cats = [
+    "Delivery",
+    "Meal kits",
+    "Supply chain",
+    "Personalised nutrition",
+    "Restaurants",
+    "Retail",
+]
+ts_df = ts_subcategory.query("`Sub Category` in @cats")
+
+# scale = 'log'
+scale = "linear"
+
+fig = (
+    alt.Chart(ts_df)
+    .mark_line(size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3])
+    .encode(
+        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
+        y=alt.Y(
+            "fraction:Q", title="Proportion of articles", axis=alt.Axis(format=".2%")
+        ),
+        color=alt.Color("Sub Category:N"),
+        # size=alt.Size('magnitude'),
+        # color='Category',
+        tooltip=["year", "counts"],
+    )
+)
+fig = pu.configure_plots(fig)
+fig
+
+# %%
 cats = ["Delivery"]
 ts_df = ts_subcategory.query("`Sub Category` in @cats")
 
@@ -363,7 +402,7 @@ fig = (
         color=alt.Color("Sub Category:N"),
         # size=alt.Size('magnitude'),
         # color='Category',
-        # tooltip=["year", "counts", "query", alt.Tooltip("fraction:Q", format="%")],
+        tooltip=["year", "counts"],
     )
 )
 fig = pu.configure_plots(fig)
@@ -399,7 +438,7 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
-cats = ["Kitchen tech"]
+cats = ["Kitchen tech", "Dark kitchen"]
 ts_df = ts_subcategory.query("`Sub Category` in @cats")
 
 # %%
@@ -630,16 +669,27 @@ trends_combined.to_csv(
 # magnitude_growth_df.sort_values('magnitude')
 
 # %%
-health_ids = set(
-    df_id_to_term[
-        df_id_to_term.Terms.isin(["obesity", "obese", "overweight"])
-    ].id.to_list()
-)
-not_health_ids = set(
-    df_id_to_term[
-        df_id_to_term.Category.isin(["obesity", "obese", "overweight"]) == False
-    ].id.to_list()
-)
+df = df_id_to_term.query("year > 2016 and year < 2022")
+health_ids = set(df[df.Terms.isin(["obesity", "obese", "overweight"])].id.to_list())
+not_health_ids = set(df[df.Category.isin(["Health"]) == False].id.to_list())
+
+# %%
+len(health_ids)
+
+# %%
+len(not_health_ids)
+
+# %%
+len(not_health_ids.intersection(health_ids)) / len(not_health_ids)
+
+# %%
+len(not_health_ids.intersection(health_ids)) / len(health_ids)
+
+# %%
+len(not_health_ids.intersection(health_ids))
+
+# %%
+len(not_health_ids)
 
 # %%
 len(not_health_ids.intersection(health_ids)) / len(not_health_ids)

@@ -16,7 +16,8 @@
 # ---
 
 # %% [markdown]
-# # Analysing hansard debates
+# # Food tech: Hansard parliamentary debate trends
+#
 
 # %%
 from innovation_sweet_spots.getters import hansard
@@ -25,32 +26,28 @@ from innovation_sweet_spots.analysis.query_terms import QueryTerms
 from innovation_sweet_spots.getters.preprocessed import get_hansard_corpus
 import utils
 import innovation_sweet_spots.analysis.query_terms as query_terms
-
-importlib.reload(query_terms)
-importlib.reload(hansard)
-importlib.reload(utils)
-
-# %%
 import altair as alt
 import pandas as pd
-
-# %%
-VERSION_NAME = "Report_Hansard"
-
-# %%
 from innovation_sweet_spots.utils.io import load_pickle
 from innovation_sweet_spots import PROJECT_DIR
-
-# tech_area_terms = load_pickle(
-#     PROJECT_DIR / "outputs/foodtech/interim/foodtech_search_terms_v2.pickle"
-# )
-
-# %%
-from innovation_sweet_spots.getters.google_sheets import get_foodtech_search_terms
-
-df_search_terms_table = get_foodtech_search_terms(from_local=False)
+from ast import literal_eval
+from innovation_sweet_spots.utils import plotting_utils as pu
+from innovation_sweet_spots.analysis import analysis_utils as au
+from innovation_sweet_spots.utils import chart_trends
 
 # %%
+# Plotting utils
+import innovation_sweet_spots.utils.altair_save_utils as alt_save
+
+AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
+
+VERSION_NAME = "Report_Hansard"
+
+# %% [markdown]
+# ## Prepare search terms
+
+# %%
+# Noisy terms (based on checking Guardian articles)
 terms_to_remove = [
     "supply chain",
     "delivery platform",
@@ -61,6 +58,12 @@ terms_to_remove = [
 ]
 
 # %%
+from innovation_sweet_spots.getters.google_sheets import get_foodtech_search_terms
+
+df_search_terms_table = get_foodtech_search_terms(from_local=False)
+
+# %%
+# Process search terms (lemmatise etc) for querying the Hansard corpus
 df_search_terms = (
     df_search_terms_table.query("Terms not in @terms_to_remove")
     .assign(Terms=lambda df: df.Terms.apply(utils.remove_space_after_comma))
@@ -68,18 +71,14 @@ df_search_terms = (
 )
 
 # %%
-df_search_terms
-
-# %%
+# Search term dictionary
 tech_area_terms = utils.compile_term_dict(df_search_terms)
 
-# %%
-tech_area_terms
-
 # %% [markdown]
-# # Speeches data
+# ## Load Hansard speeches data
 
 # %%
+# Dataframe with parliamentary debates
 df_debates = hansard.get_debates().drop_duplicates("id", keep="first")
 assert len(df_debates.id.unique()) == len(df_debates)
 len(df_debates)
@@ -88,72 +87,78 @@ len(df_debates)
 # # Keyword search
 
 # %%
+# Remove the last there tech areas (food terms, innovation terms and food technology terms)
 tech_areas_to_check = list(tech_area_terms.keys())[:-3]
 
 # %%
+# Double check the aras
 tech_areas_to_check
 
 # %%
+# Preprocessed Hansard corpus for keyword search (same data as in the table, but lemmatised etc)
 hansard_corpus = get_hansard_corpus()
-
-# %%
+# Use query util for keyword search
 Query_hansard = QueryTerms(corpus=hansard_corpus)
 
 # %%
+## Get speeches with food terms
 food_hits = Query_hansard.find_matches(
     tech_area_terms["Food terms"], return_only_matches=True
 )
 
 # %%
+## Get speeches with innovation terms
 innovation_hits = Query_hansard.find_matches(
     tech_area_terms["Innovation terms"], return_only_matches=True
 )
 
 # %%
+## Get speeches with technology terms
 gtr_query_results, gtr_all_hits = query_terms.get_document_hits(
     Query_hansard, tech_area_terms, tech_areas_to_check, food_hits
 )
 
 # %%
+# Check how many hits we found
 len(gtr_query_results)
 
-# %%
-gtr_query_results.query("id in @innovation_hits.id.to_list()")
+# %% [markdown]
+# ### Additional filtering: Check that terms are in the same sentence
+#
+# A check for cases where the search term is a combiation of multiple terms, eg "food, reformulation".
+# This will require that both "food" and "reformulation" are mentioned in the same sentnece.
 
 # %%
-importlib.reload(utils)
-from ast import literal_eval
-
-# %%
-hansard_query_export = gtr_query_results.merge(
+# Add debate speech texts to the query results
+hansard_query_results = gtr_query_results.merge(
     df_debates[["id", "speech", "speakername", "year"]], on="id"
 )
 
-# %%
-hansard_query_export["found_terms_list"] = hansard_query_export.found_terms.apply(
+# Create a column with found terms
+hansard_query_results["found_terms_list"] = hansard_query_results.found_terms.apply(
     literal_eval
 )
-
-# %%
-hansard_query_export_ = (
-    hansard_query_export.explode("found_terms_list")
-    .astype({"found_terms_list": str})
+# Add non-processed search terms to the table (we'll use those to search in the full debate text)
+hansard_query_results_ = (
+    # Create a row for each search term
+    hansard_query_results.explode("found_terms_list").astype({"found_terms_list": str})
+    # Add the non-processed version of the term to the table
     .merge(
         df_search_terms[["terms_processed", "Terms"]].astype({"terms_processed": str}),
         left_on="found_terms_list",
         right_on="terms_processed",
     )
 )
-
-# %%
+# Check that the non-processed terms are in the same sentence
 has_terms_in_same_sentence = [
     utils.check_articles_for_comma_terms(row.speech, row.Terms)
-    for i, row in hansard_query_export_.iterrows()
+    for i, row in hansard_query_results_.iterrows()
 ]
 
 # %%
-hansard_query_export_filtered = (
-    hansard_query_export_[has_terms_in_same_sentence]
+# Filter out the hits where terms are not in the same sentence
+hansard_query_results_filtered = (
+    hansard_query_results_[has_terms_in_same_sentence]
     .copy()
     .merge(
         df_search_terms[["Tech area", "Sub Category", "Category"]].drop_duplicates(
@@ -167,10 +172,14 @@ hansard_query_export_filtered = (
 )
 
 # %%
-len(hansard_query_export_filtered)
+len(hansard_query_results_filtered)
+# Should at this point export thist table and start a new notebook
 
 # %% [markdown]
-# ## Baseline speeches
+# # Analysis
+
+# %% [markdown]
+# ## Baseline number of speeches
 
 # %%
 hansard_baseline = df_debates.groupby("year", as_index=False).agg(
@@ -181,20 +190,11 @@ hansard_baseline = df_debates.groupby("year", as_index=False).agg(
 alt.Chart(hansard_baseline).mark_line().encode(x="year", y="total_counts")
 
 # %% [markdown]
-# ## Trends
-# - Time series across years of speeches per main category
-# - Time series across years of speeches per consolidated categories
-
-# %%
-# hansard_query_export_.to_csv(
-#     PROJECT_DIR
-#     / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_10_10.csv",
-#     index=False,
-# )
+# ## Check number of mentions per category
 
 # %%
 (
-    hansard_query_export_filtered.astype({"year": int})
+    hansard_query_results_filtered.astype({"year": int})
     .query("year >= 2017 and year < 2022")
     .groupby(["Category"])
     .agg(counts=("id", "count"))
@@ -202,22 +202,21 @@ alt.Chart(hansard_baseline).mark_line().encode(x="year", y="total_counts")
 )
 
 # %%
-83 / 5
-
-# %%
-hansard_query_export_filtered.astype({"year": int}).query(
+hansard_query_results_filtered.astype({"year": int}).query(
     "year >= 2017 and year < 2022"
 ).groupby(["Category", "Sub Category"]).agg(counts=("id", "count")).reset_index()
 
 # %%
-hansard_query_export_filtered.groupby(
+hansard_query_results_filtered.groupby(
     ["Category", "Sub Category", "Tech area", "Terms"]
 ).agg(counts=("id", "count")).reset_index()
 
+# %% [markdown]
+# ## Time series charts
+
 # %%
-# Export data
 ts_category = (
-    hansard_query_export_filtered.groupby(["year", "Category"])
+    hansard_query_results_filtered.groupby(["year", "Category"])
     .agg(counts=("id", "count"))
     .reset_index()
     .merge(hansard_baseline, how="left", on="year")
@@ -246,32 +245,12 @@ fig = (
 fig
 
 # %%
-from innovation_sweet_spots.utils import plotting_utils as pu
-
-# %%
-# scale = 'log'
-scale = "linear"
-
 data = (
     ts_category.copy()
     .query("Category == 'Food waste'")
     .assign(fraction=lambda df: df.fraction * 100)
 )
 
-fig = (
-    alt.Chart(data)
-    .mark_line(size=3, interpolate="monotone")
-    .encode(
-        x=alt.X("year:O"),
-        y=alt.Y("fraction:Q", sort="-x", scale=alt.Scale(type=scale)),
-        # size=alt.Size('magnitude'),
-        # color="Category",
-        tooltip=["year", "counts", "Category"],
-    )
-)
-pu.configure_plots(fig)
-
-# %%
 fig = pu.ts_smooth_incomplete(
     data,
     ["Food waste"],
@@ -317,46 +296,12 @@ fig = pu.ts_smooth_incomplete(
 pu.configure_plots(fig)
 
 # %%
-# for i, row in hansard_query_export_.query('Category=="Innovative food"').iterrows():
-#     print(row.year, row.speech)
-#     print('/n')
-
-# %%
-# # build a time series
-# # impute empty years
-
-# category_ts = []
-# for tech_area in categories_to_check:
-#     df = research_project_funding.query("Category == @tech_area")
-#     df_ts = au.gtr_get_all_timeseries_period(
-#         df, period="year", min_year=2010, max_year=2022, start_date_column="start_date"
-#     ).assign(tech_area=tech_area)
-#     tech_area_ts.append(df_ts)
-# tech_area_ts = pd.concat(tech_area_ts, ignore_index=False)
-
-# %%
 ts_category.query("Category == 'Logistics'")
 
-# %%
-# ts_category_ = au.impute_empty_periods(
-#     ts_category
-#     .query("Category == @tech_area")
-#     .assign(period = lambda df: pd.to_datetime(df.year)),
-#     'period',
-#     'Y',
-#     2000,
-#     2021
-# ).assign(
-#     year = lambda df: df.period.dt.year,
-# Category = tech_area)
-
+# %% [markdown]
+# ## Trends analysis
 
 # %%
-# ts_category_
-
-# %%
-from innovation_sweet_spots.analysis import analysis_utils as au
-
 categories_to_check = ts_category.Category.unique()
 variable = "fraction"
 magnitude_growth = []
@@ -392,12 +337,15 @@ magnitude_growth_df = pd.DataFrame(
 )
 
 # %%
-from innovation_sweet_spots.utils import chart_trends
+chart_trends.estimate_trend_type(
+    magnitude_growth_df, magnitude_column="magnitude", growth_column="growth"
+)
+
+# %% [markdown]
+# ### Export results
 
 # %%
-magnitude_growth_df
-
-# %%
+# Export
 (
     chart_trends.estimate_trend_type(
         magnitude_growth_df, magnitude_column="magnitude", growth_column="growth"
@@ -408,17 +356,14 @@ magnitude_growth_df
 )
 
 # %%
-chart_trends
-
-# %%
-hansard_query_export_filtered.to_csv(
+hansard_query_results_filtered.to_csv(
     PROJECT_DIR
-    / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_11_15.csv",
+    / "outputs/foodtech/interim/public_discourse/hansard_hits_v2022_11_22.csv",
     index=False,
 )
 
 # %% [markdown]
-# ## Other checks
+# ## Check sentences with specific terms
 
 # %%
 import re
@@ -445,13 +390,6 @@ def extract_mention_sentence(text, search_term, any_term=False):
 
 
 # %%
-# search_term = ['takeaway service']
-# search_term = ['takeaway']
-# search_term = ['supply chain', 'food', 'innovation']
-# search_term = ['meal kit']
-# search_term = ['obesity']
-# search_term = ['food waste']
-# search_term = ['reformulation', 'food']
 search_term = ["food environment"]
 hits = Query_hansard.find_matches([search_term], return_only_matches=True)
 hits = hits.merge(df_debates[["id", "speech", "speakername", "year"]], on="id")
@@ -465,22 +403,16 @@ hits["sents"] = hits.speech.apply(
 )
 
 # %%
-# for i, row in hits.iterrows():
-#     if int(row.year) > 2000:
-#         print(row.year, row.speech)
-#         print("")
+# for i, row in hits.query("year > '2015'").iterrows():
+#     print(row.year, row.speech)
+#     print("")
+#     print("")
 
 # %% [markdown]
-# ## Check terms
+# ## Check specific terms
 
 # %%
-# df = Query_hansard.find_matches([["food", "reformulat"]], return_only_matches=True)
 df = Query_hansard.find_matches([["deliveroo"]], return_only_matches=True)
-# df = Query_hansard.find_matches([["dark kitchen"]], return_only_matches=True)
-# df = Query_hansard.find_matches(
-# [["alternative", "protein", "food"]], return_only_matches=True
-# )
-# df = Query_hansard.find_matches([["alternative", "protein"]], return_only_matches=True)
 
 # %%
 df.head(1)
@@ -492,35 +424,3 @@ df = df.merge(df_debates[["id", "speech", "speakername", "year"]], on="id")
 k = -19
 print(df.iloc[k].year)
 print(df.iloc[k].speech)
-
-# %% [raw]
-#
-
-# %% [markdown]
-# ## Checking categories
-
-# %%
-sents = []
-for i, row in hansard_query_export_.iterrows():
-    sents.append(
-        [
-            extract_mention_sentence(row.speech, s, any_term=False)
-            for s in ast.literal_eval(row.found_terms)
-        ]
-    )
-
-# %%
-hansard_query_export_["sents"] = sents
-
-# %%
-cat = "Innovative food"
-cat = "Cooking and kitchen"
-cat = "Alt protein"
-for i, row in (
-    hansard_query_export_.sort_values("year").query("Category == @cat").iterrows()
-):
-    if int(row.year) > 2000:
-        print(row.year, row.sents)
-        print("")
-
-# %%

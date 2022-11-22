@@ -16,7 +16,7 @@
 # ---
 
 # %% [markdown]
-# # Analysing hansard debates
+# # Analysing Hansard debates
 
 # %%
 from innovation_sweet_spots.getters import hansard

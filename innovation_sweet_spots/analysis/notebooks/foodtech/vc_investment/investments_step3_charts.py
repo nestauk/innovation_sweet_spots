@@ -467,6 +467,14 @@ category_ids = utils.get_category_ids(
     DR,
     "Category",
 )
+# Get ids for each category
+subcategory_ids = utils.get_category_ids(
+    taxonomy_df,
+    utils.rejected_tags,
+    company_to_taxonomy_df,
+    DR,
+    "Sub Category",
+)
 
 # %%
 # Total funding in 2017-2021
@@ -496,6 +504,16 @@ print(
 )
 print(
     get_total_funding(category_ids["Logistics"], min_year=2017, max_year=2021)
+    / funding_total_minusAgritech
+)
+
+# %%
+print(
+    get_total_funding(subcategory_ids["Delivery"], min_year=2017, max_year=2021)
+    / funding_total
+)
+print(
+    get_total_funding(subcategory_ids["Delivery"], min_year=2017, max_year=2021)
     / funding_total_minusAgritech
 )
 
@@ -991,7 +1009,21 @@ df_export.head(1)
 
 # %%
 df_export.to_csv(
-    PROJECT_DIR / "outputs/foodtech/interim/foodtech_reviewed_VC_final_v2022_11_16.csv",
+    PROJECT_DIR
+    / "outputs/foodtech/venture_capital/foodtech_reviewed_VC_final_v2022_11_16.csv",
+    index=False,
+)
+
+# %%
+df_export.drop_duplicates(["id", "PROFILE URL"]).to_csv(
+    PROJECT_DIR
+    / "outputs/foodtech/venture_capital/foodtech_reviewed_VC_final_v2022_11_16_dedup.csv",
+    index=False,
+)
+
+# %%
+DR.company_data.query("NAME == 'Deliveroo'").to_csv(
+    PROJECT_DIR / "outputs/foodtech/venture_capital/foodtech_reviewed_example_data.csv",
     index=False,
 )
 

@@ -19,13 +19,15 @@
 # # Sketching the heat map visualisation
 
 # %%
-# alt.mark_rect()
-
-# %%
 import altair as alt
 import pandas as pd
 from innovation_sweet_spots.utils import plotting_utils as pu
-import google_sheets
+from innovation_sweet_spots.getters import google_sheets
+
+# %%
+import importlib
+
+importlib.reload(google_sheets)
 
 # %%
 # Functionality for saving charts
@@ -34,12 +36,26 @@ import innovation_sweet_spots.utils.altair_save_utils as alt_save
 AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
 
 # %%
-df_melt = google_sheets.get_foodtech_heat_map(
-    from_local=False, data_range="heatmap_melt"
+df_melt = (
+    google_sheets.get_foodtech_heat_map(
+        from_local=False, data_range="heatmap_data_final"
+    )
+    .query("Include == '1'")
+    .astype({"Trend_index": float, "Trend_index_final": float, "weight": float})
 )
 
 # %%
-df_melt.head(3)
+trend_index = (
+    df_melt
+    # .assign(Trend_index_final=lambda df: df.Trend_index_final * df.weight)
+    .groupby("Category", as_index=False)
+    .agg(Trend_index_sum=("Trend_index_final", "sum"))
+    .sort_values(["Trend_index_sum", "Category"], ascending=False)
+    .assign(Trend_index_final=lambda df: df.Trend_index_sum / 4.5)
+)
+
+# %%
+trend_index.round(2)
 
 # %%
 value_to_trend = {
@@ -67,16 +83,20 @@ range_ = [
     pu.NESTA_COLOURS[4],
 ]
 
+# size_values = "Size"
+size_values = "Magnitude_scaled"
+
 signal_sort_order = ["Investment", "Research", "News", "Parliament"]
-category_sort_order = [
-    "Innovative food: Reformulation",
-    "Health",
-    "Food waste",
-    "Innovative food: Alternative protein",
-    "Cooking and kitchen tech",
-    "Logistics",
-    "Restaurants and retail",
-]
+category_sort_order = trend_index.Category.to_list()
+# category_sort_order = [
+#     "Innovative food: Alternative protein",
+#     "Logistics",
+#     "Food waste",
+#     "Innovative food: Reformulation",
+#     "Restaurants and retail",
+#     "Personalised nutrition",
+#     "Cooking and kitchen tech",
+# ]
 
 # %%
 # Heat map
@@ -84,7 +104,7 @@ selection = alt.selection_single(empty="none")
 
 fig = (
     alt.Chart(df_melt, width=300, height=300)
-    .mark_square()
+    .mark_square(size=300)
     .encode(
         x=alt.X(
             "Signal:N",
@@ -103,7 +123,7 @@ fig = (
             legend=alt.Legend(orient="right"),
             scale=alt.Scale(domain=domain_, range=range_),
         ),
-        size=alt.Size("Size", legend=None, scale=alt.Scale(range=[25, 700])),
+        # size=alt.Size(size_values, legend=None, scale=alt.Scale(range=[25, 700])),
         tooltip=["Trend", "Comment"],
     )
 ).add_selection(selection)
@@ -135,7 +155,7 @@ from innovation_sweet_spots import PROJECT_DIR
 df_melt.to_csv(PROJECT_DIR / "outputs/foodtech/interim/heatmap_data.csv", index=False)
 
 # %%
-AltairSaver.save(fig, f"v2022_10_14_Heat_map", filetypes=["html", "png"])
+AltairSaver.save(fig, f"v2022_11_18_Heat_map", filetypes=["html", "svg", "png"])
 
 # %% [markdown]
 # ## Experimenting with text comments
@@ -282,8 +302,5 @@ text = (
 )
 
 (base + text).properties(title="plot", height=600, width=800).interactive()
-
-# %% [markdown]
-# ### Combining trends data
 
 # %%
