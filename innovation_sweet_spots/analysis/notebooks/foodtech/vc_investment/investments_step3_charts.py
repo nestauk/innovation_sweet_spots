@@ -44,6 +44,7 @@ import utils
 import importlib
 from collections import defaultdict
 import itertools
+from typing import DefaultDict
 
 COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
 
@@ -438,11 +439,7 @@ category_ids = utils.get_category_ids(
 )
 # Get ids for each category
 subcategory_ids = utils.get_category_ids(
-    taxonomy_df,
-    utils.rejected_tags,
-    company_to_taxonomy_df,
-    DR,
-    "Sub Category",
+    taxonomy_df, utils.rejected_tags, company_to_taxonomy_df, DR, "Sub Category"
 )
 
 # %%
@@ -465,36 +462,26 @@ print(
 # %%
 min_year = 2017
 max_year = 2021
-health_funding = get_total_funding(
-    category_ids["Health"], min_year=min_year, max_year=max_year
-)
+
+
+def share_of_funding(
+    min_year: int, max_year: int, category_ids: DefaultDict, category: str
+):
+    funding = get_total_funding(
+        category_ids[category], min_year=min_year, max_year=max_year
+    )
+    print(
+        f"The {category} category has received {round(funding / funding_total * 100, 2)}% of total foodtech funding."
+    )
+    print(
+        f"The {category} category has received {round(funding / funding_total_minusAgritech * 100, 2)}% of total foodtech (excl. Agritech) funding."
+    )
+
+
 print(f"From {min_year} to {max_year}:")
-print(
-    f"The Health category has received {round(health_funding / funding_total * 100, 2)}% of total foodtech funding."
-)
-print(
-    f"The Health category has received {round(health_funding / funding_total_minusAgritech * 100, 2)}% of total foodtech (excl. Agritech) funding."
-)
-
-logistics_funding = get_total_funding(
-    category_ids["Logistics"], min_year=min_year, max_year=max_year
-)
-print(
-    f"The Logistics category has received {round(logistics_funding / funding_total * 100, 2)}% of total foodtech funding."
-)
-print(
-    f"The Logistics category has received {round(logistics_funding / funding_total_minusAgritech * 100, 2)}% of total foodtech (excl. Agritech) funding."
-)
-
-# %%
-print(
-    get_total_funding(subcategory_ids["Delivery"], min_year=2017, max_year=2021)
-    / funding_total
-)
-print(
-    get_total_funding(subcategory_ids["Delivery"], min_year=2017, max_year=2021)
-    / funding_total_minusAgritech
-)
+share_of_funding(min_year, max_year, category_ids=category_ids, category="Health")
+share_of_funding(min_year, max_year, category_ids=category_ids, category="Logistics")
+share_of_funding(min_year, max_year, category_ids=subcategory_ids, category="Delivery")
 
 # %% [markdown]
 # ### Trends analysis
