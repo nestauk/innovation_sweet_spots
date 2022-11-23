@@ -1,7 +1,6 @@
 import pandas as pd
 import nltk.data
-
-tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
+import nltk
 from innovation_sweet_spots.analysis import analysis_utils as au
 from innovation_sweet_spots.utils import chart_trends
 
@@ -15,6 +14,9 @@ from innovation_sweet_spots.utils import chart_trends
 #     "Food waste",
 # ]
 # colour_range_ = pu.NESTA_COLOURS[0 : len(domain)]
+
+nltk.download("punkt")
+tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
 
 def remove_space_after_comma(text):
@@ -95,9 +97,7 @@ def get_magnitude_growth(
         )
     magnitude_growth_df = pd.DataFrame(
         magnitude_growth, columns=["magnitude", "growth", category]
-    ).assign(
-        growth=lambda df: df.growth / 100,
-    )
+    ).assign(growth=lambda df: df.growth / 100)
     return chart_trends.estimate_trend_type(
         magnitude_growth_df, magnitude_column="magnitude", growth_column="growth"
     )
