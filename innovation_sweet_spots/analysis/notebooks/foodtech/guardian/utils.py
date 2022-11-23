@@ -20,18 +20,19 @@ tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
 
 def remove_space_after_comma(text):
-    """util function to process search terms with comma"""
+    """Process search terms with comma"""
     return ",".join([s.strip() for s in text.split(",")])
 
 
 def check_articles_for_comma_terms(text: str, terms: str):
+    """Return True if text contains comma terms"""
     terms = [term.strip() for term in terms.split(",")]
     sentences_with_terms = find_sentences_with_terms(text, terms, all_terms=True)
     return len(sentences_with_terms) >= 1
 
 
 def find_sentences_with_terms(text, terms, all_terms: bool = True):
-    """util function that finds terms in sentences"""
+    """Finds sentences which contain specified terms"""
     # split text into sentences
     sentences = tokenizer.tokenize(text)
     # keep sentences with terms
@@ -56,7 +57,7 @@ def find_sentences_with_terms(text, terms, all_terms: bool = True):
 
 
 def get_ts(df_id_to_term, df_baseline, category="Category"):
-    """build time series"""
+    """Build time series"""
     return (
         df_id_to_term.drop_duplicates(["id", category], keep="first")
         .groupby(["year", category])
