@@ -41,20 +41,20 @@ def find_sentences_with_terms(text, terms, all_terms: bool = True):
     sentences_with_terms = []
     # number of terms in the query
     n_terms = len(terms)
-    for i, sentence in enumerate(sentences):
+    for sentence in sentences:
         terms_detected = 0
         # check all terms
         for term in terms:
             if term in sentence.lower():
                 terms_detected += 1
         # check if all terms were found
-        if all_terms and (terms_detected == n_terms):
+        if (
+            all_terms
+            and terms_detected == n_terms
+            or not all_terms
+            and terms_detected > 0
+        ):
             sentences_with_terms.append(sentence)
-        # check if at least one term was found
-        elif (all_terms is False) and (terms_deteced > 0):
-            sentences_with_terms.append(sentence)
-        else:
-            pass
     return sentences_with_terms
 
 
