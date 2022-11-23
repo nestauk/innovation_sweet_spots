@@ -27,10 +27,7 @@ def remove_space_after_comma(text):
 def check_articles_for_comma_terms(text: str, terms: str):
     terms = [term.strip() for term in terms.split(",")]
     sentences_with_terms = find_sentences_with_terms(text, terms, all_terms=True)
-    if len(sentences_with_terms) >= 1:
-        return True
-    else:
-        return False
+    return len(sentences_with_terms) >= 1
 
 
 def find_sentences_with_terms(text, terms, all_terms: bool = True):
