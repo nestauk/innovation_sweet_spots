@@ -4,17 +4,6 @@ import nltk
 from innovation_sweet_spots.analysis import analysis_utils as au
 from innovation_sweet_spots.utils import chart_trends
 
-# # Variables for colour scale (might be useful)
-# colour_domain = [
-#     "Health",
-#     "Innovative food",
-#     "Logistics",
-#     "Restaurants and retail",
-#     "Cooking and kitchen",
-#     "Food waste",
-# ]
-# colour_range_ = pu.NESTA_COLOURS[0 : len(domain)]
-
 nltk.download("punkt")
 tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
