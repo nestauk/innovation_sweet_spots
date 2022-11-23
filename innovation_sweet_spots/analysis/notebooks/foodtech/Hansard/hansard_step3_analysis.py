@@ -8,7 +8,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -63,6 +63,9 @@ from innovation_sweet_spots.getters.google_sheets import get_foodtech_search_ter
 df_search_terms_table = get_foodtech_search_terms(from_local=False)
 
 # %%
+df_search_terms_table
+
+# %%
 # Process search terms (lemmatise etc) for querying the Hansard corpus
 df_search_terms = (
     df_search_terms_table.query("Terms not in @terms_to_remove")
@@ -87,7 +90,7 @@ len(df_debates)
 # # Keyword search
 
 # %%
-# Remove the last there tech areas (food terms, innovation terms and food technology terms)
+# Remove the last three tech areas (food terms, innovation terms and food technology terms)
 tech_areas_to_check = list(tech_area_terms.keys())[:-3]
 
 # %%
@@ -269,12 +272,7 @@ data = (
 )
 
 fig = pu.ts_smooth_incomplete(
-    data,
-    ["Health"],
-    "fraction",
-    "Proportion of speeches (%)",
-    "Category",
-    amount_div=1,
+    data, ["Health"], "fraction", "Proportion of speeches (%)", "Category", amount_div=1
 )
 pu.configure_plots(fig)
 
@@ -331,10 +329,7 @@ for tech_area in categories_to_check:
     )
 magnitude_growth_df = pd.DataFrame(
     magnitude_growth, columns=["magnitude", "growth", "tech_area"]
-).assign(
-    growth=lambda df: df.growth / 100,
-    magnitude=lambda df: df.magnitude * 100,
-)
+).assign(growth=lambda df: df.growth / 100, magnitude=lambda df: df.magnitude * 100)
 
 # %%
 chart_trends.estimate_trend_type(
