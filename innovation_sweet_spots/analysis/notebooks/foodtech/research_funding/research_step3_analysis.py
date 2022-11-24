@@ -33,6 +33,7 @@ from innovation_sweet_spots import PROJECT_DIR
 from innovation_sweet_spots.analysis import analysis_utils as au
 from innovation_sweet_spots.utils import chart_trends
 import pandas as pd
+import utils
 
 pd.options.display.float_format = "{:.3f}".format
 import importlib
@@ -690,12 +691,6 @@ categories_to_check = [
     "Innovative food (other)",
     "Waste reduction",
 ]
-
-# %%
-subcategory_magnitude_growth
-
-# %%
-subcategory_amount_magnitude_growth
 
 # %%
 # Calculate research funding timeseries data for the subcategories
