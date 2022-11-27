@@ -6,64 +6,14 @@ Module for easy access to Google Sheets
 """
 from innovation_sweet_spots import PROJECT_DIR, logging
 import pandas as pd
-import pickle
-import os.path
-import dotenv
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from typing import Iterable
 from pathlib import Path
-
-
-def get_credentials_path() -> Path:
-    """Finds the path to the credentials file"""
-    if os.path.isfile(PROJECT_DIR / ".env"):
-        # Load the .env file
-        dotenv.load_dotenv(PROJECT_DIR / ".env")
-        try:
-            # Try fetching the path to credentials
-            return Path(os.environ["GOOGLE_SHEETS_CREDENTIALS"])
-        except:
-            pass
-    # If no .env file or if the key is not in the .env file
-    logging.warning("No credentials found!")
-    return None
-
-
-def gsheet_api_check(
-    scopes: Iterable[str] = ["https://www.googleapis.com/auth/spreadsheets"]
-):
-    """Authorise access to Google Sheets
-
-    Args:
-        scopes: ["https://www.googleapis.com/auth/spreadsheets"] or
-            ["https://www.googleapis.com/auth/spreadsheets"].
-
-    Returns:
-        Google credentials object
-    """
-    creds = None
-    credentials_path = get_credentials_path()
-    token_path = credentials_path.parent / "token.pickle"
-
-    if os.path.exists(token_path):
-        with open(token_path, "rb") as token:
-            creds = pickle.load(token)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(credentials_path, scopes)
-            creds = flow.run_local_server(port=0)
-        with open(token_path, "wb") as token:
-            pickle.dump(creds, token)
-    return creds
+from innovation_sweet_spots.utils.google_sheets import get_credentials
 
 
 def get_sheet_from_googlesheets(spreadsheet_id: str, data_range: str) -> list:
     """Get data from Google Sheets"""
-    creds = gsheet_api_check()
+    creds = get_credentials()
     service = build("sheets", "v4", credentials=creds)
     sheet = service.spreadsheets()
     result = (
