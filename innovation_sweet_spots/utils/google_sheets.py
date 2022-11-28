@@ -69,15 +69,25 @@ def upload_to_google_sheet(
             Note, if the worksheet already exists, this function will overwrite
             the existing worksheet with the specifed dataframe.
     """
-    d2g.upload(df=df, gfile=google_sheet_id, wks_name=wks_name, start_cell="A1")
-    gc = gspread.authorize(d2g_utils.get_credentials())
-    try:
-        gc.open_by_key(google_sheet_id).__repr__()
-    except gspread.client.APIError as e:
-        logging.error(
-            f"gspread.client.APIError: Could not upload dataframe to https://docs.google.com/spreadsheets/d/{google_sheet_id} as the Google Sheet does not exist."
-        )
-        raise e
-    logging.info(
-        f"Dataframe uploaded to https://docs.google.com/spreadsheets/d/{google_sheet_id}"
+    logging.warn(
+        f"Uploading will overwrite any existing data on worksheet {wks_name} on Google Sheet with id {google_sheet_id}."
     )
+    confirmation = input(
+        "Enter 'upload' to continue with uploading the dataframe. Type anything else to not upload:"
+    )
+    if confirmation.lower() == "upload":
+        logging.info("Uploading...")
+        d2g.upload(df=df, gfile=google_sheet_id, wks_name=wks_name, start_cell="A1")
+        gc = gspread.authorize(d2g_utils.get_credentials())
+        try:
+            gc.open_by_key(google_sheet_id).__repr__()
+        except gspread.client.APIError as e:
+            logging.error(
+                f"gspread.client.APIError: Could not upload dataframe to https://docs.google.com/spreadsheets/d/{google_sheet_id} as the Google Sheet does not exist."
+            )
+            raise e
+        logging.info(
+            f"Dataframe uploaded to https://docs.google.com/spreadsheets/d/{google_sheet_id}"
+        )
+    else:
+        logging.info("Stopped uploading to Google Sheet.")
