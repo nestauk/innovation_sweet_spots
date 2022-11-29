@@ -175,14 +175,15 @@ class Vectors:
         force_update: bool = False,
     ):
         """Generates new vectors and adds them to the existing ones"""
-        new_indexes = []
         # Check which ids to update
         if self.vectors is not None:
-            print(len(self.vectors))
-        for i, new_id in enumerate(new_document_ids):
-            if force_update or (self.is_id_present(new_id) is False):
-                new_indexes.append(i)
-        if (len(new_indexes) > 0) and (self.vectors is not None):
+            logging.info(f"There are currently {len(self.vectors)} vectors")
+        new_indexes = [
+            i
+            for i, new_id in enumerate(new_document_ids)
+            if force_update or (self.is_id_present(new_id) is False)
+        ]
+        if new_indexes and self.vectors is not None:
             self.add_vectors(
                 new_document_ids=np.array(new_document_ids)[new_indexes],
                 new_vectors=self.model.encode(np.array(texts)[new_indexes]),
@@ -191,8 +192,9 @@ class Vectors:
             # First time
             self.vectors = self.model.encode(np.array(texts)[new_indexes])
             self.vector_ids = np.array(new_document_ids)[new_indexes]
-        print(len(self.vectors))
-        logging.info(f"Added {len(new_indexes)} new vectors")
+        logging.info(
+            f"There are now {len(self.vectors)} vectors. Added {len(new_indexes)} new vectors."
+        )
 
     def add_vectors(
         self, new_document_ids: Iterator[str], new_vectors: ArrayLike
