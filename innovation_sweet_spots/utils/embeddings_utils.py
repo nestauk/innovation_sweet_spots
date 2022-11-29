@@ -71,10 +71,7 @@ class QueryEmbeddings:
     def similarities_dataframe(self, similarities: Iterator[float]) -> DataFrame:
         """Prepare outputs data frame"""
         return DataFrame(
-            {
-                "text": self.text_to_index.keys(),
-                "similarity": similarities,
-            }
+            {"text": self.text_to_index.keys(), "similarity": similarities}
         ).sort_values("similarity", ascending=False)
 
 
@@ -101,21 +98,7 @@ class Vectors:
 
         """
         self.model_name = model_name
-        if vector_ids is None:
-            # Load from local disk
-            self.load_vectors(filename, model_name, folder)
-        else:
-            # Take the provided vectors and vector ids
-            self.vector_ids = np.array(vector_ids)
-            self.vectors = vectors
         self._model = None
-        assert (
-            len(self.vector_ids) == self.vectors.shape[0]
-        ), "Number of vector ids does not match the number of vectors"
-        assert len(np.unique(self.vector_ids)) == len(
-            self.vector_ids
-        ), "All vector ids must be unique"
-
         self.model_name = model_name
         self._model = None
         self.filename = filename
@@ -123,25 +106,26 @@ class Vectors:
         files_exist = os.path.exists(
             folder / self.filepath_vectors(filename, model_name, folder)
         )
-
+        print(files_exist)
         if (vector_ids is None) and ((filename is None) or (files_exist is False)):
             # Initialise empty vectors and ids
             self.vectors = None
             self.vector_ids = []
+        elif vector_ids is None and files_exist:
+            # Load from disk
+            self.load_vectors_and_ids(filename, model_name, folder)
         else:
-            if (vector_ids is None) and (filename is not None) and files_exist:
-                # Load from disk
-                self.load_vectors_and_ids(filename, model_name, folder)
-            else:
-                # Take the provided vectors and vector ids
-                self.vector_ids = np.array(vector_ids)
-                self.vectors = vectors
+            # Take the provided vectors and vector ids
+            self.vector_ids = np.array(vector_ids)
+            self.vectors = vectors
+
+        if self.vectors is not None:
             assert (
                 len(self.vector_ids) == self.vectors.shape[0]
             ), "Number of vector ids does not match the number of vectors"
-            assert len(np.unique(self.vector_ids)) == len(
-                self.vector_ids
-            ), "All vector ids must be unique"
+        assert len(np.unique(self.vector_ids)) == len(
+            self.vector_ids
+        ), "All vector ids must be unique"
 
     def load_vectors_and_ids(self, filename: str, model_name: str, folder):
         """Loads in vectors and their corresponding document ids from disk"""
