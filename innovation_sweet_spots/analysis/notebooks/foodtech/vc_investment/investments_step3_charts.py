@@ -63,6 +63,9 @@ DR = wu.DealroomWrangler()
 # Check the number of companies
 len(DR.company_data)
 
+# %%
+# DR = DR2
+
 # %% [markdown]
 # ### Import reviewed data
 
@@ -116,7 +119,46 @@ company_to_taxonomy_df = pd.concat([company_to_taxonomy_df, df], ignore_index=Tr
 
 
 # %%
-taxonomy_df
+kitchen_robot_ids = [
+    4323337,
+    4152603,
+    3921341,
+    3834707,
+    3518716,
+    3450868,
+    3300579,
+    3029048,
+    2940904,
+    2931036,
+    2432763,
+    1977744,
+    1841335,
+    1831995,
+    1818775,
+    1775048,
+    1737517,
+    1564994,
+    1445841,
+    1417916,
+    1280760,
+    966124,
+    965511,
+]
+kitchen_robot_ids = [str(x) for x in kitchen_robot_ids]
+df_kitchen_robots_cat = pd.DataFrame(
+    data={
+        "id": kitchen_robot_ids,
+        "Category": "Cooking and kitchen",
+        "level": "Category",
+    }
+)
+df_kitchen_robots_subcat = pd.DataFrame(
+    data={"id": kitchen_robot_ids, "Category": "Kitchen tech", "level": "Sub Category"}
+)
+company_to_taxonomy_df = pd.concat(
+    [company_to_taxonomy_df, df_kitchen_robots_cat, df_kitchen_robots_subcat],
+    ignore_index=True,
+)
 
 # %%
 # # Uncomment if doing the analysis soley for the UK
@@ -216,7 +258,7 @@ tooltip = [
 
 data_early_late = foodtech_ts.assign(
     raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
-).query("year < 2022")
+)  # .query("year < 2022")
 
 fig = (
     alt.Chart(
@@ -333,7 +375,7 @@ tooltip = [
     alt.Tooltip(f"{values_column}:Q", title=values_column),
 ]
 
-data_early_late = foodtech_ts.query("year < 2022")
+data_early_late = foodtech_ts  # .query("year < 2022")
 
 fig = (
     alt.Chart(
@@ -589,7 +631,7 @@ data = (
     category_ts.assign(
         raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
     )
-    .query("year < 2022")
+    # .query("year < 2022")
     .query("Category == @category")
 )
 
@@ -798,9 +840,10 @@ subcategory_ids = utils.get_category_ids(
 variable = "raised_amount_gbp_total"
 
 subcategory_ts = (
-    utils.get_category_ts(subcategory_ids, DR)
-    .rename(columns={"Category": "Sub Category"})
-    .query("year < 2022")
+    utils.get_category_ts(subcategory_ids, DR).rename(
+        columns={"Category": "Sub Category"}
+    )
+    # .query("year < 2022")
 )
 
 
@@ -811,7 +854,7 @@ subcategory_ts.head(1)
 cats = ["Kitchen tech", "Dark kitchen"]
 
 fig = pu.configure_plots(
-    pu.ts_smooth(
+    pu.ts_smooth_incomplete(
         subcategory_ts.assign(**{variable: lambda df: df[variable] / 1}),
         cats,
         variable="raised_amount_gbp_total",
@@ -832,7 +875,7 @@ AltairSaver.save(
 cats = ["Lab meat", "Insects", "Plant-based", "Fermentation"]
 
 fig = pu.configure_plots(
-    pu.ts_smooth(
+    pu.ts_smooth_incomplete(
         subcategory_ts.assign(**{variable: lambda df: df[variable] / 1000}),
         cats,
         variable="raised_amount_gbp_total",
@@ -853,7 +896,7 @@ AltairSaver.save(
 cats = ["Innovative food (other)", "Reformulation"]
 
 fig = pu.configure_plots(
-    pu.ts_smooth(
+    pu.ts_smooth_incomplete(
         subcategory_ts.assign(**{variable: lambda df: df[variable] / 1000}),
         cats,
         variable="raised_amount_gbp_total",
@@ -876,7 +919,7 @@ AltairSaver.save(
 cats = ["Biomedical", "Personalised nutrition"]
 
 fig = pu.configure_plots(
-    pu.ts_smooth(
+    pu.ts_smooth_incomplete(
         subcategory_ts.assign(**{variable: lambda df: df[variable]}),
         cats,
         variable="raised_amount_gbp_total",
@@ -896,7 +939,7 @@ AltairSaver.save(
 cats = ["Waste reduction", "Packaging"]
 
 fig = pu.configure_plots(
-    pu.ts_smooth(
+    pu.ts_smooth_incomplete(
         subcategory_ts.assign(**{variable: lambda df: df[variable]}),
         cats,
         variable="raised_amount_gbp_total",
@@ -916,7 +959,7 @@ AltairSaver.save(
 cats = ["Retail", "Restaurants"]
 
 fig = pu.configure_plots(
-    pu.ts_smooth(
+    pu.ts_smooth_incomplete(
         subcategory_ts.assign(**{variable: lambda df: df[variable]}),
         cats,
         variable="raised_amount_gbp_total",
@@ -955,9 +998,13 @@ df_export = (
                 "id",
                 "NAME",
                 "TAGLINE",
+                "TAGS",
+                "INDUSTRIES",
+                "SUB INDUSTRIES",
                 "PROFILE URL",
                 "WEBSITE",
                 "country",
+                "city",
                 "LAUNCH DATE",
                 "LAST FUNDING DATE",
             ]
@@ -995,8 +1042,12 @@ df_export = (
         "WEBSITE",
         "LAUNCH DATE",
         "country",
+        "city",
         "raised_amount_gbp",
         "LAST FUNDING DATE",
+        "TAGS",
+        "INDUSTRIES",
+        "SUB INDUSTRIES",
         "category",
         "sub_category",
     ]
@@ -1286,7 +1337,10 @@ fig = pu.configure_plots(fig)
 fig
 
 # %% [markdown]
-# ## Custom combination of categories
+# ## Custom analyses
+
+# %% [markdown]
+# ### Custom combination of categories
 
 # %%
 trends_combined = (
@@ -1302,4 +1356,154 @@ trends_combined.to_csv(
 # %%
 chart_trends.estimate_trend_type(trends_combined)
 
+# %% [markdown]
+# ### Checking robotics companies
+
+# %% [markdown]
+# ### Manually added
+
 # %%
+folder = "inputs/data/dealroom/raw_exports/foodtech_2022_11"
+df = pd.read_excel(
+    PROJECT_DIR / f"{folder}/df8381fc-6e7d-4eab-9ed5-59ecf66074dd.xlsx"
+).astype({"id": str})
+
+# %%
+df
+
+# %%
+kitchen_robots_new = set(df.id.to_list()).difference(foodtech_ids)
+
+# %%
+df[df.id.isin(kitchen_robots_new)][["id", "NAME", "PROFILE URL", "WEBSITE"]].to_csv(
+    PROJECT_DIR / f"{folder}/kitchen_robots_new_ids.csv"
+)
+
+# %% [markdown]
+# ### Dealroom test sample
+
+# %%
+df = pd.read_excel(
+    PROJECT_DIR / f"{folder}/Miguel_sample_1ebfe17f-3d74-46d4-b96b-b1e57f695088.xlsx"
+).astype({"id": str})
+
+# %%
+df_random = df.sample(1)
+ids = df_random.id.iloc[0]
+df_random
+
+# %%
+DR.company_data.query("id == @ids")
+
+# %%
+DR2 = wu.DealroomWrangler(dataset="test")
+
+# %%
+DR2._company_data = DR2.process_input_data(df.copy())
+
+# %%
+DR2.funding_rounds.assign(year=lambda df: df.announced_on.dt.year).groupby(
+    "year"
+).count()
+
+# %%
+col = "EACH ROUND AMOUNT"
+# col = 'EACH ROUND DATE'
+print(df_random[col].iloc[0])
+print(DR.company_data.query("id == @ids")[col].iloc[0])
+
+# %%
+set(df.id.to_list()).difference(DR.company_data.id.to_list())
+
+# %%
+# df.query("id == '3389'")
+
+# %%
+old_cols = set(DR.company_data.columns)
+new_cols = set(df.columns)
+
+# %%
+# df['LAUNCH DATE']
+
+# %%
+# new_cols
+
+# %%
+old_cols.difference(new_cols)
+
+# %%
+# new_cols.difference(old_cols)
+
+# %%
+# # IDs obtained via manual checking
+# kitchen_tech_robotics_ids = [
+#     925686,
+#     1653170,
+#     1435371,
+#     879531,
+#     1763253,
+#     948529,
+#     988417,
+#     988409,
+#     1659462,
+#     962941,
+#     2031672,
+#     174032,
+#     1793126,
+#     1659665,
+#     1896957,
+#     885072,
+#     2019662,
+#     1279421,
+#     161884,
+#     1398362,
+#     1643637,
+#     965184,
+#     2016375,
+#     232116,
+#     134106,
+#     1440458,
+#     1818902,
+#     1775243,
+#     143736,
+#     958578,
+#     944819,
+#     1784780,
+#     1269910,
+#     979885,
+#     980802,
+#     928421,
+#     1818163,
+# ]
+# kitchen_tech_robotics_ids = [str(i) for i in kitchen_tech_robotics_ids]
+
+# %%
+category_ts = utils.get_category_ts(
+    {"Kitchen robots": kitchen_tech_robotics_ids}, DR, deal_type=utils.EARLY_DEAL_TYPES
+)
+category_ts.head(1)
+
+# %%
+au.estimate_magnitude_growth(
+    category_ts.drop(["Category", "time_period"], axis=1),
+    year_start=2017,
+    year_end=2021,
+)
+
+# %%
+DR.company_data[DR.company_data.NAME.str.contains("Dexai")]
+
+# %%
+124.047030 * 5
+
+# %%
+pu.configure_plots(
+    pu.ts_smooth(
+        category_ts,
+        ["Kitchen robots"],
+        "raised_amount_gbp_total",
+        "Investment (£ millions)",
+        "Category",
+        amount_div=1,
+    )
+)
