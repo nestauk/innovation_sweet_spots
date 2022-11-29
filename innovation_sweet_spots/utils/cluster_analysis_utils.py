@@ -41,7 +41,6 @@ def hdbscan_clustering(
     hdbscan_params=hdbscan_def_params,
     random_umap_state=1,
     random_hdbscan_state=3333,
-    return_only_labels=True,
 ):
     """
     Helper function for quickly getting some clusters
