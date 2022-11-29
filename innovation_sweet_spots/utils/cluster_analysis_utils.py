@@ -3,10 +3,18 @@ innovation_sweet_spots.utils.cluster_analysis_utils
 
 Module for various cluster analysis (eg extracting cluster-specific keywords)
 """
+import nltk
+
+nltk.download("stopwords")
 import numpy as np
+import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.model_selection import ParameterGrid
 from typing import Iterator, Dict
 from collections import defaultdict
+from tqdm import tqdm
 
 import hdbscan
 import umap
@@ -35,34 +43,79 @@ hdbscan_def_params = {
 }
 
 
-def hdbscan_clustering(
-    vectors,
-    umap_params=umap_def_params,
-    hdbscan_params=hdbscan_def_params,
-    random_umap_state=1,
-    random_hdbscan_state=3333,
-):
-    """
-    Helper function for quickly getting some clusters
-
-    Outputs an array of shape (n_vectors, 2) with columns for best cluster index and probability
-    """
-    # UMAP
+def umap_reducer(
+    vectors: np.typing.ArrayLike,
+    umap_params: dict = umap_def_params,
+    random_umap_state: int = 1,
+) -> np.typing.ArrayLike:
+    """"Reduce dimensions of the input array using UMAP"""
     logging.info(
         f"Generating {umap_def_params['n_components']}-d UMAP embbedings for {len(vectors)} vectors"
     )
-    reducer_low_dim = umap.UMAP(random_state=random_umap_state, **umap_params)
-    embedding = reducer_low_dim.fit_transform(vectors)
-    logging.info(f"Clustering {len(embedding)} vectors")
-    # HDBSCAN
+    reducer = umap.UMAP(random_state=random_umap_state, **umap_params)
+    return reducer.fit_transform(vectors)
+
+
+def hdbscan_clustering(
+    vectors: np.typing.ArrayLike,
+    hdbscan_params: dict = hdbscan_def_params,
+    random_hdbscan_state: int = 3333,
+) -> np.typing.ArrayLike:
+    """Cluster vectors using HDBSCAN.
+
+    Returns a dataframe with columns for highest probability cluster index
+    and probability
+    """
+    logging.info(f"Clustering {len(vectors)} vectors with HDBSCAN.")
     np.random.seed(random_hdbscan_state)
     clusterer = hdbscan.HDBSCAN(**hdbscan_params)
-    clusterer.fit(embedding)
-    # Cluster probabilities
+    clusterer.fit(vectors)
     cluster_probs = hdbscan.all_points_membership_vectors(clusterer)
-    best_cluster_prob = np.array([(np.argmax(x), np.max(x)) for x in cluster_probs])
+    highest_cluster_prob = np.array([(np.argmax(x), np.max(x)) for x in cluster_probs])
+    return pd.DataFrame(
+        {
+            "labels": highest_cluster_prob[:, 0],
+            "probability": highest_cluster_prob[:, 1],
+        }
+    ).astype({"labels": int})
 
-    return best_cluster_prob
+
+def kmeans_clustering(
+    vectors: np.typing.ArrayLike, kmeans_params: dict
+) -> pd.DataFrame:
+    """Cluster vectors using K-Means clustering"""
+    logging.info(f"Clustering {len(vectors)} vectors with K-Means clustering")
+    kmeans = KMeans(**kmeans_params).fit(vectors)
+    return kmeans.labels_
+
+
+def param_grid_search(
+    vectors: np.typing.ArrayLike, search_params: dict, method: str
+) -> pd.DataFrame:
+    """Perform grid search over search parameters and calculate mean silhouette score"""
+    parameters_record = []
+    silhouette_score_record = []
+    method_record = []
+    for parameters in tqdm(ParameterGrid(search_params)):
+        parameters_record.append(parameters)
+        reduced_dims_vectors = umap_reducer(vectors)
+        if method == "HDBSCAN":
+            clusters = hdbscan_clustering(
+                reduced_dims_vectors, hdbscan_params=parameters
+            )
+            silhouette = silhouette_score(reduced_dims_vectors, clusters.labels.values)
+        else:
+            clusters = kmeans_clustering(reduced_dims_vectors, kmeans_params=parameters)
+            silhouette = silhouette_score(reduced_dims_vectors, clusters)
+        silhouette_score_record.append(silhouette)
+        method_record.append(method)
+    return pd.DataFrame.from_dict(
+        {
+            "method": method_record,
+            "model_params": parameters_record,
+            "silhouette_score": silhouette_score_record,
+        }
+    ).sort_values("silhouette_score", ascending=False)
 
 
 def simple_preprocessing(text: str, stopwords=DEFAULT_STOPWORDS) -> str:
