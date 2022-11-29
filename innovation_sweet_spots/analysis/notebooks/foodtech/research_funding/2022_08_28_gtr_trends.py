@@ -42,7 +42,7 @@ nihr_df_reviewed = google_sheets.get_foodtech_reviewed_nihr(from_local=False).qu
 # ## Process GtR documents
 
 # %%
-gtr_projects = gtr.get_wrangled_projects()
+gtr_projects = gtr.get_gtr_file("gtr_projects-wrangled_project_data.csv")
 
 # %%
 gtr_projects.info()
