@@ -106,7 +106,6 @@ class Vectors:
         files_exist = os.path.exists(
             folder / self.filepath_vectors(filename, model_name, folder)
         )
-        print(files_exist)
         if (vector_ids is None) and ((filename is None) or (files_exist is False)):
             # Initialise empty vectors and ids
             self.vectors = None
