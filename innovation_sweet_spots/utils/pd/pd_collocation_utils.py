@@ -5,17 +5,12 @@ Created on Fri Oct 15 15:04:48 2021
 
 @author: jdjumalieva
 """
-import os
-from collections import Counter, defaultdict
+from collections import defaultdict
 import pandas as pd
 import math
 import numpy as np
 import itertools
 from sklearn.feature_extraction.text import CountVectorizer
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
 from innovation_sweet_spots.utils import text_processing_utils as tpu
 
 ###
