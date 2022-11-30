@@ -90,25 +90,40 @@ def kmeans_clustering(
 
 
 def param_grid_search(
-    vectors: np.typing.ArrayLike, search_params: dict, method: str
+    vectors: np.typing.ArrayLike, search_params: dict, cluster_with_hdbscan: bool
 ) -> pd.DataFrame:
-    """Perform grid search over search parameters and calculate mean silhouette score"""
+    """Perform grid search over search parameters and calculate
+    mean silhouette score.
+
+    Args:
+        vectors: Embedding vectors.
+        search_params: Dictionary with keys as parameter names
+            and values as a list of parameters to search through.
+        cluster_with_hdbscan: True to cluster with HDBSCAN and
+            False to cluster with K-Means.
+
+    Returns:
+        Dataframe with information on clustering method, parameters,
+            mean silhouette scoure.
+    """
     parameters_record = []
     silhouette_score_record = []
     method_record = []
     for parameters in tqdm(ParameterGrid(search_params)):
         parameters_record.append(parameters)
         reduced_dims_vectors = umap_reducer(vectors)
-        if method == "HDBSCAN":
+        if cluster_with_hdbscan:
             clusters = hdbscan_clustering(
                 reduced_dims_vectors, hdbscan_params=parameters
             )
             silhouette = silhouette_score(reduced_dims_vectors, clusters.labels.values)
+            method_record.append("HDBSCAN")
         else:
             clusters = kmeans_clustering(reduced_dims_vectors, kmeans_params=parameters)
             silhouette = silhouette_score(reduced_dims_vectors, clusters)
+            method_record.append("K-Means clustering")
         silhouette_score_record.append(silhouette)
-        method_record.append(method)
+
     return pd.DataFrame.from_dict(
         {
             "method": method_record,
