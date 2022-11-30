@@ -9,7 +9,7 @@ import numpy as np
 from innovation_sweet_spots.analysis.wrangling_utils import check_valid
 from typing import Iterator
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
-
+import datetime
 
 def impute_empty_periods(
     df_time_period: pd.DataFrame,
@@ -35,8 +35,8 @@ def impute_empty_periods(
     max_year = max(max_year_data, max_year)
     full_period_range = (
         pd.period_range(
-            f"01/01/{min_year}",
-            f"31/12/{max_year}",
+            datetime.datetime.strptime(f"01/01/{min_year}", '%d/%m/%Y'),
+            datetime.datetime.strptime(f"31/12/{max_year}", '%d/%m/%Y'),
             freq=period,
         )
         .to_timestamp()

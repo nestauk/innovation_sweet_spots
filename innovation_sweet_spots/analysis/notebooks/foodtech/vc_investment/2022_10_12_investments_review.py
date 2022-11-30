@@ -4,21 +4,21 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
+#     formats: ipynb,py
 #     text_representation:
 #       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.13.6
+#       format_name: light
+#       format_version: '1.5'
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
 
-# %% [markdown]
 # ## Investment
 
-# %%
+# +
 import innovation_sweet_spots.analysis.wrangling_utils as wu
 import importlib
 import innovation_sweet_spots.analysis.analysis_utils as au
@@ -30,14 +30,13 @@ import altair as alt
 import pandas as pd
 
 COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
+# -
 
-# %%
 from innovation_sweet_spots import PROJECT_DIR
 
-# %%
 import numpy as np
 
-# %%
+# +
 # Initialise a Dealroom wrangler instance
 import importlib
 
@@ -47,50 +46,43 @@ DR = wu.DealroomWrangler()
 # Number of companies
 len(DR.company_data)
 
-# %%
+# +
 # Reviewed companies
 from innovation_sweet_spots.getters.google_sheets import get_foodtech_reviewed_vc
 
 reviewed_df = get_foodtech_reviewed_vc(from_local=False)
+# -
 
-# %% [markdown]
 # ## Reviewed taxonomy
 # - Check all major categories
 # - Check all sub-categories
 
-# %%
 import ast
 import re
 
 
-# %%
 def process_reviewed_text(text: str) -> str:
     text = re.sub("‘", "'", text)
     text = re.sub("’", "'", text)
     return text
 
 
-# %%
 process_reviewed_text(
     "{'agritech': ['agritech (all other)'], 'food waste': ['food waste (all other)’]}"
 )
 
-# %%
 for i, row in reviewed_df.iterrows():
     try:
         ast.literal_eval(process_reviewed_text(row.taxonomy_checked))
     except:
         print(row.NAME, row.taxonomy_checked)
 
-# %%
 taxonomy_assigments = reviewed_df.taxonomy_checked.apply(
     lambda x: ast.literal_eval(process_reviewed_text(x))
 )
 
-# %%
 from collections import defaultdict
 
-# %%
 all_keys = set()
 all_values = set()
 taxonomy = defaultdict(set)
@@ -101,36 +93,29 @@ for t in taxonomy_assigments:
         taxonomy[key] = taxonomy[key].union(set(t[key]))
 
 
-# %%
 for key in taxonomy:
     taxonomy[key] = list(taxonomy[key])
 taxonomy = dict(taxonomy)
 
-# %%
 taxonomy
 
-# %%
 df = reviewed_df[reviewed_df.taxonomy_checked != "{}"]
 
-# %%
 assert len(df[df.duplicated("id", keep=False)]) == 0
 
-# %%
 all_ids = df.id.to_list()
 tax_assignments = list(
     df.taxonomy_checked.apply(lambda x: ast.literal_eval(process_reviewed_text(x)))
 )
 
-# %%
 company_to_taxonomy_dict = dict(zip(all_ids, tax_assignments))
 
-# %% [markdown]
 # #### create taxonomy dataframe
 
-# %%
+# +
 # enabling_tech.keys()
+# -
 
-# %%
 rejected_tags = [
     "pet food",
     "pet care",
@@ -139,7 +124,6 @@ rejected_tags = [
 ]
 
 
-# %%
 def create_taxonomy_dataframe(
     taxonomy: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -166,16 +150,12 @@ def create_taxonomy_dataframe(
     return taxonomy_df
 
 
-# %%
 taxonomy_df = create_taxonomy_dataframe(taxonomy)
 
-# %%
 taxonomy_df.iloc[0:20]
 
-# %% [markdown]
 # ## Refining taxonomy assignments
 
-# %% [markdown]
 # - [1] Major category update:
 #     - Create a dataframe with company > category links from the dictionary
 #     - Check companies in multiple categories
@@ -191,14 +171,11 @@ taxonomy_df.iloc[0:20]
 # - [4] Any special rules (eg within major groups)
 #
 
-# %%
 from tqdm.notebook import tqdm
 
-# %%
 df = taxonomy_df.drop_duplicates(["Minor", "Major"])
 minor_to_major = dict(zip(df.Minor, df.Major))
 
-# %%
 company_to_taxonomy_labels = []
 for company_id in all_ids:
     for cat in company_to_taxonomy_dict[company_id]:
@@ -206,25 +183,21 @@ for company_id in all_ids:
         for minor_cat in company_to_taxonomy_dict[company_id][cat]:
             company_to_taxonomy_labels.append([company_id, minor_cat, "Minor"])
 
-# %%
 company_to_taxonomy_df = pd.DataFrame(
     company_to_taxonomy_labels, columns=["id", "Category", "level"]
 )
 
-# %%
 len(company_to_taxonomy_df.id.unique())
 
-# %%
 company_to_taxonomy_df.head(5)
 
-# %%
 # Remove categories
 drop_categories = ["taste", "vegan", "algae", "oleaginous"]
 company_to_taxonomy_df = company_to_taxonomy_df[
     company_to_taxonomy_df.Category.isin(drop_categories) == False
 ].reset_index(drop=True)
 
-# %%
+# +
 # Check category "innovative food (all other")
 category_to_check = "innovative food (all other)"
 ids = list(company_to_taxonomy_df.query("Category == @category_to_check").id.unique())
@@ -250,7 +223,7 @@ print(len(indices))
 
 company_to_taxonomy_df = company_to_taxonomy_df.drop(indices).reset_index(drop=True)
 
-# %%
+# +
 # Check category "innovative food (all other")
 category_to_check = "alt protein"
 ids = list(company_to_taxonomy_df.query("Category == @category_to_check").id.unique())
@@ -272,7 +245,7 @@ for company_id in ids:
 print(len(indices))
 company_to_taxonomy_df = company_to_taxonomy_df.drop(indices).reset_index(drop=True)
 
-# %%
+# +
 # Check category "innovative food (all other")
 category_to_check = "diet"
 ids = list(company_to_taxonomy_df.query("Category == @category_to_check").id.unique())
@@ -289,17 +262,17 @@ for company_id in ids:
 print(len(indices))
 
 company_to_taxonomy_df = company_to_taxonomy_df.drop(indices).reset_index(drop=True)
+# -
 
-# %%
 company_to_taxonomy_df.loc[
     company_to_taxonomy_df.query("Category == 'health tech'").index, "Category"
 ] = "health (all other)"
 
 
-# %%
+# +
 # company_to_taxonomy_df[company_to_taxonomy_df.duplicated(['id','Category'])]
 
-# %%
+# +
 # Check category "innovative food (all other")
 category_to_check = "health (all other)"
 ids = list(company_to_taxonomy_df.query("Category == @category_to_check").id.unique())
@@ -321,7 +294,7 @@ print(len(indices))
 
 company_to_taxonomy_df = company_to_taxonomy_df.drop(indices).reset_index(drop=True)
 
-# %%
+# +
 company_to_taxonomy_df.loc[
     company_to_taxonomy_df.query("Category == 'food waste (all other)'").index,
     "Category",
@@ -339,8 +312,8 @@ company_to_taxonomy_df.loc[
 company_to_taxonomy_df.loc[
     company_to_taxonomy_df.query("Category == 'alt protein'").index, "Category"
 ] = "alt protein (other)"
+# -
 
-# %%
 taxonomy = {
     "agritech": [
         "agritech (all other)",
@@ -370,20 +343,15 @@ taxonomy = {
     "cooking and kitchen": ["kitchen tech", "dark kitchen"],
 }
 
-# %%
 taxonomy_df = create_taxonomy_dataframe(taxonomy)
 
-# %%
 df = taxonomy_df.drop_duplicates(["Minor", "Major"])
 minor_to_major = dict(zip(df.Minor, df.Major))
 
-# %%
 company_to_taxonomy_df.groupby(["level", "Category"]).count()
 
-# %% [markdown]
 # ### Export the outputs of processing reviewed data
 
-# %%
 taxonomy_df.Major = taxonomy_df.Major.str.capitalize()
 taxonomy_df.Minor = taxonomy_df.Minor.str.capitalize()
 taxonomy_df = taxonomy_df.rename(
@@ -393,11 +361,9 @@ taxonomy_df = taxonomy_df.rename(
     }
 )
 
-# %%
 df = taxonomy_df.drop_duplicates(["Category", "Sub Category"])
 minor_to_major = dict(zip(df["Sub Category"], df["Category"]))
 
-# %%
 company_to_taxonomy_df.Category = company_to_taxonomy_df.Category.str.capitalize()
 company_to_taxonomy_df.loc[
     company_to_taxonomy_df.level == "Major", "level"
@@ -407,20 +373,16 @@ company_to_taxonomy_df.loc[
 ] = "Sub Category"
 company_to_taxonomy_df
 
-# %%
 output_folder = PROJECT_DIR / "outputs/foodtech/venture_capital"
 from innovation_sweet_spots.utils.io import save_json, load_json
 
-# %%
 taxonomy_df.to_csv(output_folder / "vc_tech_taxonomy.csv", index=False)
 
-# %%
 save_json(minor_to_major, output_folder / "vc_tech_taxonomy_minor_to_major.json")
 
-# %%
 company_to_taxonomy_df.to_csv(output_folder / "vc_company_to_taxonomy.csv", index=False)
 
 
-# %%
 
-# %%
+
+

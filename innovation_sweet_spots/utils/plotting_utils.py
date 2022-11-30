@@ -6,7 +6,7 @@ import innovation_sweet_spots.analysis.analysis_utils as au
 import altair as alt
 import pandas as pd
 
-ChartType = alt.vegalite.v4.api.Chart
+# ChartType = alt.vegalite.v4.api.Chart
 
 # Brand aligned fonts and colours
 FONT = "Averta"
@@ -229,7 +229,7 @@ def time_series(
     x_column: str = "time_period",
     period: str = "Y",
     show_trend: bool = False,
-) -> ChartType:
+):
     """Basic time series plot"""
     chart = (
         alt.Chart(
@@ -250,7 +250,7 @@ def time_series(
     return standardise_chart(chart)
 
 
-def standardise_chart(chart: ChartType) -> ChartType:
+def standardise_chart(chart):
     return chart.configure_axis(
         gridDash=[1, 6],
         gridColor="grey",
@@ -297,7 +297,7 @@ def cb_deal_types(
     simpler_types: bool = False,
     deal_types: list = None,
     stack: str = None,
-) -> ChartType:
+):
     """
     Stacked bar chart of the investment deal types per year
     Args:
@@ -342,7 +342,7 @@ def cb_top_geographies(
     value_label: str = None,
     category_label: str = None,
     top_n: int = 10,
-) -> ChartType:
+):
     """
     Plots a bar chart with stats for top_n countries
 
@@ -380,7 +380,7 @@ def time_series_by_category(
     time_column: str = "time_period",
     period: str = "Y",
     category_column: str = "geography",
-) -> ChartType:
+):
     """Basic time series plot"""
     chart = (
         alt.Chart(
@@ -445,7 +445,7 @@ def cb_top_geographies(
     value_label: str = None,
     category_label: str = None,
     top_n: int = 10,
-) -> ChartType:
+):
     """
     Plots a bar chart with stats for top_n countries
     Args:
@@ -481,7 +481,7 @@ def time_series_by_category(
     time_column: str = "time_period",
     period: str = "Y",
     category_column: str = "geography",
-) -> ChartType:
+):
     """Basic time series plot"""
     chart = (
         alt.Chart(
@@ -539,7 +539,7 @@ def cb_deals_per_year(
     companies: pd.DataFrame,
     funding_rounds: pd.DataFrame,
     company_industries: pd.DataFrame,
-) -> ChartType:
+):
     """
     Interactive plot with all the deals (with funding amount info)
     per given year, and extra information about the companies
@@ -610,6 +610,7 @@ def ts_smooth(
     stroke_dash=_stroke_dash_none,
     tooltip=True,
     line_width=_line_width,
+    line_point_filled=True,
 ):
     """"""
     if variable == "no_of_projects":
@@ -644,6 +645,7 @@ def ts_smooth(
             interpolate="monotone",
             size=line_width,
             strokeDash=stroke_dash,
+            point=alt.OverlayMarkDef(size=30, filled=line_point_filled),
         )
         .encode(
             x=alt.X("year:O", title=""),
@@ -676,6 +678,18 @@ def ts_smooth_incomplete(
         height,
     ).transform_filter(f"datum.year <= {max_complete_year}")
 
+    fig_solid_stroke = ts_smooth(
+        ts,
+        categories_to_show,
+        variable,
+        variable_title,
+        category_column,
+        amount_div,
+        width,
+        height,
+        line_point_filled=False,
+    ).transform_filter(f"datum.year <= {max_complete_year}")
+    
     fig_dashed = ts_smooth(
         ts,
         categories_to_show,
@@ -687,9 +701,125 @@ def ts_smooth_incomplete(
         height,
         stroke_dash=_stroke_dash_default,
         line_width=2.5,
+        line_point_filled=False,
     ).transform_filter(f"datum.year >= {max_complete_year}")
 
-    return fig_solid + fig_dashed
+    return fig_solid + fig_solid_stroke + fig_dashed
+
+
+def ts_bar(
+    ts,
+    categories_to_show,
+    variable: str = "raised_amount_gbp_total",
+    variable_title: str = "Investment (£ billions)",
+    category_column: str = "Sub Category",
+    category_label: str = "Sub-categories",
+    amount_div: int = 1000,
+    width: int = 400,
+    height: int = 150,
+    tooltip=True,
+    filled=True,
+    fillOpacity=1,
+):
+    """ Grouped bar plot showing time series """
+    # Time column
+    horizontal_column = "year"
+    horizontal_label = "Year"
+    # Tooltips
+    if tooltip:    
+        tooltip = [
+            alt.Tooltip(f"{category_column}:N", title=category_label),    
+            alt.Tooltip(f"{horizontal_column}:O", title=horizontal_label),
+            alt.Tooltip(f"{variable}:Q", format=",.3f", title=variable_title),
+        ]
+    else:
+        tooltip = []
+    
+    return (
+        alt.Chart(
+            (
+                ts
+                .query(f"`{category_column}` in @categories_to_show")
+                .assign(**{variable: lambda df: df[variable] / amount_div})
+            ),
+            width=width,
+            height=height,
+        )
+        .mark_bar(filled=filled, fillOpacity=fillOpacity, strokeWidth=1.5, strokeOpacity=1)
+        .encode(
+            alt.X(f"{horizontal_column}:O", title=""),
+            alt.Y(
+                f"{variable}:Q",
+                title=variable_title,
+            ),
+            xOffset=f"{category_column}",
+            tooltip=tooltip,
+            color=alt.Color(
+                f"{category_column}:N", legend=alt.Legend(orient='top', title=f"{category_label}")
+            ),
+        )
+    )
+
+def ts_bar_incomplete(
+    ts,
+    categories_to_show,
+    variable: str = "raised_amount_gbp_total",
+    variable_title: str = "Investment (£ billions)",
+    category_column: str = "Sub Category",
+    category_label: str = "Sub-categories",
+    amount_div: int = 1000,
+    width: int = 400,
+    height: int = 150,
+    tooltip=True,
+    max_complete_year=2021,
+):
+    """ Incomplete year """
+    fig_solid = ts_bar(
+        ts,
+        categories_to_show,
+        variable,
+        variable_title,
+        category_column,
+        category_label,
+        amount_div,
+        width,
+        height,
+        tooltip,
+        filled=True,
+    ).transform_filter(f"datum.year <= {max_complete_year}")
+
+    fig_stroke = ts_bar(
+        ts,
+        categories_to_show,
+        variable,
+        variable_title,
+        category_column,
+        category_label,
+        amount_div,
+        width,
+        height,
+        tooltip=False,
+        filled=False,
+        fillOpacity=1,
+    ).transform_filter(f"datum.year >= {max_complete_year}")
+
+    fig_faint = ts_bar(
+        ts,
+        categories_to_show,
+        variable,
+        variable_title,
+        category_column,
+        category_label,
+        amount_div,
+        width,
+        height,
+        tooltip,
+        filled=True,
+        fillOpacity=0.25,
+    ).transform_filter(f"datum.year >= {max_complete_year}")
+    
+    
+    return fig_solid + fig_stroke + fig_faint
 
 
 def ts_funding_projects(ts, categories_to_show, width: int = 400, height: int = 150):

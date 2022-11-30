@@ -4,11 +4,12 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -48,15 +49,6 @@ import itertools
 COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
 
 # %%
-# Plotting utils
-import innovation_sweet_spots.utils.altair_save_utils as alt_save
-
-AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
-
-# Figure version name
-VERSION_NAME = "Report_VC"
-
-# %%
 # Initialise a Dealroom wrangler instance
 DR = wu.DealroomWrangler()
 
@@ -64,7 +56,13 @@ DR = wu.DealroomWrangler()
 len(DR.company_data)
 
 # %%
-# DR = DR2
+# Plotting utils
+import innovation_sweet_spots.utils.altair_save_utils as alt_save
+
+AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
+
+# Figure version name
+VERSION_NAME = "Report_VC"
 
 # %% [markdown]
 # ### Import reviewed data
@@ -587,7 +585,7 @@ chart_trends._epsilon = 0.05
 fig = chart_trends.mangitude_vs_growth_chart(
     magnitude_vs_growth_plot,
     x_limit=16,
-    y_limit=6.5,
+    y_limit=7,
     mid_point=mid_point,
     baseline_growth=BASELINE_GROWTH,
     values_label="Average investment per year (£ billions)",
@@ -600,7 +598,7 @@ fig
 AltairSaver.save(
     fig,
     f"v{VERSION_NAME}_growth_vs_magnitude_Category",
-    filetypes=["html", "svg", "png"],
+    filetypes=["html"],
 )
 
 # %% [markdown]
@@ -732,7 +730,10 @@ fig = (
                 labelExpr="datum.value < -1 ? null : datum.label",
                 labelFlush=False,
             ),
-            scale=alt.Scale(domain=(-1, 100)),
+            scale=alt.Scale(
+                domain=(-1, 150),
+                # domain=(.1, 100), type="log",                
+            ),
         ),
         y=alt.Y(
             "Sub Category:N",
@@ -851,6 +852,9 @@ subcategory_ts = (
 subcategory_ts.head(1)
 
 # %%
+importlib.reload(pu);
+
+# %%
 cats = ["Kitchen tech", "Dark kitchen"]
 
 fig = pu.configure_plots(
@@ -858,12 +862,26 @@ fig = pu.configure_plots(
         subcategory_ts.assign(**{variable: lambda df: df[variable] / 1}),
         cats,
         variable="raised_amount_gbp_total",
-        variable_title="Investment (£ million)",
+        variable_title="Investment (£ millions)",
         category_column="Sub Category",
         amount_div=1,
     )
 )
 fig
+
+# %%
+pu.configure_plots(pu.ts_bar_incomplete(
+    subcategory_ts,
+    categories_to_show=cats,
+    variable= "raised_amount_gbp_total",
+    variable_title= "Investment (£ billions)",
+    category_column= "Sub Category",
+    category_label= "Sub category",
+    amount_div= 1000,
+    width= 400,
+    height= 200,
+    tooltip=True,
+))
 
 # %%
 AltairSaver.save(
@@ -885,6 +903,23 @@ fig = pu.configure_plots(
     )
 )
 fig
+
+# %%
+importlib.reload(pu);
+
+# %%
+pu.configure_plots(pu.ts_bar_incomplete(
+    subcategory_ts,
+    categories_to_show=cats,
+    variable= "raised_amount_gbp_total",
+    variable_title= "Investment (£ billions)",
+    category_column= "Sub Category",
+    category_label= "Sub-categories",
+    amount_div= 1000,
+    width= 450,
+    height= 200,
+    tooltip=True,
+))
 
 # %%
 AltairSaver.save(

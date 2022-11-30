@@ -22,7 +22,15 @@ _font_size = 15
 _tickCountX = 5
 _tickCountY = 5
 _circle_size = 30
-
+# Trends labels
+_trend_text_color = "#524940"
+_trend_text_opacity = 0.8
+_trend_font_size = _font_size
+_dormant_descr = 'Dormant: Relatively low magnitude and low growth'
+_emerging_descr = 'Emerging: Relatively low magnitude but high growth'
+_hot_descr = 'Hot: Relatively high magnitude and high growth'
+_stabilising_descr = 'Stabilising: Relatively high magnitude but low growth'
+_trend_descriptions = [_dormant_descr, _emerging_descr, _hot_descr, _stabilising_descr]
 # Dummy table
 _dummy_data = pd.DataFrame(
     data={
@@ -252,9 +260,11 @@ def mangitude_vs_growth_chart(
     horizontal_log: bool = False,
     width: int = 400,
     height: int = 400,
+    show_trend_labels: bool = True,
 ):
     """Combines gradient and scatter plots"""
     gradient_bg = gradient_background(x_limit, y_limit, mid_point)
+    trends_labels_chart = trends_labels(x_limit, y_limit)
     scatter = scatter_chart(
         data,
         x_limit,
@@ -266,8 +276,111 @@ def mangitude_vs_growth_chart(
         width,
         height,
     )
-    return configure_trends_chart(gradient_bg + scatter)
+    if show_trend_labels:
+        return configure_trends_chart(gradient_bg + scatter + trends_labels_chart)
+    else:
+        return configure_trends_chart(gradient_bg + scatter)
+        
 
+def trends_labels(
+    x_limit: float,
+    y_limit: float,
+    text_color = _trend_text_color,
+    text_opacity = _trend_text_opacity,
+    font_size=_trend_font_size,
+):
+    """ Add labels to the plot """
+    data = pd.DataFrame(data={
+        'label': ['DORMANT', 'EMERGING', 'HOT', 'STABILISING'],        
+        'x': [0, 0, x_limit, x_limit],
+        'y': [-1, y_limit, y_limit, -1],
+        'Trend': _trend_descriptions,
+    })
+    tooltip = ['Trend']
+    
+    text_dormant = (
+        alt.Chart(data.query("label == 'DORMANT'"))
+        .mark_point()
+        .encode(
+            x='x',
+            y='y',
+            tooltip=tooltip,
+        )
+    ).mark_text(
+        align="left",
+        baseline="bottom",
+        font=pu.FONT,
+        dx=5,
+        fontSize=font_size,
+        fontStyle="bold",
+        color=text_color,
+        opacity=text_opacity,
+    ).encode(
+        text="label:N")
+    
+    text_emerging = (
+        alt.Chart(data.query("label == 'EMERGING'"))
+        .mark_point()
+        .encode(
+            x='x',
+            y='y',
+            tooltip=tooltip,
+        )
+    ).mark_text(
+        align="left",
+        baseline="top",
+        font=pu.FONT,
+        dx=5,
+        dy=5,          
+        fontSize=font_size,
+        fontStyle="bold",
+        color=text_color, 
+        opacity=text_opacity,        
+    ).encode(
+        text="label:N")
+
+    text_hot = (
+        alt.Chart(data.query("label == 'HOT'"))
+        .mark_point()
+        .encode(
+            x='x',
+            y='y',
+            tooltip=tooltip,            
+        )
+    ).mark_text(
+        align="right",
+        baseline="top",
+        font=pu.FONT,
+        dx=-5,
+        dy=5,        
+        fontSize=font_size,
+        fontStyle="bold",
+        color=text_color, 
+        opacity=text_opacity,        
+    ).encode(
+        text="label:N")   
+    
+    text_stabilising = (
+        alt.Chart(data.query("label == 'STABILISING'"))
+        .mark_point()
+        .encode(
+            x='x',
+            y='y',
+            tooltip=tooltip,            
+        )
+    ).mark_text(
+        align="right",
+        baseline="bottom",
+        font=pu.FONT,
+        dx=-5,
+        fontSize=font_size,
+        fontStyle="bold",
+        color=text_color, 
+        opacity=text_opacity,        
+    ).encode(
+        text="label:N")    
+    
+    return text_dormant + text_emerging + text_hot + text_stabilising
 
 def _estimate_trend_type(magnitude, growth, mid_point, tolerance=0.1):
     # Flags to double check trend type if ambiguous
