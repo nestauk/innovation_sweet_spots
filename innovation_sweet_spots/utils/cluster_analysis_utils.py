@@ -133,6 +133,14 @@ def param_grid_search(
     ).sort_values("silhouette_score", ascending=False)
 
 
+def highest_silhouette_model_params(param_search_results: pd.DataFrame) -> dict:
+    """Return dictionary of model params with the highest
+    scoring mean silhouette score"""
+    return param_search_results.query(
+        "silhouette_score == silhouette_score.max()"
+    ).model_params.values[0]
+
+
 def simple_preprocessing(text: str, stopwords=DEFAULT_STOPWORDS) -> str:
     """Simple preprocessing for cluster texts"""
     text = re.sub(r"[^a-zA-Z ]+", "", text).lower()
