@@ -106,21 +106,26 @@ def param_grid_search(
         Dataframe with information on clustering method, parameters,
             mean silhouette scoure.
     """
+    from sklearn.metrics.pairwise import euclidean_distances
+
     parameters_record = []
     silhouette_score_record = []
     method_record = []
+    reduced_dims_vectors = umap_reducer(vectors)
+    distances = euclidean_distances(reduced_dims_vectors)
     for parameters in tqdm(ParameterGrid(search_params)):
         parameters_record.append(parameters)
-        reduced_dims_vectors = umap_reducer(vectors)
         if cluster_with_hdbscan:
             clusters = hdbscan_clustering(
                 reduced_dims_vectors, hdbscan_params=parameters
             )
-            silhouette = silhouette_score(reduced_dims_vectors, clusters.labels.values)
+            silhouette = silhouette_score(
+                distances, clusters.labels.values, metric="precomputed"
+            )
             method_record.append("HDBSCAN")
         else:
             clusters = kmeans_clustering(reduced_dims_vectors, kmeans_params=parameters)
-            silhouette = silhouette_score(reduced_dims_vectors, clusters)
+            silhouette = silhouette_score(distances, clusters, metric="precomputed")
             method_record.append("K-Means clustering")
         silhouette_score_record.append(silhouette)
 

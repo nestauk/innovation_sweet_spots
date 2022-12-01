@@ -98,6 +98,7 @@ hdbscan_search_params = {
 kmeans_search_params = {"n_clusters": [8, 20, 30], "init": ["k-means++"]}
 
 # %%
+# %%time
 # Parameter grid search using HDBSCAN
 hdbscan_search_results = param_grid_search(
     vectors=gtr_vectors.vectors,
@@ -115,6 +116,7 @@ optimal_hdbscan_params = highest_silhouette_model_params(hdbscan_search_results)
 optimal_hdbscan_params
 
 # %%
+# %%time
 # Parameter grid search using K-Means
 kmeans_search_results = param_grid_search(
     vectors=gtr_vectors.vectors,
