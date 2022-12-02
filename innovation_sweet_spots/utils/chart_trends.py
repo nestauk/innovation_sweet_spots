@@ -68,7 +68,7 @@ def test_figure():
 
 
 def gradient_background(
-    x_limit: float, y_limit: float, mid_point: int = 1, zero_point: float = _zero_point
+    x_limit: float, y_limit: float, mid_point: int = 1, zero_point: float = _zero_point, x_min: float = 0
 ):
     """Prepares an altair chart with a gradient background"""
     data_bottom = pd.DataFrame(
@@ -95,6 +95,7 @@ def gradient_background(
         _color_hot,
         mid_point,
         _opacity,
+        x_min,
     )
     gradient_bottom = gradient_chart(
         data_bottom,
@@ -105,6 +106,7 @@ def gradient_background(
         _color_stabilising,
         mid_point,
         _opacity,
+        x_min,
     )
     return gradient_top + gradient_bottom
 
@@ -118,6 +120,7 @@ def gradient_chart(
     color_end: str = "red",
     mid_point: int = 1,
     opacity: float = 1,
+    x_min: float = 0,
 ):
     """Creates an altair chart with a gradient block"""
     if top:
@@ -155,7 +158,7 @@ def gradient_chart(
         .encode(
             x=alt.X(
                 "x:Q",
-                scale=alt.Scale(domain=(0, x_limit)),
+                scale=alt.Scale(domain=(x_min, x_limit)),
                 axis=alt.Axis(tickCount=_tickCountX),
                 title="",
             ),
@@ -181,9 +184,11 @@ def scatter_chart(
     width: int = 400,
     height: int = 400,
     font_size: int = _font_size,
+    x_min: float = 0,
 ):
     """Scatter plot component of the magnitude versus growth plot"""
     scale = "log" if horizontal_log else "linear"
+    
     fig_points = (
         alt.Chart(data, width=width, height=height)
         .mark_circle(color="black", size=_circle_size)
@@ -192,7 +197,7 @@ def scatter_chart(
                 "magnitude:Q",
                 title=horizontal_values_title,
                 axis=alt.Axis(tickCount=_tickCountX, labelFlush=False),
-                scale=alt.Scale(domain=(0, x_limit), type=scale),
+                scale=alt.Scale(domain=(x_min, x_limit), type=scale),
             ),
             y=alt.Y(
                 "growth:Q",
@@ -261,10 +266,11 @@ def mangitude_vs_growth_chart(
     width: int = 400,
     height: int = 400,
     show_trend_labels: bool = True,
+    x_min: float = 0,
 ):
     """Combines gradient and scatter plots"""
-    gradient_bg = gradient_background(x_limit, y_limit, mid_point)
-    trends_labels_chart = trends_labels(x_limit, y_limit)
+    gradient_bg = gradient_background(x_limit, y_limit, mid_point, x_min=x_min)
+    trends_labels_chart = trends_labels(x_limit, y_limit, x_min=x_min)
     scatter = scatter_chart(
         data,
         x_limit,
@@ -275,6 +281,7 @@ def mangitude_vs_growth_chart(
         horizontal_log,
         width,
         height,
+        x_min = x_min,
     )
     if show_trend_labels:
         return configure_trends_chart(gradient_bg + scatter + trends_labels_chart)
@@ -288,6 +295,7 @@ def trends_labels(
     text_color = _trend_text_color,
     text_opacity = _trend_text_opacity,
     font_size=_trend_font_size,
+    x_min: float=0,
 ):
     """ Add labels to the plot """
     data = pd.DataFrame(data={

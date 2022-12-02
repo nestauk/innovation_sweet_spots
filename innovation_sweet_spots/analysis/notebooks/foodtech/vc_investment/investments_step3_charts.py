@@ -309,7 +309,7 @@ fig
 
 # %%
 AltairSaver.save(
-    fig, f"v{VERSION_NAME}_total_early_investment", filetypes=["html", "png"]
+    fig, f"v{VERSION_NAME}_total_early_investment", filetypes=["html"]
 )
 
 # %%
@@ -476,7 +476,8 @@ fig
 AltairSaver.save(
     fig,
     f"v{VERSION_NAME}_total_investment_early_late",
-    filetypes=["html", "svg", "png"],
+    # filetypes=["html", "svg", "png"],
+    filetypes=["html"],
 )
 
 
@@ -1382,6 +1383,7 @@ trends_combined = (
     pd.concat([magnitude_vs_growth, magnitude_vs_growth_minor])
     .fillna("n/a (category level)")
     .sort_values(["Category", "Sub Category"])
+    .reset_index(drop=True)
 )
 trends_combined.to_csv(
     PROJECT_DIR / f"outputs/foodtech/trends/venture_capital_{VERSION_NAME}_all.csv",
@@ -1389,7 +1391,62 @@ trends_combined.to_csv(
 )
 
 # %%
-chart_trends.estimate_trend_type(trends_combined)
+# trends_combined = chart_trends.estimate_trend_type(trends_combined).reset_index(drop=True)
+# trends_combined_ = chart_trends.estimate_trend_type(trends_combined.iloc[[1,2,6,7,25,19,22,21,11, 13]])
+trends_combined_ = (
+    chart_trends.estimate_trend_type(trends_combined.iloc[[2,6,7,25,22,21,11, 13]])
+    .assign(magnitude=lambda df: df.Magnitude/1_000)
+)
+
+# %%
+trends_combined_
+
+# %%
+importlib.reload(chart_trends);
+mid_point = trends_combined_.magnitude.median()
+# color gradient width
+chart_trends._epsilon = 0.01
+
+fig = chart_trends.mangitude_vs_growth_chart(
+    trends_combined_,
+    x_limit=12,
+    y_limit=9,
+    mid_point=mid_point,
+    baseline_growth=BASELINE_GROWTH,
+    values_label="Average investment per year (£ billions)",
+    text_column="Sub Category",
+    width=425,
+    horizontal_log=True,
+    x_min=.1,
+)
+fig
+
+# %%
+import altair as alt
+from vega_datasets import data
+
+y2 = alt.value(0)
+
+source = data.stocks()
+
+alt.Chart(source.query("price > 100")).transform_filter(
+    'datum.symbol==="GOOG"'
+).mark_area(
+    # line={'color':'darkgreen'},
+    color=alt.Gradient(
+        gradient='linear',
+        stops=[alt.GradientStop(color='red', offset=0),
+               alt.GradientStop(color='darkgreen', offset=1)],
+        x1=1,
+        x2=1,
+        y1=0,
+        y2=0,
+    )
+).encode(
+    x=alt.X('date:T'),
+    y=alt.Y('price:Q', scale=alt.Scale(type='linear', domain=(100, 1000))),
+    y2 = alt.value(0),
+)
 
 # %% [markdown]
 # ### Checking robotics companies
