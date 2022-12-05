@@ -15,6 +15,6 @@ conda activate <virtual_env_name>
 conda config --env --set subdir osx-64
 ```
 
-7. Now you can install tomotopy in the Rosetta environment with `pip install tomotopy`
+8. Now you can install tomotopy in the Rosetta environment with `pip install tomotopy`
 
 Now that the environment is created, if you want to use the environment in the future, you just need to open the Rosetta terminal and `run conda activate <virtual_env_name>`.
