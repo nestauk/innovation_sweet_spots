@@ -88,6 +88,20 @@ company_to_taxonomy_df = (
     .copy()
 )
 
+# Fix these later upstream
+minor_to_major['Retail'] = 'Restaurants and retail'
+minor_to_major['Restaurants'] = 'Restaurants and retail'
+company_to_taxonomy_df.loc[company_to_taxonomy_df["Category"] == 'Retail and restaurants', "Category"] = "Restaurants and retail" 
+taxonomy_df.loc[taxonomy_df["Category"] == 'Retail and restaurants', "Category"] = "Restaurants and retail" 
+
+minor_to_major['Supply chain'] = 'Delivery and logistics'
+minor_to_major['Meal kits'] = 'Delivery and logistics'
+minor_to_major['Delivery'] = 'Delivery and logistics'
+company_to_taxonomy_df.loc[company_to_taxonomy_df["Category"] == 'Logistics', "Category"] = "Delivery and logistics" 
+taxonomy_df.loc[taxonomy_df["Category"] == 'Logistics', "Category"] = "Delivery and logistics" 
+
+minor_to_major['Alt protein (all)'] = 'Innovative food'
+
 # %%
 ## Adapting taxonomy to also include a combined alt protein category
 # Existing alt protein categories
@@ -115,6 +129,48 @@ df = (
 df.loc[:, "Category"] = combined_category_name
 company_to_taxonomy_df = pd.concat([company_to_taxonomy_df, df], ignore_index=True)
 
+
+# %%
+kitchen_robot_ids = [
+    4323337,
+    4152603,
+    3921341,
+    3834707,
+    3518716,
+    3450868,
+    3300579,
+    3029048,
+    2940904,
+    2931036,
+    2432763,
+    1977744,
+    1841335,
+    1831995,
+    1818775,
+    1775048,
+    1737517,
+    1564994,
+    1445841,
+    1417916,
+    1280760,
+    966124,
+    965511,
+]
+kitchen_robot_ids = [str(x) for x in kitchen_robot_ids]
+df_kitchen_robots_cat = pd.DataFrame(
+    data={
+        "id": kitchen_robot_ids,
+        "Category": "Cooking and kitchen",
+        "level": "Category",
+    }
+)
+df_kitchen_robots_subcat = pd.DataFrame(
+    data={"id": kitchen_robot_ids, "Category": "Kitchen tech", "level": "Sub Category"}
+)
+company_to_taxonomy_df = pd.concat(
+    [company_to_taxonomy_df, df_kitchen_robots_cat, df_kitchen_robots_subcat],
+    ignore_index=True,
+)
 
 # %%
 taxonomy_df
@@ -217,7 +273,7 @@ tooltip = [
 
 data_early_late = foodtech_ts.assign(
     raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total
-).query("year < 2022")
+).query("year < 2023")
 
 fig = (
     alt.Chart(
@@ -291,6 +347,13 @@ au.percentage_change(
 au.percentage_change(
     data_early.query("`year`==2020")[values_column].iloc[0],
     data_early.query("`year`==2021")[values_column].iloc[0],
+)
+
+# %%
+# Percentage difference between 2020 and 2021
+au.percentage_change(
+    data_early.query("`year`==2021")[values_column].iloc[0],
+    data_early.query("`year`==2022")[values_column].iloc[0],
 )
 
 # %%
@@ -493,11 +556,11 @@ print(
 
 # %%
 print(
-    get_total_funding(category_ids["Logistics"], min_year=2017, max_year=2021)
+    get_total_funding(category_ids["Delivery and logistics"], min_year=2017, max_year=2021)
     / funding_total
 )
 print(
-    get_total_funding(category_ids["Logistics"], min_year=2017, max_year=2021)
+    get_total_funding(category_ids["Delivery and logistics"], min_year=2017, max_year=2021)
     / funding_total_minusAgritech
 )
 

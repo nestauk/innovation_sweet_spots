@@ -49,6 +49,10 @@ import itertools
 COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
 
 # %%
+import innovation_sweet_spots.getters.dealroom
+importlib.reload(innovation_sweet_spots.getters.dealroom);
+
+# %%
 # Initialise a Dealroom wrangler instance
 DR = wu.DealroomWrangler()
 
@@ -63,6 +67,9 @@ AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
 
 # Figure version name
 VERSION_NAME = "Report_VC"
+
+# %%
+fig_filetypes = ["html", "svg", "png"]
 
 # %% [markdown]
 # ### Import reviewed data
@@ -87,6 +94,23 @@ company_to_taxonomy_df = (
     .query("id not in @rejected_ids")
     .copy()
 )
+
+# Fix these later upstream
+minor_to_major['Retail'] = 'Restaurants and retail'
+minor_to_major['Restaurants'] = 'Restaurants and retail'
+company_to_taxonomy_df.loc[company_to_taxonomy_df["Category"] == 'Retail and restaurants', "Category"] = "Restaurants and retail" 
+taxonomy_df.loc[taxonomy_df["Category"] == 'Retail and restaurants', "Category"] = "Restaurants and retail" 
+
+minor_to_major['Supply chain'] = 'Delivery and logistics'
+minor_to_major['Meal kits'] = 'Delivery and logistics'
+minor_to_major['Delivery'] = 'Delivery and logistics'
+company_to_taxonomy_df.loc[company_to_taxonomy_df["Category"] == 'Logistics', "Category"] = "Delivery and logistics" 
+taxonomy_df.loc[taxonomy_df["Category"] == 'Logistics', "Category"] = "Delivery and logistics" 
+
+minor_to_major['Alt protein (all)'] = 'Innovative food'
+
+# %%
+minor_to_major
 
 # %%
 ## Adapting taxonomy to also include a combined alt protein category
@@ -115,6 +139,9 @@ df = (
 df.loc[:, "Category"] = combined_category_name
 company_to_taxonomy_df = pd.concat([company_to_taxonomy_df, df], ignore_index=True)
 
+
+# %%
+sorted(company_to_taxonomy_df.Category.unique())
 
 # %%
 kitchen_robot_ids = [
@@ -214,7 +241,7 @@ foodtech_ts_early = (
             )
         ),
         period="year",
-        min_year=2010,
+        min_year=2009,
         max_year=2022,
     )
     .assign(year=lambda df: df.time_period.dt.year)
@@ -231,7 +258,7 @@ foodtech_ts_late = (
             )
         ),
         period="year",
-        min_year=2010,
+        min_year=2009,
         max_year=2022,
     )
     .assign(year=lambda df: df.time_period.dt.year)
@@ -251,16 +278,16 @@ values_label = "Investment (£ billions)"
 values_column = "raised_amount_gbp_total"
 tooltip = [
     alt.Tooltip(f"{horizontal_column}:O", title=horizontal_label),
-    alt.Tooltip(f"{values_column}:Q", format=",.3f", title=values_column),
+    alt.Tooltip(f"{values_column}:Q", format=",.3f", title=values_label),
 ]
 
 data_early_late = foodtech_ts.assign(
     raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
-)  # .query("year < 2022")
+)
 
 fig = (
     alt.Chart(
-        data_early_late,
+        data_early_late.query("year > 2009"),
         width=400,
         height=200,
     )
@@ -291,7 +318,7 @@ data_early = data_early_late.query('deal_type == "Early"')
 
 fig = (
     alt.Chart(
-        data_early,
+        data_early.query("year > 2009"),
         width=400,
         height=200,
     )
@@ -302,6 +329,7 @@ fig = (
             f"{values_column}:Q",
             title=values_label,
         ),
+        tooltip=tooltip,
     )
 )
 fig = pu.configure_plots(fig)
@@ -309,7 +337,7 @@ fig
 
 # %%
 AltairSaver.save(
-    fig, f"v{VERSION_NAME}_total_early_investment", filetypes=["html"]
+    fig, f"v{VERSION_NAME}_total_early_investment", filetypes=fig_filetypes
 )
 
 # %%
@@ -325,6 +353,12 @@ au.percentage_change(
 )
 
 # %%
+i2011 = data_early.query("`year`==2011")[values_column].iloc[0]
+i2021 = data_early.query("`year`==2021")[values_column].iloc[0]
+print(i2011, i2021)
+print('difference:', i2021 / i2011)
+
+# %%
 # Percentage difference between 2020 and 2021
 au.percentage_change(
     data_early.query("`year`==2020")[values_column].iloc[0],
@@ -332,8 +366,22 @@ au.percentage_change(
 )
 
 # %%
+# Percentage difference between 2020 and 2021
+au.percentage_change(
+    data_early.query("`year`==2021")[values_column].iloc[0],
+    data_early.query("`year`==2022")[values_column].iloc[0],
+)
+
+# %%
 # Magnitude and growth between 2017 and 2021
 au.estimate_magnitude_growth(data_early.drop(["deal_type"], axis=1), 2017, 2021)
+
+# %%
+# Magnitude and growth between 2017 and 2021
+au.estimate_magnitude_growth(data_early.drop(["deal_type"], axis=1), 2011, 2021)
+
+# %%
+data_early.to_csv('test.csv')
 
 # %%
 # Chart with only the late stage deals
@@ -341,7 +389,7 @@ data_late = data_early_late.query('deal_type == "Late"')
 
 fig = (
     alt.Chart(
-        data_late,
+        data_late.query("year > 2009"),
         width=400,
         height=200,
     )
@@ -352,14 +400,16 @@ fig = (
             f"{values_column}:Q",
             title=values_label,
         ),
+        tooltip=tooltip,        
     )
+    
 )
 fig = pu.configure_plots(fig)
 fig
 
 # %%
 AltairSaver.save(
-    fig, f"v{VERSION_NAME}_total_late_investment", filetypes=["html", "png"]
+    fig, f"v{VERSION_NAME}_total_late_investment", filetypes=fig_filetypes
 )
 
 # %%
@@ -377,7 +427,7 @@ data_early_late = foodtech_ts  # .query("year < 2022")
 
 fig = (
     alt.Chart(
-        data_early_late,
+        data_early_late.query("year > 2009"),
         width=400,
         height=200,
     )
@@ -477,8 +527,72 @@ AltairSaver.save(
     fig,
     f"v{VERSION_NAME}_total_investment_early_late",
     # filetypes=["html", "svg", "png"],
-    filetypes=["html"],
+    filetypes=fig_filetypes,
 )
+
+# %%
+category_label = "Category"
+values_label = "Investment"
+
+fig = (
+    alt.Chart(
+        df_major_amount_deal_type,
+        width=350,
+        height=300,
+    )
+    .mark_bar()
+    .encode(
+        alt.X(
+            f"{values_label}",
+            title="Investment (proprtion)",
+            axis=alt.Axis(labelFlush=False, format="%"),
+            stack="normalize",
+        ),
+        alt.Y(f"{category_label}", sort="-x", title=""),
+        color=alt.Color("Deal type"),
+        order=alt.Order(
+            # Sort the segments of the bars by this field
+            "Deal type",
+            sort="ascending",
+        ),
+    )
+)
+fig = pu.configure_plots(fig)
+fig
+
+# %% [markdown]
+# #### Logistics check
+
+# %%
+# Late stage deals time series
+foodtech_logistics_ids = set(list(company_to_taxonomy_df.query("Category == 'Delivery and logistics'").id.unique()))
+foodtech_logistics_ids = set(list(company_to_taxonomy_df.query("Category == 'Lab meat'").id.unique()))
+
+foodtech_ts_late = (
+    au.cb_get_all_timeseries(
+        DR.company_data.query("id in @foodtech_logistics_ids"),
+        (
+            DR.funding_rounds.query("id in @foodtech_logistics_ids").query(
+                "`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES"
+            )
+        ),
+        period="year",
+        min_year=2009,
+        max_year=2022,
+    )
+    .assign(year=lambda df: df.time_period.dt.year)
+    .assign(deal_type="Late")
+)
+
+
+# %%
+foodtech_ts_late
+
+# %%
+(612.536091-556.465087)/556.465087	
+
+# %%
+(3490.258340 - 1707.778906)/3490.258340
 
 
 # %% [markdown]
@@ -540,11 +654,11 @@ print(
 
 # %%
 print(
-    get_total_funding(category_ids["Logistics"], min_year=2017, max_year=2021)
+    get_total_funding(category_ids["Delivery and logistics"], min_year=2017, max_year=2021)
     / funding_total
 )
 print(
-    get_total_funding(category_ids["Logistics"], min_year=2017, max_year=2021)
+    get_total_funding(category_ids["Delivery and logistics"], min_year=2017, max_year=2021)
     / funding_total_minusAgritech
 )
 
@@ -566,6 +680,10 @@ print(
 BASELINE_GROWTH = 1.28
 
 # %%
+import importlib
+importlib.reload(utils);
+
+# %%
 # Caculate mangitude vs growth plots
 magnitude_vs_growth = utils.get_trends(
     taxonomy_df, utils.rejected_tags, "Category", company_to_taxonomy_df, DR
@@ -577,6 +695,9 @@ magnitude_vs_growth_plot = magnitude_vs_growth.assign(
 chart_trends.estimate_trend_type(magnitude_vs_growth).sort_values("growth")
 
 # %%
+importlib.reload(chart_trends);
+
+# %%
 # Chart configs
 # mid point
 mid_point = magnitude_vs_growth_plot.magnitude.median()
@@ -585,7 +706,7 @@ chart_trends._epsilon = 0.05
 
 fig = chart_trends.mangitude_vs_growth_chart(
     magnitude_vs_growth_plot,
-    x_limit=16,
+    x_limit=18,
     y_limit=7,
     mid_point=mid_point,
     baseline_growth=BASELINE_GROWTH,
@@ -614,7 +735,7 @@ category_ids = utils.get_category_ids(
 category_ts = utils.get_category_ts(category_ids, DR)
 
 # %%
-category = "Retail and restaurants"
+category = "Cooking and kitchen"
 # category = "Logistics"
 
 horizontal_label = "Year"
@@ -819,7 +940,7 @@ ids = company_to_taxonomy_df.query("Category == @category")
 
 # %%
 (
-    estimate_trend_type(magnitude_vs_growth_minor).to_csv(
+    chart_trends.estimate_trend_type(magnitude_vs_growth_minor).to_csv(
         PROJECT_DIR
         / f"outputs/foodtech/trends/venture_capital_{VERSION_NAME}_SubCategory.csv",
         index=False,
@@ -860,10 +981,10 @@ cats = ["Kitchen tech", "Dark kitchen"]
 
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(
-        subcategory_ts.assign(**{variable: lambda df: df[variable] / 1}),
+        subcategory_ts.assign(**{variable: lambda df: df[variable] / 1000}),
         cats,
         variable="raised_amount_gbp_total",
-        variable_title="Investment (£ millions)",
+        variable_title="Investment (£ billions)",
         category_column="Sub Category",
         amount_div=1,
     )
@@ -871,18 +992,18 @@ fig = pu.configure_plots(
 fig
 
 # %%
-pu.configure_plots(pu.ts_bar_incomplete(
-    subcategory_ts,
-    categories_to_show=cats,
-    variable= "raised_amount_gbp_total",
-    variable_title= "Investment (£ billions)",
-    category_column= "Sub Category",
-    category_label= "Sub category",
-    amount_div= 1000,
-    width= 400,
-    height= 200,
-    tooltip=True,
-))
+# pu.configure_plots(pu.ts_bar_incomplete(
+#     subcategory_ts,
+#     categories_to_show=cats,
+#     variable= "raised_amount_gbp_total",
+#     variable_title= "Investment (£ billions)",
+#     category_column= "Sub Category",
+#     category_label= "Sub category",
+#     amount_div= 1000,
+#     width= 400,
+#     height= 200,
+#     tooltip=True,
+# ))
 
 # %%
 AltairSaver.save(
@@ -898,7 +1019,7 @@ fig = pu.configure_plots(
         subcategory_ts.assign(**{variable: lambda df: df[variable] / 1000}),
         cats,
         variable="raised_amount_gbp_total",
-        variable_title="Investment (£ billion)",
+        variable_title="Investment (£ billions)",
         category_column="Sub Category",
         amount_div=1,
     )
@@ -936,7 +1057,7 @@ fig = pu.configure_plots(
         subcategory_ts.assign(**{variable: lambda df: df[variable] / 1000}),
         cats,
         variable="raised_amount_gbp_total",
-        variable_title="Investment (£ billion)",
+        variable_title="Investment (£ billions)",
         category_column="Sub Category",
         amount_div=1,
     )
@@ -959,7 +1080,7 @@ fig = pu.configure_plots(
         subcategory_ts.assign(**{variable: lambda df: df[variable]}),
         cats,
         variable="raised_amount_gbp_total",
-        variable_title="Investment (£ million)",
+        variable_title="Investment (£ millions)",
         category_column="Sub Category",
         amount_div=1,
     )
@@ -979,7 +1100,7 @@ fig = pu.configure_plots(
         subcategory_ts.assign(**{variable: lambda df: df[variable]}),
         cats,
         variable="raised_amount_gbp_total",
-        variable_title="Investment (£ million)",
+        variable_title="Investment (£ millions)",
         category_column="Sub Category",
         amount_div=1,
     )
@@ -1226,10 +1347,10 @@ data = (
 
 # Categories to show
 cats = [
-    "Logistics",
+    "Delivery and logistics",
     "Innovative food",
     "Health",
-    "Retail and restaurants",
+    "Restaurants and retail",
     "Cooking and kitchen",
     "Food waste",
     # "Agritech",
@@ -1246,7 +1367,7 @@ data_top8 = pd.concat(data_top8, ignore_index=True)
 
 
 # %%
-data.query('Category == "Logistics"').raised_amount_gbp.sum()
+data.query('Category == "Delivery and logistics"').raised_amount_gbp.sum()
 
 # %%
 fig = (
@@ -1391,35 +1512,156 @@ trends_combined.to_csv(
 )
 
 # %%
-# trends_combined = chart_trends.estimate_trend_type(trends_combined).reset_index(drop=True)
-# trends_combined_ = chart_trends.estimate_trend_type(trends_combined.iloc[[1,2,6,7,25,19,22,21,11, 13]])
+full_titles = [f'{x[0]}: {x[1]}' for x in list(zip(trends_combined['Category'], trends_combined['Sub Category']))]
+trends_combined['full_titles'] = full_titles
+
+# %%
+categories_to_show = [
+    'Innovative food: Alt protein (all)',
+    'Delivery and logistics: Delivery',
+    'Food waste: n/a (category level)',
+    'Health: Biomedical',
+    'Restaurants and retail: n/a (category level)',
+    'Innovative food: Reformulation',
+    'Delivery and logistics: Meal kits',
+    'Cooking and kitchen: Dark kitchen',
+    'Cooking and kitchen: Kitchen tech',
+    'Health: Personalised nutrition',
+]
+
+# %%
 trends_combined_ = (
-    chart_trends.estimate_trend_type(trends_combined.iloc[[2,6,7,25,22,21,11, 13]])
-    .assign(magnitude=lambda df: df.Magnitude/1_000)
+    trends_combined.query('full_titles in @categories_to_show')
+    .assign(magnitude=lambda df: df.Magnitude)
 )
 
 # %%
 trends_combined_
 
 # %%
+import numpy as np
+
+def log_growth(growth):
+    if growth > 0:
+        return np.log10(growth)
+    else:
+        return -np.log10(-growth)
+    
+    
+trends_combined_log = trends_combined_.copy()
+# trends_combined_log['magnitude'] = np.log10(trends_combined_log.magnitude)
+# trends_combined_log['growth'] = trends_combined_log.Growth.apply(log_growth)
+
+# %%
+trends_combined_log
+
+# %%
+importlib.reload(alt);
 importlib.reload(chart_trends);
-mid_point = trends_combined_.magnitude.median()
+
+# %%
+trends_combined_log[['magnitude', 'growth', 'full_titles']]
+
+# %%
+trends_combined_log.magnitude.describe(percentiles=[0.25, 0.5, 0.75])
+
+# %%
+trends_combined_log.magnitude.median()
+
+# %%
+# importlib.reload(chart_trends);
+mid_point = trends_combined_log.magnitude.median()
 # color gradient width
 chart_trends._epsilon = 0.01
 
 fig = chart_trends.mangitude_vs_growth_chart(
-    trends_combined_,
-    x_limit=12,
-    y_limit=9,
+    trends_combined_log,
+    x_limit=20_000,
+    y_limit=10,
     mid_point=mid_point,
     baseline_growth=BASELINE_GROWTH,
-    values_label="Average investment per year (£ billions)",
-    text_column="Sub Category",
+    values_label="Average investment per year (£ millions)",
+    text_column='full_titles',
     width=425,
     horizontal_log=True,
-    x_min=.1,
+    x_min=50,
 )
+
+# Baseline
+baseline_rule = (
+    alt.Chart(pd.DataFrame({"x": [mid_point]}))
+    .mark_rule(strokeDash=[5, 7], size=1, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+baseline_rule_1= (
+    alt.Chart(pd.DataFrame({"x": [192.682263]}))
+    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+baseline_rule_2 = (
+    alt.Chart(pd.DataFrame({"x": [1059.097782]}))
+    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+fig = fig + baseline_rule + baseline_rule_1 + baseline_rule_2
 fig
+
+# fig = fig + baseline_rule
+# fig
+
+# %%
+AltairSaver.save(
+    fig, f"v{VERSION_NAME}_magnitude_growth_Synthesis_venture", filetypes=["html", "svg", "png"]
+)
+
+# %%
+fig_points = (
+    alt.Chart(trends_combined_log, width=350, height=350)
+    .mark_circle(color="black")
+    .encode(
+        x=alt.X(
+            "magnitude:Q",
+            # title=horizontal_values_title,
+            axis=alt.Axis(labelFlush=False,
+                          labelExpr="pow(10, datum.value)"),
+            scale=alt.Scale(domain=(1.6, 4.6)),
+        ),
+        y=alt.Y(
+            "growth:Q",
+            title="Growth",
+            scale=alt.Scale(domain=(-2, 4.5)),            
+            axis=alt.Axis(
+                # format="%",
+                labelFlush=False,
+                labelExpr="datum.value > 0 ? pow(10, datum.value) + '%' : -pow(10, -datum.value) + '%'",
+            ),
+
+        ),
+        tooltip=[
+            alt.Tooltip(f"full_titles"),                
+            # alt.Tooltip("magnitude:Q", title=horizontal_values_title, format=_values_format),
+            # alt.Tooltip("growth:Q", title="Growth", format=".1%"),
+        ],
+    )
+)
+fig_points
+
+# %%
 
 # %%
 import altair as alt
@@ -1459,9 +1701,6 @@ folder = "inputs/data/dealroom/raw_exports/foodtech_2022_11"
 df = pd.read_excel(
     PROJECT_DIR / f"{folder}/df8381fc-6e7d-4eab-9ed5-59ecf66074dd.xlsx"
 ).astype({"id": str})
-
-# %%
-df
 
 # %%
 kitchen_robots_new = set(df.id.to_list()).difference(foodtech_ids)

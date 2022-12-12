@@ -700,11 +700,11 @@ def ts_smooth_incomplete(
         width,
         height,
         stroke_dash=_stroke_dash_default,
-        line_width=2.5,
+        line_width=2,
         line_point_filled=False,
     ).transform_filter(f"datum.year >= {max_complete_year}")
 
-    return fig_solid + fig_solid_stroke + fig_dashed
+    return fig_solid_stroke+ fig_solid + fig_dashed
 
 
 def ts_bar(

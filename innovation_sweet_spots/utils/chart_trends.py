@@ -18,6 +18,7 @@ _color_stabilising = "#94D8E4"
 _epsilon = 0.1
 # Fonts
 _font_size = 15
+_values_format =  ",.3f"
 # Axes fine tuning
 _tickCountX = 5
 _tickCountY = 5
@@ -185,13 +186,14 @@ def scatter_chart(
     height: int = 400,
     font_size: int = _font_size,
     x_min: float = 0,
+    values_format: str = _values_format
 ):
     """Scatter plot component of the magnitude versus growth plot"""
     scale = "log" if horizontal_log else "linear"
     
     fig_points = (
         alt.Chart(data, width=width, height=height)
-        .mark_circle(color="black", size=_circle_size)
+        .mark_circle(color="black", size=_circle_size, clip=True)
         .encode(
             x=alt.X(
                 "magnitude:Q",
@@ -206,7 +208,8 @@ def scatter_chart(
                 scale=alt.Scale(domain=(-1, y_limit)),
             ),
             tooltip=[
-                alt.Tooltip("magnitude:Q", title=horizontal_values_title),
+                alt.Tooltip(f"{text_column}"),                
+                alt.Tooltip("magnitude:Q", title=horizontal_values_title, format=_values_format),
                 alt.Tooltip("growth:Q", title="Growth", format=".1%"),
             ],
         )
@@ -238,6 +241,7 @@ def scatter_chart(
         font=pu.FONT,
         dx=7,
         fontSize=_font_size,
+        clip=True,
     ).encode(text=f"{text_column}:N")
 
     if baseline_growth is not None:
