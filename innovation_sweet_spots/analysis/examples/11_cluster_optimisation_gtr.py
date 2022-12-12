@@ -3,6 +3,7 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -30,6 +31,8 @@ from innovation_sweet_spots.utils.cluster_analysis_utils import (
     param_grid_search,
     highest_silhouette_model_params,
 )
+import innovation_sweet_spots.utils.cluster_analysis_utils as cau
+import innovation_sweet_spots.utils.embeddings_utils as eu
 from innovation_sweet_spots import PROJECT_DIR
 
 # %% [markdown]
@@ -132,3 +135,22 @@ kmeans_search_results
 # Find K-Means model params with highest silhouette score
 optimal_kmeans_params = highest_silhouette_model_params(kmeans_search_results)
 optimal_kmeans_params
+
+# %% [markdown]
+# ## Visualising the optimal clustering result
+
+# %%
+optimal_labels = cau.kmeans_clustering(gtr_vectors.vectors, optimal_kmeans_params)
+
+# %%
+cau.cluster_visualisation(
+    gtr_vectors.vectors,
+    optimal_labels,
+    # Add short abstracts to the visualisation 
+    extra_data=(
+        gtr_project_abstracts[['id', 'abstract']]
+        .assign(abstract=lambda df: df.abstract.apply(lambda x: str(x)[0:300] + '...'))
+    ),
+)
+
+# %%

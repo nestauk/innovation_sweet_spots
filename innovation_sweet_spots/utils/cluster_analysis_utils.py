@@ -241,3 +241,51 @@ def cluster_keywords(
         top_cluster_tokens[unique_cluster_labels[i]] = [id_to_token[j] for j in x]
 
     return top_cluster_tokens
+
+## kk additions
+import altair as alt
+alt.data_transformers.disable_max_rows()
+import innovation_sweet_spots.utils.embeddings_utils as eu
+import innovation_sweet_spots.utils.plotting_utils as pu
+
+def cluster_visualisation(
+    vectors,
+    cluster_labels: list,
+    width=600,
+    height=600,
+    random_state=1,
+    extra_data: pd.DataFrame=None
+):
+    """ Reduces the vectors to 2D and plots them with altair """
+    vectors_2d = eu.reduce_to_2D(vectors, random_state)
+    # Create a dataframe
+    data = pd.DataFrame(data={
+        'x': vectors_2d[:,0],
+        'y': vectors_2d[:,1],
+        'cluster_label': [str(c) for c in cluster_labels],
+    })
+    # Add extra data
+    if extra_data is not None:
+        extra_columns = list(extra_data.columns)
+        for col in extra_columns:
+            data[col] = extra_data[col].to_list()
+    else:
+        extra_columns = []
+    # Plot the clusters
+    fig = (
+        alt
+        .Chart(data, width=width, height=height)
+        .mark_circle()
+        .encode(
+            x=alt.X('x', axis=alt.Axis(labels=False, title="", ticks=False, domain=False)),
+            y=alt.Y('y', axis=alt.Axis(labels=False, title="", ticks=False, domain=False)),
+            color=alt.Color('cluster_label'),
+            tooltip=['cluster_label'] + extra_columns,
+        )
+    )
+    return (
+        pu.configure_plots(fig)
+        .configure_axis(grid=False)
+        .configure_view(strokeWidth=0)
+        .interactive()
+    )

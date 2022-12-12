@@ -13,6 +13,7 @@ from numpy.typing import ArrayLike
 from typing import Iterator, Union
 from pandas import DataFrame
 import os
+import umap
 
 
 class QueryEmbeddings:
@@ -254,6 +255,8 @@ class Vectors:
         """Saves vectors and the corresponding document ids locally"""
         filename = self.filename if filename is None else filename
         folder = self.folder if folder is None else folder
+        # Create the director if needed
+        folder.mkdir(parents=True, exist_ok=True)
         # Save vectors
         vectors_filepath = self.filepath_vectors(filename, self.model_name, folder)
         np.save(vectors_filepath, self.vectors)
@@ -263,3 +266,13 @@ class Vectors:
             list(self.vector_ids),
             self.filepath_vector_ids(filename, self.model_name, folder),
         )
+
+        
+def reduce_to_2D(vectors, random_state=1):
+    """Helper function to reduce vectors to 2-d embeddings using UMAP, for visualisation purposes"""
+    reducer = umap.UMAP(n_components=2, random_state=random_state)
+    embedding = reducer.fit_transform(vectors)    
+    return embedding
+
+    
+        
