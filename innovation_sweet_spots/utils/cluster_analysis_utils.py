@@ -257,7 +257,10 @@ def cluster_visualisation(
     extra_data: pd.DataFrame=None
 ):
     """ Reduces the vectors to 2D and plots them with altair """
-    vectors_2d = eu.reduce_to_2D(vectors, random_state)
+    if vectors.shape[1] != 2:
+        vectors_2d = eu.reduce_to_2D(vectors, random_state)
+    else:
+        vectors_2d = vectors
     # Create a dataframe
     data = pd.DataFrame(data={
         'x': vectors_2d[:,0],
@@ -283,9 +286,10 @@ def cluster_visualisation(
             tooltip=['cluster_label'] + extra_columns,
         )
     )
-    return (
+    fig = (
         pu.configure_plots(fig)
         .configure_axis(grid=False)
         .configure_view(strokeWidth=0)
         .interactive()
     )
+    return vectors_2d, fig

@@ -140,10 +140,16 @@ optimal_kmeans_params
 # ## Visualising the optimal clustering result
 
 # %%
+importlib.reload(cau);
+
+# %% [markdown]
+# ### k-means result
+
+# %%
 optimal_labels = cau.kmeans_clustering(gtr_vectors.vectors, optimal_kmeans_params)
 
 # %%
-cau.cluster_visualisation(
+vectors_2d, fig = cau.cluster_visualisation(
     gtr_vectors.vectors,
     optimal_labels,
     # Add short abstracts to the visualisation 
@@ -152,5 +158,25 @@ cau.cluster_visualisation(
         .assign(abstract=lambda df: df.abstract.apply(lambda x: str(x)[0:300] + '...'))
     ),
 )
+
+# %% [markdown]
+# ### hdbscan result
+
+# %%
+optimal_labels = cau.hdbscan_clustering(gtr_vectors.vectors, optimal_hdbscan_params)
+
+# %%
+vectors_2d, fig = cau.cluster_visualisation(
+    vectors_2d,
+    optimal_labels['labels'],
+    # Add short abstracts to the visualisation 
+    extra_data=(
+        gtr_project_abstracts[['id', 'abstract']]
+        .assign(abstract=lambda df: df.abstract.apply(lambda x: str(x)[0:300] + '...'))
+    ),
+)
+
+# %%
+fig
 
 # %%
