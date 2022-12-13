@@ -24,11 +24,8 @@ import transformers
 import datasets
 import torch
 
-print(
-    f"Running on transformers v{transformers.__version__} and datasets v{datasets.__version__}"
-)
-
 # %%
+# Load dataframes
 LOAD_DF_PATH = PROJECT_DIR / "inputs/data/review_labelling/dataframes/foodtech_gtr/"
 train_df = load_pickle(LOAD_DF_PATH / "train_df.pickle")
 valid_df = load_pickle(LOAD_DF_PATH / "valid_df.pickle")
@@ -47,7 +44,7 @@ def create_labels(dataset: Dataset, cols_to_skip: list) -> Dataset:
     )
 
 
-def tokenize(dataset: Dataset, text_column: str) -> Dataset:
+def tokenize_dataset(dataset: Dataset, text_column: str) -> Dataset:
     remove_cols = dataset.column_names
     remove_cols.remove("labels")
     tokenizer = AutoTokenizer.from_pretrained(
@@ -65,7 +62,7 @@ def df_to_hf_ds(
 ) -> Dataset:
     dataset = Dataset.from_pandas(df, preserve_index=False)
     dataset = create_labels(dataset, cols_to_skip=non_label_cols)
-    return tokenize(dataset, text_column="text")
+    return tokenize_dataset(dataset, text_column="text")
 
 
 # %%
