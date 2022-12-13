@@ -133,20 +133,32 @@ SAVE_DF_PATH.mkdir(parents=True, exist_ok=True)
 
 # %%
 # Make and save training dataframe
-train_df = ft_gtr_w_dummy.query("reviewed == 1")[:split].pipe(process_columns)
+train_df = (
+    ft_gtr_w_dummy.query("reviewed == 1")[:split]
+    .pipe(process_columns)
+    .reset_index(drop=True)
+)
 save_pickle(train_df, SAVE_DF_PATH / "train_df.pickle")
 train_df.head(3)
 
 # %%
 # Make and save validation dataframe
-valid_df = ft_gtr_w_dummy.query("reviewed == 1")[split:].pipe(process_columns)
+valid_df = (
+    ft_gtr_w_dummy.query("reviewed == 1")[split:]
+    .pipe(process_columns)
+    .reset_index(drop=True)
+)
 save_pickle(valid_df, SAVE_DF_PATH / "valid_df.pickle")
 valid_df.head(3)
 
 # %%
 # Make and save set of records to be reviewed using the model
-to_review_df = ft_gtr_w_dummy.query("reviewed == 0").pipe(process_columns)
+to_review_df = (
+    ft_gtr_w_dummy.query("reviewed == 0").pipe(process_columns).reset_index(drop=True)
+)
 save_pickle(to_review_df, SAVE_DF_PATH / "to_review_df.pickle")
 to_review_df.head(3)
+
+# %%
 
 # %%
