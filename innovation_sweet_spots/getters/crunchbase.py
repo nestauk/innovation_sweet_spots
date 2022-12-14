@@ -10,6 +10,7 @@ from innovation_sweet_spots.getters.path_utils import (
     CB_GTR_LINK_PATH,
     PILOT_OUTPUTS,
 )
+from innovation_sweet_spots import logger
 
 
 def restore_column_names(df: pd.DataFrame) -> pd.DataFrame:
@@ -39,14 +40,30 @@ def get_crunchbase_category_groups() -> pd.DataFrame:
     return pd.read_csv(CB_PATH / "crunchbase_category_groups.csv")
 
 
-def get_crunchbase_orgs(nrows: int = None) -> pd.DataFrame:
-    """
-    Loads and deduplicates the main Crunchbase organisations table;
+def get_crunchbase_orgs(
+    nrows: int = None, filter_invalid_ids: bool = False
+) -> pd.DataFrame:
+    """Loads and deduplicates the main Crunchbase organisations table;
     dtype = object, to avoid warnings about mixed data types
+
+    Args:
+        nrows: Number of rows to load
+        filter_invalid_ids: If set to True, remove rows that do not
+            have a valid Crunchbase id
+
+    Returns:
+        Dataframe of Crunchbase organisations
     """
-    return pd.read_csv(
+    cb_orgs = pd.read_csv(
         CB_PATH / "crunchbase_organizations.csv", dtype=object, nrows=nrows
     ).drop_duplicates()
+    if filter_invalid_ids:
+        regex_query = "id.str.match('^[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}$')"
+        filtered_cb_orgs = cb_orgs.dropna(subset="id").query(regex_query)
+        rows_filtered = len(cb_orgs) - len(filtered_cb_orgs)
+        logger.info(f"{rows_filtered} invalid rows were filtered.")
+        return filtered_cb_orgs
+    return cb_orgs
 
 
 def get_crunchbase_organizations_categories() -> pd.DataFrame:

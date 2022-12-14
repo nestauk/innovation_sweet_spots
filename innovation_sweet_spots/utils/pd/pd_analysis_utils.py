@@ -1,7 +1,6 @@
 """
 
 """
-from innovation_sweet_spots import logging
 from innovation_sweet_spots.getters import guardian
 from innovation_sweet_spots.utils.pd import (
     pd_data_collection_utils as dcu,
@@ -19,9 +18,11 @@ import pandas as pd
 import itertools
 import spacy
 from collections import defaultdict
-from typing import Iterator
-import pickle
+from typing import Iterator, List
 import altair as alt
+from tqdm import tqdm
+from innovation_sweet_spots import logger
+from bertopic._bertopic import BERTopic
 
 MIN_YEAR = 2000
 MAX_YEAR = 2022
@@ -85,11 +86,9 @@ def get_guardian_articles(
         outputs_path.mkdir(parents=True, exist_ok=True)
         filename = f"document_text_{query_identifier}.csv"
         document_text.to_csv(
-            outputs_path / filename,
-            index=False,
-            quoting=csv.QUOTE_NONNUMERIC,
+            outputs_path / filename, index=False, quoting=csv.QUOTE_NONNUMERIC
         )
-        logging.info(f"Saved a table in {outputs_path / filename}")
+        logger.info(f"Saved a table in {outputs_path / filename}")
         save_pickle(metadata, outputs_path / f"metadata_dict_{query_identifier}.pkl")
     return document_text, metadata
 
@@ -126,6 +125,7 @@ class DiscourseAnalysis:
         self.banned_terms = banned_terms
         self.q_id = query_identifier
         self.outputs_path = outputs_path / query_identifier
+        self.outputs_path.mkdir(parents=True, exist_ok=True)
         self.v = verbose
         if not self.v:
             innovation_sweet_spots.utils.io.VERBOSE = False
@@ -134,14 +134,17 @@ class DiscourseAnalysis:
         self._document_text = None
         self._metadata = None
         self.load_documents()
+        self.load_metadata()
         # Intermediate outputs
         self._sentence_records = None
         self._sentence_record_dict = None
         self._processed_articles_by_year = None
         self._term_sentences = None
         self._combined_term_sentences = None
-        self._self_noun_chunks_all_years = None
+        self._noun_chunks_all_years = None
         self._flat_sentences = None
+        self._list_of_flat_sentences = None
+        self._list_of_pos_phrases = None
         # Load precomputed intermediate outputs
         if self.use_cached and (os.path.isdir(self.outputs_path)):
             self.load_preprocessed_data()
@@ -156,13 +159,15 @@ class DiscourseAnalysis:
         self.pos_period_length = 3
 
     ### Collection
-
     @property
     def document_text(self):
         """Documents filtered by required and banned terms"""
         if self._document_text is None:
             self._document_text = self.subset_documents(
-                self.required_terms, self._all_document_text
+                self.search_terms, self._all_document_text
+            )
+            self._document_text = self.subset_documents(
+                self.required_terms, self._document_text
             )
             self._document_text = self.remove_documents(
                 self.banned_terms, self._document_text
@@ -174,24 +179,33 @@ class DiscourseAnalysis:
         return self._metadata
 
     def load_documents(
-        self,
-        load_cached: bool = True,
-        document_text: pd.DataFrame = None,
-        metadata: dict = None,
+        self, load_cached: bool = True, document_text: pd.DataFrame = None
     ):
-        """Loads document texts and metadata"""
-        if (load_cached) and (document_text is None) and (metadata is None):
+        """Loads document texts"""
+        if load_cached and document_text is None:
             try:
-                self._all_document_text = pd.read_csv(
-                    self.outputs_path / f"document_text_{self.q_id}.csv",
-                ).assign(date=lambda df: pd.to_datetime(df.date))
-                self._metadata = load_pickle(
-                    self.outputs_path / f"metadata_dict_{self.q_id}.pkl"
+                document_path = self.outputs_path / f"document_text_{self.q_id}.csv"
+                self._all_document_text = pd.read_csv(document_path).assign(
+                    date=lambda df: pd.to_datetime(df.date)
                 )
-            except:
-                logging.warning("Please provide documents and metadata")
+            except FileNotFoundError as e:
+                logger.warning(
+                    f"{e}. Either create {document_path} or run load_documents with document_text variable assigned."
+                )
         else:
             self._all_document_text = document_text
+
+    def load_metadata(self, load_cached: bool = True, metadata: dict = None):
+        """Loads metadata"""
+        if load_cached and metadata is None:
+            try:
+                metadata_path = self.outputs_path / f"metadata_dict_{self.q_id}.pkl"
+                self._metadata = load_pickle(metadata_path)
+            except FileNotFoundError as e:
+                logger.warning(
+                    f"{e}. Either create {metadata_path} or run load_metadata with metadata variable assigned."
+                )
+        else:
             self._metadata = metadata
 
     def load_preprocessed_data(self):
@@ -216,7 +230,7 @@ class DiscourseAnalysis:
                 self.outputs_path / f"combined_sentences_{self.q_id}.pkl"
             )
         except:
-            logging.warning(
+            logger.warning(
                 f"Intermediate outputs were not found in {self.outputs_path}"
             )
 
@@ -339,14 +353,14 @@ class DiscourseAnalysis:
         """"""
         # Use spacy functionality to identify noun phrases in all sentences in the corpus.
         # These often provide a useful starting point for analysing language used around a given technology.
-        if self._self_noun_chunks_all_years is None:
+        if self._noun_chunks_all_years is None:
             self._noun_chunks_all_years = {
                 str(year): dpu.get_noun_chunks(
                     processed_articles, remove_det_articles=True
                 )
                 for year, processed_articles in self.processed_articles_by_year.items()
             }
-        return self._self_noun_chunks_all_years
+        return self._noun_chunks_all_years
 
     ### Analysing
     @property
@@ -377,8 +391,8 @@ class DiscourseAnalysis:
             # Collect into a single dataframe and specify column names
             mentions_df = pd.concat(mentions_s, axis=1)
             mentions_df.columns = self.search_terms
-            self._sentence_mentions = mentions_df.reset_index().rename(
-                columns={"index": "year"}
+            self._sentence_mentions = (
+                mentions_df.reset_index().rename(columns={"index": "year"}).astype(int)
             )
         return self._sentence_mentions
 
@@ -494,16 +508,36 @@ class DiscourseAnalysis:
             self._term_temporal_rank = cu.analyse_rank_pmi_over_time(self._term_rank)
         return self._term_temporal_rank
 
-    @property
-    def phrase_patterns(self):
-        """"""
+    def make_combined_phrase_patterns(self) -> List[dict]:
+        combined_phrase_patterns = {}
+        for search_term in self.search_terms:
+            phrase_pattern_to_add = pos.make_phrase_patterns(search_term)
+            combined_phrase_patterns = {
+                **combined_phrase_patterns,
+                **phrase_pattern_to_add,
+            }
+        return combined_phrase_patterns
+
+    def set_phrase_patterns(self, load_patterns: bool, make_patterns: bool) -> dict:
+        """Set phrase patterns by loading from json file or by making patterns
+        using function pd_pod_utils.make_phrase_patterns"""
         if self._phrase_patterns is None:
-            try:
-                self._phrase_patterns = load_json(
-                    self.outputs_path / f"phrase_patterns_{self.q_id}.json"
+            if make_patterns and load_patterns:
+                logger.warning(
+                    "Both make_patterns and load cannot be True. Rerun with only one variable set to True"
                 )
-            except:
-                return None
+            elif make_patterns:
+                self._phrase_patterns = self.make_combined_phrase_patterns()
+            elif load_patterns:
+                try:
+                    phrase_patterns_json_path = (
+                        self.outputs_path / f"phrase_patterns_{self.q_id}.json"
+                    )
+                    self._phrase_patterns = load_json(phrase_patterns_json_path)
+                except FileNotFoundError as e:
+                    logger.warning(
+                        f"{e}. Create missing file or use make_patterns=True and rerun this function."
+                    )
         return self._phrase_patterns
 
     def term_phrases(self):
@@ -514,42 +548,62 @@ class DiscourseAnalysis:
         """
         return pos.noun_chunks_w_term(self.noun_chunks_all_years, self.search_terms)
 
-    def get_phrases(self, pattern="noun_phrase", period_length: int = 1):
-        """"""
-        return pos.save_phrases(
-            [
-                pos.aggregate_matches(
-                    pos.match_patterns_across_years(
-                        self.combined_term_sentences,
-                        NLP,
-                        self.phrase_patterns[pattern],
-                        period_length,
+    def get_phrases_based_on_pattern(self, pattern: str) -> pd.DataFrame:
+        """Get phrases based on specified pattern
+
+        Args:
+            pattern: pattern label key in self.phrase_patterns
+                e.g 'heat_pumps_adj_phrase'
+
+        Returns:
+            Dataframe containing columns for:
+                year, phrase, number_of_mentions, pattern
+        """
+        try:
+            return pos.phrase_results(
+                [
+                    pos.aggregate_matches(
+                        pos.match_patterns_across_years(
+                            self.combined_term_sentences,
+                            NLP,
+                            self._phrase_patterns[pattern],
+                            self.pos_period_length,
+                        )
                     )
-                )
-            ]
-        )
+                ],
+                pattern,
+            )
+        except TypeError as e:
+            logger.warning(
+                f"{e}. There are no phrases set yet, run function set_phrase_patterns first."
+            )
 
     @property
-    def pos_phrases(self):
-        """"""
+    def pos_phrases(self) -> pd.DataFrame:
+        """Finds POS phrases that match all phrase patterns
+        from within combined_term_sentences"""
         if self._pos_phrases is None:
-            if self.phrase_patterns is not None:
-                self._pos_phrases = pos.save_phrases(
+            try:
+                self._pos_phrases = pd.concat(
                     [
-                        pos.aggregate_matches(
-                            pos.match_patterns_across_years(
-                                self.combined_term_sentences,
-                                NLP,
-                                self.phrase_patterns[pattern],
-                                self.pos_period_length,
-                            )
-                        )
-                        for pattern in self.phrase_patterns
+                        self.get_phrases_based_on_pattern(pattern)
+                        for pattern in tqdm(self._phrase_patterns)
                     ]
+                ).reset_index(drop=True)
+            except TypeError as e:
+                logger.warning(
+                    f"{e}. There are no phrases set yet, run function set_phrase_patterns first."
                 )
-            else:
-                self._pos_phrases = pd.DataFrame()
         return self._pos_phrases
+
+    @property
+    def list_of_pos_phrases(self):
+        """List of POS phrases. This format is suitable for BERTopic analysis"""
+        if self._list_of_pos_phrases is None:
+            self._list_of_pos_phrases = (
+                self.pos_phrases.phrase.drop_duplicates().to_list()
+            )
+        return self._list_of_pos_phrases
 
     @property
     def subject_phrase_triples(self):
@@ -585,7 +639,7 @@ class DiscourseAnalysis:
                 self._object_phrase_triples[year] = object_phrases
 
     def save_analysis_results(self):
-        """"""
+        """Saves analys to outputs path"""
         self.document_mentions.to_csv(
             self.outputs_path / f"document_mentions_{self.q_id}.csv", index=False
         )
@@ -613,20 +667,15 @@ class DiscourseAnalysis:
             )
         return self._flat_sentences
 
-    def view_mentions(
-        self, term, print_sentences: bool = True, output_to_file: bool = False
-    ):
-        """"""
-        return dpu.view_mentions(
-            dpu.check_mentions(self.flat_sentences, term),
-            self.metadata,
-            self.sentence_record_dict,
-            output_to_file=output_to_file,
-            print_sentences=print_sentences,
-        )
+    @property
+    def list_of_flat_sentences(self):
+        """List of flat sentencs. This format is suitable for BERTopic analysis"""
+        if self._list_of_flat_sentences is None:
+            self._list_of_flat_sentences = self.flat_sentences.sentence.to_list()
+        return self._list_of_flat_sentences
 
     def view_collocations(
-        self, term: str, print_sentences: bool = True, output_to_file: bool = False
+        self, term: str, print_sentences: bool = False, output_to_file: bool = True
     ):
         """"""
         return dpu.view_collocations(
@@ -635,6 +684,7 @@ class DiscourseAnalysis:
             self.sentence_record_dict,
             output_to_file=output_to_file,
             print_sentences=print_sentences,
+            output_path=self.outputs_path,
         )
 
     def view_phrase_sentences(
@@ -651,16 +701,65 @@ class DiscourseAnalysis:
                 output_data=False,
             )
 
+    def fit_topic_model(self, use_phrases: bool = False) -> BERTopic:
+        """Fits a BERTopic model on specified documents
+
+        Args:
+            use_phrases: If set to True, use POS phrases. If set to False use
+                sentences containing search terms.
+
+        Returns:
+            topic_model: BERTopic model
+            docs: list of docs (either from POS phrases or sentences
+                containing search terms)
+        """
+        docs = self.list_of_pos_phrases if use_phrases else self.list_of_flat_sentences
+        topic_model = BERTopic()
+        topic_model.fit_transform(docs)
+        return topic_model, docs
+
     ### Visualising
 
-    def plot_document_mentions(self):
-        """"""
-        return (
-            alt.Chart(self.document_mentions)
-            .mark_bar()
-            .encode(
-                x=alt.X("year:O", title="Year"),
-                y=alt.Y("documents", title="Number of documents"),
-                tooltip=["year", "documents"],
+    def plot_mentions(self, use_documents: bool = True):
+        """Plot the number of mentions for documents/sentences
+        containing the search terms over time.
+
+        Set `use_documents` to True to use document_mentions and
+        to False to use sentence_mentions.
+        """
+        if use_documents:
+            title_lbl = "documents"
+            data = self.document_mentions
+            return (
+                alt.Chart(data)
+                .mark_bar()
+                .encode(
+                    x=alt.X("year:O", title="Year"),
+                    y=alt.Y(
+                        "documents:Q",
+                        title=f"Number of {title_lbl} containing search terms",
+                    ),
+                    tooltip="documents:O",
+                )
             )
-        )
+        else:
+            title_lbl = "sentences"
+            data = self.sentence_mentions.melt(
+                id_vars=["year"],
+                value_vars=self.sentence_mentions.columns[1:],
+                var_name="search_term",
+                value_name="mentions",
+            )
+            return (
+                alt.Chart(data)
+                .mark_bar()
+                .encode(
+                    x=alt.X("year:O", title="Year"),
+                    y=alt.Y(
+                        "mentions:Q",
+                        title=f"Number of {title_lbl} containing search terms",
+                    ),
+                    color="search_term:O",
+                    tooltip="mentions:Q",
+                )
+            )

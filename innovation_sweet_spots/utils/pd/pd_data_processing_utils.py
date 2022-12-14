@@ -5,11 +5,9 @@ Created on Tue Oct  5 14:37:14 2021
 
 @author: jdjumalieva
 """
-import os
 from collections import defaultdict
 import pandas as pd
 import re
-from typing import Iterator
 
 from innovation_sweet_spots.utils import text_cleaning_utils as tcu
 from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
@@ -158,10 +156,9 @@ def get_flat_sentence_mentions(search_terms, sentence_collection):
     """
     base = r"{}"
     expr = "(?:\s|^){}(?:,?\s|\.|$)"
-    for term in search_terms:
-        combined_expressions = [
-            base.format("".join(expr.format(term))) for term in search_terms
-        ]
+    combined_expressions = [
+        base.format("".join(expr.format(term))) for term in search_terms
+    ]
     joined_expressions = "|".join(combined_expressions)
 
     year_flat_sentences = dict()
@@ -220,7 +217,7 @@ def view_collocations(
     sentence_record_dict,
     url_field="webUrl",
     title_field="webTitle",
-    print_sentences=True,
+    print_sentences=False,
     output_to_file=True,
     output_path=OUTPUT_DATA_PATH,
 ):
@@ -236,19 +233,18 @@ def view_collocations(
     """
     results = []
     for year, group in grouped_sentences:
-        if print_sentences:
+        if print_sentences and metadata_dict:
             print(year)
         for ix, row in group.iterrows():
             sentence = row["sentence"]
             sent_id = sentence_record_dict[sentence]
-            web_url = metadata_dict[sent_id][url_field]
-            article_title = metadata_dict[sent_id][title_field]
-            if print_sentences:
-                print(article_title)
-                print(sentence, end="\n\n")
-                print(web_url, end="\n\n")
-                print("----------")
             results.append([year, sent_id, sentence])
+            if print_sentences and metadata_dict:
+                print(metadata_dict[sent_id][title_field])
+                print(sentence, end="\n\n")
+                print(metadata_dict[sent_id][url_field], end="\n\n")
+                print("----------")
+
     results_df = pd.DataFrame.from_records(results, columns=["year", "id", "sentence"])
     if output_to_file:
         results_df.to_csv(output_path / "sentences_w_collocations.csv", index=False)
@@ -281,82 +277,3 @@ def view_collocations_given_year(
         print(sentence, end="\n\n")
         print(web_url, end="\n\n")
         print("----------")
-
-
-# Utility functions for quickly checking mentions (adapted from above)
-def check_mentions(sentence_collection_df, term, groupby_field="year"):
-    """Retrieves sentences with mentions.
-
-    Args:
-        sentence_collection_df: A pandas dataframe with sentences.
-        collocated_term: A string referring to the term of interest.
-        groupby_field: A string referring to the field on which sentence dataframe
-            will be grouped.
-    Returns:
-        A pandas groupby object.
-    """
-    base = r"{}"
-    expr = "(?:\s|^){}(?:,?\s|\.|$)"
-    combined_expr = base.format("".join(expr.format(term)))
-    mentions_df = sentence_collection_df[
-        sentence_collection_df["sentence"].str.contains(combined_expr, regex=True)
-    ]
-    grouped_by_year = mentions_df.groupby(groupby_field)
-    return grouped_by_year
-
-
-def mentions_summary(grouped_sentences):
-    """Prints a quick summary of mentions.
-
-    Args:
-        grouped_sentences: A pandas groupby object.
-
-    Returns:
-        None.
-    """
-    num_years = len(grouped_sentences)
-    num_sentences = sum([len(group) for name, group in grouped_sentences])
-    print(
-        f"The term was mentioned in {num_sentences} sentences across {num_years} years."
-    )
-
-
-def view_mentions(
-    grouped_sentences,
-    metadata_dict,
-    sentence_record_dict,
-    url_field="webUrl",
-    title_field="webTitle",
-    print_sentences=True,
-    output_to_file=True,
-    output_path=OUTPUT_DATA_PATH,
-):
-    """Prints sentences and corresponding article metadata grouped by year.
-
-    Args:
-        grouped_sentences: A pandas groupby object.
-        metadata_dict: A dict mapping article IDs to original article metadata.
-        sentence_record_dict: A dict mapping sentences to article IDs.
-
-    Returns:
-        None.
-    """
-    results = []
-    for year, group in grouped_sentences:
-        if print_sentences:
-            print(year)
-        for ix, row in group.iterrows():
-            sentence = row["sentence"]
-            sent_id = sentence_record_dict[sentence]
-            web_url = metadata_dict[sent_id][url_field]
-            article_title = metadata_dict[sent_id][title_field]
-            if print_sentences:
-                print(article_title)
-                print(sentence, end="\n\n")
-                print(web_url, end="\n\n")
-                print("----------")
-            results.append([year, sent_id, sentence])
-    results_df = pd.DataFrame.from_records(results, columns=["year", "id", "sentence"])
-    if output_to_file:
-        results_df.to_csv(output_path / "sentences_w_mentions.csv", index=False)
-    return results_df
