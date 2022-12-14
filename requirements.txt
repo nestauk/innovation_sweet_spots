@@ -1,7 +1,7 @@
 numpy
 scipy
 pandas
-matplotlib
+matplotlib==3.5.1
 altair
 metaflow
 python-dotenv
@@ -11,7 +11,7 @@ typer
 sh
 CurrencyConverter
 pyldavis
-tomotopy
+#tomotopy
 altair-saver
 selenium
 webdriver-manager
@@ -21,8 +21,9 @@ beautifulsoup4
 textacy
 gensim
 sentence-transformers
-git+https://github.com/nestauk/jacc-hammer.git@legacy
-tables
+#git+https://github.com/nestauk/jacc-hammer.git@legacy
+#tables
 pandas-profiling
 missingno
+bertopic
 #data_getters @ git+https://github.com/nestauk/data_getters.git

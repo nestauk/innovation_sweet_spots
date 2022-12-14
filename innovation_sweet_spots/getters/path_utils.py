@@ -10,6 +10,7 @@ from innovation_sweet_spots import PROJECT_DIR
 # Input paths
 INPUTS_PATH = PROJECT_DIR / "inputs/data/"
 GTR_PATH = INPUTS_PATH / "gtr"
+GTR_2022_PATH = INPUTS_PATH / "gtr_2022_august"
 CB_PATH = INPUTS_PATH / "cb"
 CB_GTR_LINK_PATH = INPUTS_PATH / "cb_gtr_link"
 HANSARD_PATH = INPUTS_PATH / "hansard"

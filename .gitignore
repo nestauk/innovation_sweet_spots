@@ -113,6 +113,13 @@ outputs/figures/*
 /outputs/*
 /outputs/
 !/outputs/figures/*.md
+/innovation_sweet_spots/tests/data_update_checks/other/*
+/innovation_sweet_spots/tests/data_update_checks/cb/*
+!/innovation_sweet_spots/tests/data_update_checks/cb/cb_utils.py
+/innovation_sweet_spots/tests/data_update_checks/gtr/*
+!/innovation_sweet_spots/tests/data_update_checks/gtr/gtr_utils.py
+/innovation_sweet_spots/tests/data_update_checks/nihr/*
+!/innovation_sweet_spots/tests/data_update_checks/nihr/nihr_utils.py
 
 # Mac OS-specific storage files
 .DS_Store

@@ -11,9 +11,8 @@ from collections import defaultdict, Counter
 from textacy import extract
 from spacy.matcher import Matcher
 from spacy.util import filter_spans
-
+from innovation_sweet_spots import logger
 from innovation_sweet_spots.utils.pd import pd_data_processing_utils as dpu
-from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
 
 
 def noun_chunks_w_term(noun_chunks_dict, search_terms):
@@ -93,7 +92,7 @@ def match_patterns_across_years(
     return phrases
 
 
-def aggregate_matches(phrase_dict, sort_phrases=True):
+def aggregate_matches(phrase_dict):
     """Combines phrase matches over a time period and and counts frequency.
 
     Args:
@@ -109,18 +108,10 @@ def aggregate_matches(phrase_dict, sort_phrases=True):
         sorted_results = sorted(Counter(flat_results).items())
         agg_results[year_period] = sorted_results
     return agg_results
-    return agg_results
 
 
 def view_phrase_sentences(
-    year,
-    agg_phrases,
-    sentence_collection_df,
-    metadata_dict,
-    sentence_record_dict,
-    year_field="year",
-    output_data=False,
-    output_path=OUTPUT_DATA_PATH,
+    year, agg_phrases, sentence_collection_df, metadata_dict, sentence_record_dict
 ):
     """Prints out the original sentences in which phrases were were used.
 
@@ -191,7 +182,9 @@ def view_phrase_sentences_period(
             if len(year_subset) > 0:
                 year_subset_df = pd.concat(year_subset)
                 dpu.view_collocations(
-                    year_subset_df.groupby("year"), metadata_dict, sentence_record_dict
+                    year_subset_df.groupby(year_field),
+                    metadata_dict,
+                    sentence_record_dict,
                 )
             else:
                 print("No results")
@@ -269,12 +262,84 @@ def get_svo_phrases(svo_subject, svo_object):
     return subject_phrases, object_phrases
 
 
-def save_phrases(phrase_objects):
+def make_phrase_patterns(search_term: str) -> dict:
+    """For a search term, generate a dictionary of phrase patterns.
+    More details on patterns can be found here:
+    https://spacy.io/api/matcher#patterns
+    """
+    processed_term = search_term.replace("-", " ").replace("_", " ")
+    term_dict_lbl = processed_term.replace(" ", "_")
+    text_phrase = [
+        {"TEXT": f"{search_term_part}"}
+        for search_term_part in processed_term.split(" ")
+    ]
+    return {
+        f"{term_dict_lbl}_term_noun": text_phrase
+        + [{"POS": "NOUN"}, {"POS": "NOUN", "OP": "?"}],
+        f"{term_dict_lbl}_noun_phrase": [
+            {"POS": "ADJ", "OP": "*"},
+            {"POS": "NOUN"},
+            {"POS": "NOUN", "OP": "?"},
+        ]
+        + text_phrase,
+        f"{term_dict_lbl}_adj_phrase": [
+            {"POS": "ADV", "OP": "*"},
+            {"POS": "ADJ"},
+            {"POS": "ADJ", "OP": "*"},
+            {"POS": "NOUN", "OP": "?"},
+        ]
+        + text_phrase,
+        f"{term_dict_lbl}_term_is": text_phrase
+        + [
+            {"LEMMA": "be"},
+            {"DEP": "neg", "OP": "?"},
+            {"POS": {"IN": ["ADV", "DET"]}, "OP": "*"},
+            {"POS": {"IN": ["NOUN", "ADJ"]}, "OP": "*"},
+        ],
+        f"{term_dict_lbl}_term_have": text_phrase
+        + [
+            {"LEMMA": "have"},
+            {"DEP": "neg", "OP": "?"},
+            {"POS": {"IN": ["ADV", "DET"]}, "OP": "*"},
+            {"POS": {"IN": ["NOUN", "ADJ"]}, "OP": "*"},
+        ],
+        f"{term_dict_lbl}_term_can": text_phrase
+        + [
+            {"LEMMA": "can"},
+            {"DEP": "neg", "OP": "?"},
+            {"POS": {"IN": ["ADV", "DET"]}, "OP": "*"},
+            {"POS": {"IN": ["NOUN", "ADJ"]}, "OP": "*"},
+        ],
+        f"{term_dict_lbl}_term_is_at": text_phrase
+        + [{"LEMMA": "be"}, {"DEP": "prep"}, {"POS": "DET"}, {"POS": "NOUN"}],
+        f"{term_dict_lbl}_verb_obj": [
+            {"POS": {"IN": ["NOUN", "ADJ", "ADV", "VERB"]}, "OP": "?"},
+            {"POS": {"IN": ["NOUN", "ADJ", "ADV", "VERB"]}, "OP": "?"},
+            {"POS": "VERB"},
+            {"OP": "?"},
+        ]
+        + text_phrase,
+        f"{term_dict_lbl}_verb_subj": text_phrase
+        + [
+            {"POS": "VERB"},
+            {"POS": {"IN": ["NOUN", "ADJ", "ADV", "VERB"]}, "OP": "?"},
+            {"POS": {"IN": ["NOUN", "ADJ", "ADV", "VERB"]}, "OP": "?"},
+        ],
+    }
+
+
+def phrase_results(phrase_objects: defaultdict, pattern: str) -> pd.DataFrame:
+    """Generate phrase results dataframe with columns for:
+    year, phrase, number_of_mentions, pattern
+    """
     results = []
     for obj in phrase_objects:
         for time_period, phrases in obj.items():
-            for p in phrases:
-                results.append([time_period, p[0], p[1]])
-    result_df = pd.DataFrame.from_records(results)
-    result_df.columns = ["year", "phrase", "number_of_mentions"]
-    return result_df
+            results.extend([time_period, p[0], p[1]] for p in phrases)
+    if results:
+        result_df = pd.DataFrame.from_records(results)
+        result_df.columns = ["year", "phrase", "number_of_mentions"]
+        result_df["pattern"] = pattern
+        return result_df
+    else:
+        logger.info(f"{pattern} pattern found no phrase matches.")

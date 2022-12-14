@@ -5,13 +5,9 @@ Created on Fri Oct  1 15:36:41 2021
 
 @author: jdjumalieva
 """
-import os
-import re
 from bs4 import BeautifulSoup
-from itertools import groupby
 from collections import defaultdict
 import pandas as pd
-from typing import Iterator
 
 
 def filter_by_category(aggregated_articles, category_list, field="sectionName"):
@@ -36,8 +32,10 @@ def filter_by_category(aggregated_articles, category_list, field="sectionName"):
     if not isinstance(field, str):
         raise TypeError("parameter field should be a string")
 
-    filtered_articles = [a for a in aggregated_articles if a[field] in category_list]
-    return filtered_articles
+    if len(category_list) > 0:
+        return [a for a in aggregated_articles if a[field] in category_list]
+    else:
+        return aggregated_articles
 
 
 def extract_text_from_html(html, tags):
@@ -153,10 +151,9 @@ def subset_articles(article_text, filter_1, filter_2, text_field="text"):
     # e.g. applications of hydrogen to heating
     base = r"{}"
     expr = "(?:\s|^){}(?:,?\s|\.|$)"
-    for term in filter_1:
-        combined_expressions = [
-            base.format("".join(expr.format(term))) for term in filter_1
-        ]
+    combined_expressions = [
+        base.format("".join(expr.format(term))) for term in filter_1
+    ]
     joined_expressions = "|".join(combined_expressions)
     subset_df = article_text[article_text[text_field].str.contains(joined_expressions)]
     deduplicated_df = subset_df.drop_duplicates()
@@ -166,7 +163,7 @@ def subset_articles(article_text, filter_1, filter_2, text_field="text"):
     # defined above
     if len(filter_2) > 0:
         for term in filter_2:
-            combined_terms = "|".join(filter_2)
+            combined_terms = "|".join(term)
         filtered_subset_df = deduplicated_df[
             deduplicated_df[text_field].str.contains(combined_terms)
         ]

@@ -71,7 +71,7 @@ search_terms = ["heat pump", "heat pumps"]
 # %%
 # For each search term download corresponding articles.
 articles = [
-    guardian.search_content(search_term, use_cached=True)
+    guardian.search_content(search_term, use_cached=False)
     for search_term in search_terms
 ]
 
@@ -158,5 +158,8 @@ article_text.to_csv(
     index=False,
     quoting=csv.QUOTE_NONNUMERIC,
 )
+
+# %%
+article_text
 
 # %%
