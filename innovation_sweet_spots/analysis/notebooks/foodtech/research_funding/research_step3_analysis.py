@@ -42,6 +42,9 @@ pd.options.display.float_format = "{:.3f}".format
 import importlib
 import numpy as np
 
+# %%
+import utils
+
 # %% [markdown]
 # ### Plotting utils
 
@@ -819,7 +822,7 @@ subcategory_ts_2022.head(1)
 # %%
 # fig = pu.ts_funding_projects(subcategory_ts, ['Delivery', 'Supply chain'], height=100)
 fig = pu.configure_plots(
-    pu.ts_smooth(
+    pu.ts_smooth_incomplete(
         subcategory_ts_2022,
         ["Delivery", "Supply chain"],
         "amount_total",
