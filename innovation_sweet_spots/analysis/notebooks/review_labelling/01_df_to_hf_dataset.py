@@ -15,14 +15,9 @@
 # ---
 
 # %%
-import pandas as pd
-from datasets import Dataset
-from transformers import AutoTokenizer
 from innovation_sweet_spots.utils.io import save_pickle, load_pickle
 from innovation_sweet_spots import PROJECT_DIR
-import transformers
-import datasets
-import torch
+from innovation_sweet_spots.analysis.notebooks.review_labelling.utils import df_to_hf_ds
 
 # %%
 # Load dataframes
@@ -30,40 +25,6 @@ LOAD_DF_PATH = PROJECT_DIR / "inputs/data/review_labelling/dataframes/foodtech_g
 train_df = load_pickle(LOAD_DF_PATH / "train_df.pickle")
 valid_df = load_pickle(LOAD_DF_PATH / "valid_df.pickle")
 to_review_df = load_pickle(LOAD_DF_PATH / "to_review_df.pickle")
-
-
-# %%
-def create_labels(dataset: Dataset, cols_to_skip: list) -> Dataset:
-    cols = dataset.column_names
-    return dataset.map(
-        lambda row: {
-            "labels": torch.FloatTensor(
-                [(row[col]) for col in cols if col not in cols_to_skip]
-            )
-        }
-    )
-
-
-def tokenize_dataset(dataset: Dataset, text_column: str) -> Dataset:
-    remove_cols = dataset.column_names
-    remove_cols.remove("labels")
-    tokenizer = AutoTokenizer.from_pretrained(
-        "distilbert-base-uncased", problem_type="multi_label_classification"
-    )
-    return dataset.map(
-        lambda row: tokenizer(row[text_column], truncation=True),
-        batched=True,
-        remove_columns=remove_cols,
-    )
-
-
-def df_to_hf_ds(
-    df: pd.DataFrame, non_label_cols: list = ["text", "id"], text_column: str = "text"
-) -> Dataset:
-    dataset = Dataset.from_pandas(df, preserve_index=False)
-    dataset = create_labels(dataset, cols_to_skip=non_label_cols)
-    return tokenize_dataset(dataset, text_column="text")
-
 
 # %%
 # Make datasets

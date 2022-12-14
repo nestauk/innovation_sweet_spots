@@ -23,6 +23,53 @@ from pathlib import Path
 from datasets import Dataset
 
 
+def create_labels(dataset: Dataset, cols_to_skip: list) -> Dataset:
+    """Add labels to the dataset. Labels are a list of 0.0s and 1.0s
+    corresponding to the order of the labels in the original dataframe
+    that was used to create the dataset. Note the 0.0s and 1.0s must be floats."""
+    cols = dataset.column_names
+    return dataset.map(
+        lambda row: {
+            "labels": torch.FloatTensor(
+                [(row[col]) for col in cols if col not in cols_to_skip]
+            )
+        }
+    )
+
+
+def tokenize_dataset(dataset: Dataset, text_column: str) -> Dataset:
+    """Tokenize text in dataset"""
+    remove_cols = dataset.column_names
+    remove_cols.remove("labels")
+    tokenizer = load_tokenizer()
+    return dataset.map(
+        lambda row: tokenizer(row[text_column], truncation=True),
+        batched=True,
+        remove_columns=remove_cols,
+    )
+
+
+def df_to_hf_ds(
+    df: pd.DataFrame, non_label_cols: list = ["text", "id"], text_column: str = "text"
+) -> Dataset:
+    """Converts a dataframe into a huggingface dataset.
+    Adds labels and tokenizes the text.
+
+    Args:
+        df: Dataframe to convert into a dataset
+        non_label_cols: Columns that are not labels.
+            Defaults to ["text", "id"].
+        text_column: Column in dataframe that contain text to tokenize.
+            Defaults to "text".
+
+    Returns:
+        Huggingface dataset
+    """
+    dataset = Dataset.from_pandas(df, preserve_index=False)
+    dataset = create_labels(dataset, cols_to_skip=non_label_cols)
+    return tokenize_dataset(dataset, text_column=text_column)
+
+
 def load_tokenizer() -> DistilBertTokenizerFast:
     """Load multi label classification BERT tokenzier"""
     return AutoTokenizer.from_pretrained(
