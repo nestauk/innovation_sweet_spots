@@ -221,3 +221,55 @@ def compute_metrics(model_predictions: EvalPrediction) -> dict:
         else model_predictions.predictions
     )
     return multi_label_metrics(predictions=preds, labels=model_predictions.label_ids)
+
+
+def add_reviewer_and_predicted_labels(
+    df: pd.DataFrame, ds: Dataset, trainer: Trainer, model_dataset_name: str
+) -> pd.DataFrame:
+    """To dataframe, adds:
+            - Reviewer labels
+            - Predicted labels
+            - Column that compares the reviewer and predicted labels
+            - Column indicating the model dataset name
+
+    Args:
+        df: Dataframe containing columns for id, text, and dummy label columns
+        ds: Dataset containing fields for labels, input_ids, attention_mask
+        trainer: Model trainer
+        model_dataset_name: Name to identify dataset by, e.g. "train", "validation"
+
+    Returns:
+        Dataframe with reviewer and predicted labels and related columns
+    """
+    label_columns = df.drop(columns=["id", "text"]).columns
+
+    trainer_predictions = trainer.predict(ds)
+    binarised_preds = binarise_predictions(
+        predictions=trainer_predictions.predictions, threshold=0.5
+    )
+    binarised_preds = pd.DataFrame(binarised_preds)
+    binarised_preds.columns = label_columns
+    return (
+        df.assign(
+            model_labels=dummies_to_labels(binarised_preds),
+            reviewer_labels=dummies_to_labels(
+                dummy_cols=df.drop(columns=["id", "text"])
+            ),
+            model_dataset=model_dataset_name,
+        )
+        .fillna("")
+        .assign(
+            reviewer_model_match=lambda df: np.where(
+                df.reviewer_labels == df.model_labels, 1, 0
+            )
+        )[
+            [
+                "id",
+                "text",
+                "reviewer_labels",
+                "model_labels",
+                "reviewer_model_match",
+                "model_dataset",
+            ]
+        ]
+    )
