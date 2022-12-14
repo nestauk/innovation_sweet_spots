@@ -62,5 +62,3 @@ trainer.evaluate()
 # View f1, roc and accuracy of predictions on validation set
 predictions = trainer.predict(valid_ds)
 compute_metrics(predictions)
-
-# %%

@@ -21,6 +21,51 @@ from transformers import (
 from typing import Union
 from pathlib import Path
 from datasets import Dataset
+from sklearn.preprocessing import MultiLabelBinarizer
+
+
+def combine_labels(
+    df: pd.DataFrame, groupby_cols: list, label_column: str
+) -> pd.DataFrame:
+    """Combine labels across multiple rows together as a list"""
+    return df.groupby(groupby_cols)[label_column].apply(list).reset_index()
+
+
+def add_binarise_labels(
+    df: pd.DataFrame, label_column: str, not_valid_label: str
+) -> pd.DataFrame:
+    """Add label dummy columns to dataframe.
+
+    Args:
+        df: Dataframe to add dummy columns to.
+        label_column: Column with labels to turn into dummy column.
+            The label column must have values in a list.
+        not_valid_label: Label that indicates that the record is
+            not relevant or valid. If a record has this label,
+            all of its other labels will be set to 0. The dummy
+            column relating to this label will be removed.
+
+    Returns:
+        Dataframe with additional dummy label columns
+    """
+    mlb = MultiLabelBinarizer()
+    dummy_cols = pd.DataFrame(
+        mlb.fit_transform(df[label_column]), columns=mlb.classes_, index=df.index
+    )
+    valid_cols = [col for col in dummy_cols.columns if col != not_valid_label]
+    # Set all other labels to 0 if row has not valid label
+    dummy_cols = dummy_cols[valid_cols].mask(dummy_cols[not_valid_label] == 1, 0)
+    return pd.concat([df, dummy_cols], axis=1)
+
+
+def rename_columns(df: pd.DataFrame, text_column: str) -> pd.DataFrame:
+    """For column names:
+        Replace space and - with _
+        Make lowercase
+        Rename specified text column to 'text'
+    """
+    df.columns = df.columns.str.replace("\s|-", "_", regex=True)
+    return df.rename(columns={text_column: "text"}).rename(columns=str.lower)
 
 
 def create_labels(dataset: Dataset, cols_to_skip: list) -> Dataset:
