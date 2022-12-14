@@ -21,6 +21,7 @@ beautifulsoup4
 textacy
 gensim
 sentence-transformers
+pyairtable
 #git+https://github.com/nestauk/jacc-hammer.git@legacy
 #tables
 pandas-profiling

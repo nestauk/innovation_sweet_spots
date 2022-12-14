@@ -24,6 +24,7 @@ OUTPUT_DATA_PATH = OUTPUT_PATH / "data"
 OUTPUT_GTR_PATH = OUTPUT_DATA_PATH / "gtr"
 OUTPUT_CB_PATH = OUTPUT_DATA_PATH / "cb"
 PILOT_OUTPUTS = PROJECT_DIR / "outputs/finals/pilot_outputs/"
+AIRTABLE_PATH = OUTPUT_PATH / "airtable"
 
 # Model paths
 PILOT_MODELS_DIR = PILOT_OUTPUTS / "models/"
