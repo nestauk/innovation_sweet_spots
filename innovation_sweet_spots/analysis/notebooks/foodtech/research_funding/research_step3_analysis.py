@@ -4,6 +4,7 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -37,6 +38,9 @@ import utils
 
 pd.options.display.float_format = "{:.3f}".format
 import importlib
+
+# %%
+import utils
 
 # %% [markdown]
 # ### Plotting utils
@@ -837,6 +841,26 @@ alt.Chart(subcategory_ts, width=200, height=100).mark_line(
 
 # %%
 # Plot funding for subcategories Delivery and Supply chain
+
+importlib.reload(pu)
+
+# %%
+subcategory_ts_2022.head(1)
+
+# %%
+# fig = pu.ts_funding_projects(subcategory_ts, ['Delivery', 'Supply chain'], height=100)
+fig = pu.configure_plots(
+    pu.ts_smooth_incomplete(
+        subcategory_ts_2022,
+        ["Delivery", "Supply chain"],
+        "amount_total",
+        "Funding (£ millions)",
+        height=125,
+    )
+)
+fig
+
+# %%
 importlib.reload(pu)
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(

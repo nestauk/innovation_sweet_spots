@@ -4,11 +4,12 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -589,18 +590,18 @@ import importlib
 importlib.reload(chart_trends)
 
 # %%
-category_amount_magnitude_growth.magnitude.median()
+midpoint = category_amount_magnitude_growth.magnitude.median()
 
 # %%
 category_amount_magnitude_growth.magnitude.mean()
 
 # %%
-chart_trends._epsilon = 0.075
+chart_trends._epsilon = 0.04
 fig = chart_trends.mangitude_vs_growth_chart(
     category_amount_magnitude_growth,
     x_limit=45,
     y_limit=2.5,
-    mid_point=4.5,
+    mid_point=midpoint,
     baseline_growth=0.11417,
     values_label="Average new funding per year (£ millions)",
     text_column="Category",
@@ -1037,11 +1038,117 @@ AltairSaver.save(
 )
 
 # %%
-(
-    research_project_funding_.query('consolidated_category == "Reformulation"')
-    .query('start_date >= "2019-01-01" and start_date < "2020-01-01"')
-    .sort_values("amount", ascending=False)
-)[["title", "amount", "start_date"]]
+# (
+#     research_project_funding_.query('consolidated_category == "Reformulation"')
+#     .query('start_date >= "2019-01-01" and start_date < "2020-01-01"')
+#     .sort_values("amount", ascending=False)
+# )[["title", "amount", "start_date"]]
+
+# %% [markdown]
+# ## Custom combination of trends
+
+# %%
+BASELINE_GROWTH = 0.11417
+
+# %%
+trends_combined = pd.read_csv(PROJECT_DIR / 'outputs/foodtech/trends/research_Report_GTR_NIHR_all.csv')
+
+# %%
+full_titles = [f'{x[0]}: {x[1]}' for x in list(zip(trends_combined['Category'], trends_combined['Sub Category']))]
+trends_combined['full_titles'] = full_titles
+
+# %%
+trends_combined
+
+# %%
+categories_to_show = [
+    'Innovative food: Alt protein',
+    'Delivery and logistics: Delivery',
+    'Food waste: n/a (category level)',
+    'Health: Biomedical',
+    'Restaurants and retail: n/a (category level)',
+    'Innovative food: Reformulation',
+    # 'Logistics: Meal kits',
+    # 'Cooking and kitchen: Dark kitchen',
+    'Cooking and kitchen: Kitchen tech',
+    'Health: Personalised nutrition',
+    'Logistics: Delivery',
+]
+
+# %%
+trends_combined_ = (
+    trends_combined.query('full_titles in @categories_to_show')
+    # .assign(magnitude=lambda df: df.Magnitude)
+)
+
+# %%
+trends_combined_[['magnitude', 'growth', 'full_titles']]
+
+# %%
+# importlib.reload(chart_trends);
+mid_point = trends_combined_.magnitude.median()
+mid_point
+
+# %%
+trends_combined_.magnitude.describe(percentiles=[0.25, 0.5, 0.75])
+
+# %%
+# color gradient width
+chart_trends._epsilon = 0.01
+
+fig = chart_trends.mangitude_vs_growth_chart(
+    trends_combined_,
+    x_limit=30,
+    y_limit=2.2,
+    mid_point=mid_point,
+    baseline_growth=BASELINE_GROWTH,
+    values_label="Average new research funding per year (£ millions)",
+    text_column='full_titles',
+    width=425,
+    horizontal_log=True,
+    x_min=0.7,
+)
+
+# Baseline
+baseline_rule = (
+    alt.Chart(pd.DataFrame({"x": [mid_point]}))
+    .mark_rule(strokeDash=[5, 7], size=1, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+baseline_rule_1= (
+    alt.Chart(pd.DataFrame({"x": [0.766]}))
+    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+baseline_rule_2 = (
+    alt.Chart(pd.DataFrame({"x": [2.964]}))
+    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+fig = fig + baseline_rule + baseline_rule_1 + baseline_rule_2
+fig
+
+# %%
+
+# %%
+AltairSaver.save(
+    fig, f"v{fig_version_name}_magnitude_growth_Synthesis_research", filetypes=["html", "svg", "png"]
+)
 
 # %% [markdown]
 # ## Check alt protein

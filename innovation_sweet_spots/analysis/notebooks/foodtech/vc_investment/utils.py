@@ -1,3 +1,16 @@
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     comment_magics: true
+#     formats: ipynb,py:light
+#     text_representation:
+#       extension: .py
+#       format_name: light
+#       format_version: '1.5'
+#       jupytext_version: 1.14.1
+# ---
+
 """
 """
 import innovation_sweet_spots.analysis.analysis_utils as au
@@ -329,7 +342,7 @@ def get_trends(
     # Calculate magnitude and gowth trends
     return (
         get_magnitude_vs_growth(
-            category_ts,
+            category_ts.query("year <= 2021"),
             value_column=values_title_,
             time_column=horizontal_title,
             category_column="Category",
