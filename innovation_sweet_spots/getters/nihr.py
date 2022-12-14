@@ -3,6 +3,7 @@ innovation_sweet_spots.getters.nihr
 
 Module for easy access to downloaded NIHR data
 """
+
 # import numpy as np
 # import pandas as pd
 # import altair as alt
@@ -26,6 +27,7 @@ def get_nihr_summary_data(from_local: bool = True) -> pd.DataFrame:
 def save_nihr_to_local():
     """Save NIHR summary data locally"""
     data = get_nihr_summary_data()
+
     # Create the folder if it doesn't exist
     NIHR_FOLDER.mkdir(parents=True, exist_ok=True)
     path = NIHR_FOLDER / "nihr_summary_data.csv"

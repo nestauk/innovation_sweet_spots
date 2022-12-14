@@ -3,6 +3,7 @@ innovation_sweet_spots.utils.nihr.create_nihr
 
 Module for creating NIHR data from source and saving into the S3 bucket
 """
+
 import numpy as np
 import pandas as pd
 import altair as alt

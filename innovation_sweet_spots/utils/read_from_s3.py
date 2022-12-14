@@ -12,7 +12,6 @@ from functools import lru_cache
 
 BUCKET_NAME = "innovation-sweet-spots-lake"  # put in .config
 
-
 def save_to_s3(s3_path, filename, contents):
     """Saves the contents to the filename in {BUCKET_NAME}/{s3_path}"""
     s3 = boto3.resource("s3")
