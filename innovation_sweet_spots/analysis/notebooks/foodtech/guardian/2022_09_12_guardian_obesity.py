@@ -36,6 +36,19 @@ REQUIRED_TERMS = [
 
 
 # %%
+query_id = "reformulation"
+search_terms = ["food,reformulation", "food reformulation", "reformulated food"]
+
+# %%
+articles, metadata = au.get_guardian_articles(
+    search_terms=search_terms,
+    use_cached=False,
+    allowed_categories=CATEGORIES,
+    query_identifier=query_id,
+    save_outputs=True,
+)
+
+# %%
 query_id = "obesity"
 search_terms = ["obesity", "obese"]
 
@@ -97,8 +110,69 @@ articles, metadata = au.get_guardian_articles(
     save_outputs=True,
 )
 
+# %%
+query_id = "obesity_healthy_eating"
+search_terms = [
+    "obesity",
+    "obese",
+    "overweight",
+    "healthy food",
+    "healthy foods",
+    "healthy eating",
+    "healthy meal",
+    "healthy meals",
+    "healthy diet",
+    "healthy diets",
+]
+
+# %%
+articles, metadata = au.get_guardian_articles(
+    search_terms=search_terms,
+    use_cached=False,
+    allowed_categories=CATEGORIES,
+    query_identifier=query_id,
+    save_outputs=True,
+)
+
+# %%
+# query_id = "health"
+# search_terms = [
+#     "health",
+#     "healthy",
+#     "healthier",
+# ]
+
+# %%
+# articles, metadata = au.get_guardian_articles(
+#     search_terms=search_terms,
+#     use_cached=False,
+#     allowed_categories=CATEGORIES,
+#     query_identifier=query_id,
+#     save_outputs=True,
+# )
+
 # %% [markdown]
 # # Time series
+
+# %%
+query_id = "reformulation"
+search_terms = ["food,reformulation"]
+REQUIRED_TERMS = ["food"]
+banned_terms = ["Australia"]
+
+g = au.DiscourseAnalysis(
+    search_terms=search_terms,
+    required_terms=REQUIRED_TERMS,
+    banned_terms=banned_terms,
+    use_cached=True,
+    query_identifier=query_id,
+)
+
+# %%
+g.plot_document_mentions()
+
+# %%
+g.document_text.sort_values("year")
 
 # %%
 query_id = "food_environment"

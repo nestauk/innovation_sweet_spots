@@ -9,7 +9,7 @@ import numpy as np
 from innovation_sweet_spots.analysis.wrangling_utils import check_valid
 from typing import Iterator
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
-
+import datetime
 
 def impute_empty_periods(
     df_time_period: pd.DataFrame,
@@ -35,8 +35,8 @@ def impute_empty_periods(
     max_year = max(max_year_data, max_year)
     full_period_range = (
         pd.period_range(
-            f"01/01/{min_year}",
-            f"31/12/{max_year}",
+            datetime.datetime.strptime(f"01/01/{min_year}", '%d/%m/%Y'),
+            datetime.datetime.strptime(f"31/12/{max_year}", '%d/%m/%Y'),
             freq=period,
         )
         .to_timestamp()
@@ -636,7 +636,7 @@ def ts_magnitude_growth(ts_df: pd.DataFrame, year_start: int, year_end: int):
             year_end,
         )
         .to_frame("magnitude")
-        .assign(growth=smoothed_growth(ts_moving_average(ts_df), year_start, year_end))
+        .assign(growth=smoothed_growth(ts_df, year_start, year_end))
     )
 
 
@@ -644,11 +644,7 @@ def ts_magnitude_growth_(ts_df: pd.DataFrame, year_start: int, year_end: int):
     return (
         magnitude(ts_df, year_start, year_end)
         .to_frame("magnitude")
-        .assign(
-            growth=smoothed_growth(
-                ts_df.pipe(moving_average, replace_columns=True), year_start, year_end
-            )
-        )
+        .assign(growth=smoothed_growth(ts_df, year_start, year_end))
     )
 
 

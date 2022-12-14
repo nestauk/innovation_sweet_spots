@@ -28,3 +28,9 @@ pandas-profiling
 missingno
 bertopic
 #data_getters @ git+https://github.com/nestauk/data_getters.git
+google-auth-oauthlib
+google-api-python-client
+chromedriver-autoinstaller
+selenium==4.2.0
+df2gspread
+openpyxl

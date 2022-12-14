@@ -151,9 +151,10 @@ COLUMN_CATEGORIES = {
 
 def get_foodtech_companies() -> pd.DataFrame:
     """Dataset used in the food tech themed Innovation Sweet Spots"""
+    # return pd.read_csv(DEALROOM_PATH / "dealroom_foodtech.csv")
     return (
         pd.read_csv(
-            DEALROOM_PATH / "dealroom_foodtech.csv",
+            DEALROOM_PATH / "dealroom_foodtech_2022_11_24.csv",
         )
         .query("id != 'Error retrieving row data'")
         .astype({"id": "int32"})

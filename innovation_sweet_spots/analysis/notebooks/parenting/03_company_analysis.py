@@ -263,6 +263,81 @@ utils.save_data_table(data, figure_name, TABLES_DIR)
 #
 
 # %% [markdown]
+# ## UK baseline
+
+# %%
+uk_orgs = CB.cb_organisations.query("country == 'United Kingdom'")
+
+# %%
+len(uk_orgs)
+
+# %%
+# Get all funding rounds
+cb_uk_funding_rounds = CB.get_funding_rounds(uk_orgs)
+# Get time series of total investment
+cb_uk_rounds_ts = au.cb_investments_per_period(
+    (cb_uk_funding_rounds.query("investment_type in @utils.EARLY_STAGE_DEALS").copy()),
+    period="Y",
+    min_year=2009,
+    max_year=2021,
+).assign(year=lambda df: df.time_period.dt.year)
+
+# %%
+au.smoothed_growth(cb_uk_rounds_ts.drop("time_period", axis=1), 2011, 2021)
+
+# %%
+au.smoothed_growth(cb_uk_rounds_ts.drop("time_period", axis=1), 2017, 2021)
+
+# %%
+# Growth factor from 2011 to 2021
+cb_uk_rounds_ts.query("`year`==2021")["raised_amount_gbp_total"].iloc[
+    0
+] / cb_uk_rounds_ts.query("`year`==2011")["raised_amount_gbp_total"].iloc[0]
+
+# %%
+horizontal_label = "Year"
+values_label = "Investment (million GBP)"
+tooltip = [horizontal_label, alt.Tooltip(values_label, format=",.3f")]
+
+data = (
+    cb_uk_rounds_ts.assign(
+        raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1000
+    )
+    .query("time_period < 2022")
+    .rename(
+        columns={
+            "time_period": horizontal_label,
+            "raised_amount_gbp_total": values_label,
+        }
+    )
+    .assign(
+        **{
+            horizontal_label: lambda df: pu.convert_time_period(
+                df[horizontal_label], "Y"
+            )
+        }
+    )
+)[[horizontal_label, values_label]]
+
+
+fig = (
+    alt.Chart(
+        data.query("Year > 2009"),
+        width=400,
+        height=200,
+    )
+    .mark_bar(color=pu.NESTA_COLOURS[0])
+    .encode(
+        alt.X(f"{horizontal_label}:O"),
+        alt.Y(f"{values_label}:Q"),
+        tooltip=tooltip,
+    )
+)
+
+fig_final = pu.configure_plots(fig)
+fig_final
+
+# %% [markdown]
 # ## Country investment figures
 
 # %%

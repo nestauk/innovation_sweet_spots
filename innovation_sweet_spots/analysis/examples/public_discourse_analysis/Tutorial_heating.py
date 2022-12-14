@@ -100,6 +100,20 @@ len(g.document_text)
 g.plot_document_mentions()
 
 # %%
+# x = g.view_collocations('government')
+x
+
+# %%
+x = g.view_mentions(["government"])
+
+
+# %%
+len(x)
+
+# %%
+g.view_collocations("restaurant")
+
+# %%
 g.save_analysis_results()
 
 # %% [markdown]
