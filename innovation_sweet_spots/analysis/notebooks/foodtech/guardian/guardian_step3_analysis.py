@@ -8,7 +8,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -150,9 +150,7 @@ fig
 # Check subcategory time series
 alt.Chart(ts_subcategory, width=200, height=100).mark_line(size=3).encode(
     x="year:O",
-    y=alt.Y(
-        "counts:Q",
-    ),
+    y=alt.Y("counts:Q"),
     color="Sub Category:N",
     facet=alt.Facet("Category:N", columns=2),
     tooltip=["Sub Category", "counts", "year"],
@@ -179,6 +177,7 @@ magnitude_growth_df = utils.get_magnitude_growth(
 magnitude_growth_df
 
 # %%
+# Plot growth vs. proportion of articles
 fig = chart_trends.mangitude_vs_growth_chart(
     data=magnitude_growth_df,
     x_limit=0.45,
@@ -213,6 +212,7 @@ AltairSaver.save(
 # ### Variable = Number of articles
 
 # %%
+# Calculate baseline growth
 baseline_magnitude_growth = au.estimate_magnitude_growth(guardian_baseline, 2017, 2021)
 baseline_growth = (
     baseline_magnitude_growth.query("trend == 'growth'").iloc[0].counts / 100
@@ -223,11 +223,10 @@ baseline_growth
 magnitude_growth_counts_df = utils.get_magnitude_growth(
     ts_category, "counts", "Category"
 )
-
-# %%
 magnitude_growth_counts_df
 
 # %%
+# Plot growth vs number of articles
 fig = chart_trends.mangitude_vs_growth_chart(
     data=magnitude_growth_counts_df,
     x_limit=400,
@@ -243,6 +242,7 @@ fig
 # ## Subcategory trends
 
 # %%
+# Calculate magnitude and growth for subcategories
 magnitude_growth_df_subcategory = utils.get_magnitude_growth(
     ts_subcategory, "fraction", "Sub Category"
 ).assign(
@@ -251,17 +251,17 @@ magnitude_growth_df_subcategory = utils.get_magnitude_growth(
     * 100
 )
 
-# %%
 magnitude_growth_df_subcategory
 
 # %%
+# Plot growth vs average number of articles for subcategories
 fig = chart_trends.mangitude_vs_growth_chart(
     data=magnitude_growth_df_subcategory,
     x_limit=0.12,
     y_limit=7.5,
     mid_point=magnitude_growth_df_subcategory.magnitude.median(),
     baseline_growth=0,
-    values_label="Average number of articles",
+    values_label="Proportion of articles (%)",
     text_column="Sub Category",
 )
 fig.interactive()
@@ -270,12 +270,7 @@ fig.interactive()
 # ### Export the trends tables
 
 # %%
-magnitude_growth_df
-
-# %%
-magnitude_growth_df_subcategory
-
-# %%
+# Save magnitude growth for subcategoires with category col added
 (
     magnitude_growth_df_subcategory.merge(
         df_search_terms[["Category", "Sub Category"]].drop_duplicates(), how="left"
@@ -287,6 +282,7 @@ magnitude_growth_df_subcategory
 )
 
 # %%
+# Combine and save subcategory and category level magnitude and growth
 trends_combined = (
     pd.concat(
         [
@@ -310,21 +306,13 @@ trends_combined.to_csv(
 # ## Time series charts
 
 # %%
-cats = ["Reformulation", "Alt protein"]
-ts_df = ts_subcategory.query("`Sub Category` in @cats")
-
-scale = "linear"
-
-fig = (
-    alt.Chart(ts_df.query("year >= 2000"))
-    .mark_line(size=3, interpolate="monotone")
-    .encode(
-        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
-        y=alt.Y(
-            "fraction:Q", title="Proportion of articles", axis=alt.Axis(format=".2%")
-        ),
-        color=alt.Color("Sub Category:N"),
-    )
+# Proportion of articles alt protein and reformulation smooth incomplete plot
+fig = pu.ts_smooth_incomplete(
+    ts=ts_subcategory.assign(fraction=lambda df: df.fraction * 100),
+    categories_to_show=["Reformulation", "Alt protein"],
+    variable="fraction",
+    variable_title="Proportion of articles (%)",
+    category_column="Sub Category",
 )
 fig = pu.configure_plots(fig)
 fig
@@ -332,34 +320,18 @@ fig
 # %%
 AltairSaver.save(
     fig,
-    f"Guardian_{VERSION_NAME}_articles_per_year_InnovativeFood",
+    f"Guardian_{VERSION_NAME}_proportion_articles_per_year_InnovativeFood",
     filetypes=["html", "svg", "png"],
 )
 
 # %%
-cats = [
-    "Delivery",
-    # "Meal kits",
-    # "Supply chain",
-    # "Personalised nutrition",
-    # "Restaurants",
-    # "Retail",
-]
-ts_df = ts_subcategory.query("`Sub Category` in @cats")
-
-scale = "linear"
-
-fig = (
-    alt.Chart(ts_df)
-    .mark_line(size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3])
-    .encode(
-        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
-        y=alt.Y(
-            "fraction:Q", title="Proportion of articles", axis=alt.Axis(format=".2%")
-        ),
-        color=alt.Color("Sub Category:N"),
-        tooltip=["year", "counts"],
-    )
+# Proportion of articles smooth Delivery incomplete plot
+fig = pu.ts_smooth_incomplete(
+    ts=ts_subcategory.assign(fraction=lambda df: df.fraction * 100),
+    categories_to_show=["Delivery"],
+    variable="fraction",
+    variable_title="Proportion of articles (%)",
+    category_column="Sub Category",
 )
 fig = pu.configure_plots(fig)
 fig
@@ -367,28 +339,18 @@ fig
 # %%
 AltairSaver.save(
     fig,
-    f"Guardian_{VERSION_NAME}_articles_per_year_Delivery",
+    f"Guardian_{VERSION_NAME}_proportion_articles_per_year_Delivery",
     filetypes=["html", "svg", "png"],
 )
 
 # %%
-cats = ["Food waste"]
-ts_df = ts_category.query("`Category` in @cats")
-
-# scale = 'log'
-scale = "linear"
-
-fig = (
-    alt.Chart(ts_df)
-    .mark_line(size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3])
-    .encode(
-        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
-        y=alt.Y(
-            "fraction:Q", title="Proportion of articles", axis=alt.Axis(format=".2%")
-        ),
-        color=alt.Color("Category:N"),
-        tooltip=["year", "counts", alt.Tooltip("fraction:Q", format="%")],
-    )
+# Proportion of articles smooth Food waste incomplete plot
+fig = pu.ts_smooth_incomplete(
+    ts=ts_category.assign(fraction=lambda df: df.fraction * 100),
+    categories_to_show=["Food waste"],
+    variable="fraction",
+    variable_title="Proportion of articles (%)",
+    category_column="Category",
 )
 fig = pu.configure_plots(fig)
 fig
@@ -396,28 +358,18 @@ fig
 # %%
 AltairSaver.save(
     fig,
-    f"Guardian_{VERSION_NAME}_articles_per_year_Food_waste",
+    f"Guardian_{VERSION_NAME}_proportion_articles_per_year_Food_waste",
     filetypes=["html", "svg", "png"],
 )
 
 # %%
-cats = ["Health"]
-ts_df = ts_category.query("`Category` in @cats")
-
-# scale = 'log'
-scale = "linear"
-
-fig = (
-    alt.Chart(ts_df)
-    .mark_line(size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3])
-    .encode(
-        x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
-        y=alt.Y(
-            "fraction:Q", title="Proportion of articles", axis=alt.Axis(format=".2%")
-        ),
-        color=alt.Color("Sub Category:N"),
-        tooltip=["year", "counts", alt.Tooltip("fraction:Q", format="%")],
-    )
+# Proportion of articles smooth Health incomplete plot
+fig = pu.ts_smooth_incomplete(
+    ts=ts_category.assign(fraction=lambda df: df.fraction * 100),
+    categories_to_show="Health",
+    variable="fraction",
+    variable_title="Proportion of articles (%)",
+    category_column="Category",
 )
 fig = pu.configure_plots(fig)
 fig
@@ -425,7 +377,7 @@ fig
 # %%
 AltairSaver.save(
     fig,
-    f"Guardian_{VERSION_NAME}_articles_per_year_Health",
+    f"Guardian_{VERSION_NAME}_proportion_articles_per_year_Health",
     filetypes=["html", "svg", "png"],
 )
 
@@ -443,12 +395,6 @@ obesity_ids = set(df[df.Terms.isin(["obesity", "obese", "overweight"])].id.to_li
 not_health_ids = set(df[df.Category.isin(["Health"]) == False].id.to_list())
 
 # %%
-len(obesity_ids)
-
-# %%
-len(not_health_ids)
-
-# %%
 # Articles that mention obesity terms but are not explicitly about health
 len(not_health_ids.intersection(obesity_ids)) / len(not_health_ids)
 
@@ -462,17 +408,19 @@ overlap_ids = not_health_ids.intersection(obesity_ids)
 len(overlap_ids)
 
 # %%
+# Counts of articles that mention obesity terms but are not explicitly about health
 df_id_to_term.query("id in @overlap_ids").groupby(["Category", "Sub Category"]).agg(
     counts=("id", "count")
 )
 
 # %%
+# Example of an article that mention obesity terms but are not explicitly about health
 df_id_to_term.query("id in @overlap_ids").iloc[0].URL
 
 # %% [markdown]
 # ## Checking articles about alternative proteins
 #
-# Check what types of alternative proteins are mentioned
+# Check the share of alternative protein mentions
 
 # %%
 n_alt_protein = len(

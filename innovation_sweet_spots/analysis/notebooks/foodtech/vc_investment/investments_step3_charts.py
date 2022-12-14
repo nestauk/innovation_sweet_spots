@@ -45,6 +45,7 @@ import utils
 import importlib
 from collections import defaultdict
 import itertools
+from typing import DefaultDict
 
 COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
 
@@ -75,11 +76,12 @@ fig_filetypes = ["html", "svg", "png"]
 # ### Import reviewed data
 
 # %%
-# Check companies with rejected tags
+# Check companies with rejected tags (relating to pets/animals)
 rejected_ids = [
     DR.get_ids_by_labels(row.Category, row.label_type)
     for i, row in DR.labels.query("Category in @utils.rejected_tags").iterrows()
 ]
+
 rejected_ids = set(itertools.chain(*rejected_ids))
 
 # %%
@@ -125,7 +127,7 @@ alt_protein_cats = [
 # Combined category
 combined_category_name = "Alt protein (all)"
 
-# Adding the combined category to taxonomy dataframe
+# Adding the Alt protein (all) subcategory to the taxonomy dataframe
 last_row = len(taxonomy_df)
 taxonomy_df.loc[last_row, "Category"] = "Innovative food"
 taxonomy_df.loc[last_row, "Sub Category"] = combined_category_name
@@ -138,7 +140,6 @@ df = (
 )
 df.loc[:, "Category"] = combined_category_name
 company_to_taxonomy_df = pd.concat([company_to_taxonomy_df, df], ignore_index=True)
-
 
 # %%
 sorted(company_to_taxonomy_df.Category.unique())
@@ -294,10 +295,7 @@ fig = (
     .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
         alt.X(f"{horizontal_column}:O", title=""),
-        alt.Y(
-            f"{values_column}:Q",
-            title=values_label,
-        ),
+        alt.Y(f"{values_column}:Q", title=values_label),
         tooltip=tooltip,
         color=alt.Color(
             "deal_type", sort=["Late", "Early"], legend=alt.Legend(title="Deal type")
@@ -434,10 +432,7 @@ fig = (
     .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
         alt.X(f"{horizontal_column}:O", title=""),
-        alt.Y(
-            f"{values_column}:Q",
-            title=values_label,
-        ),
+        alt.Y(f"{values_column}:Q", title=values_label),
         tooltip=tooltip,
         color=alt.Color(
             "deal_type", sort=["Late", "Early"], legend=alt.Legend(title="Deal type")
@@ -498,11 +493,7 @@ category_label = "Category"
 values_label = "Investment"
 
 fig = (
-    alt.Chart(
-        df_major_amount_deal_type,
-        width=350,
-        height=300,
-    )
+    alt.Chart(df_major_amount_deal_type, width=350, height=300)
     .mark_bar()
     .encode(
         alt.X(
@@ -594,9 +585,12 @@ foodtech_ts_late
 # %%
 (3490.258340 - 1707.778906)/3490.258340
 
-
 # %% [markdown]
 # ### Category proportion of total investment
+
+# %%
+DR.funding_rounds
+
 
 # %%
 def get_total_funding(
@@ -616,19 +610,11 @@ def get_total_funding(
 # %%
 # Get ids for each category
 category_ids = utils.get_category_ids(
-    taxonomy_df,
-    utils.rejected_tags,
-    company_to_taxonomy_df,
-    DR,
-    "Category",
+    taxonomy_df, utils.rejected_tags, company_to_taxonomy_df, DR, "Category"
 )
 # Get ids for each category
 subcategory_ids = utils.get_category_ids(
-    taxonomy_df,
-    utils.rejected_tags,
-    company_to_taxonomy_df,
-    DR,
-    "Sub Category",
+    taxonomy_df, utils.rejected_tags, company_to_taxonomy_df, DR, "Sub Category"
 )
 
 # %%
@@ -643,16 +629,15 @@ funding_total_minusAgritech = get_total_funding(foodtech_ids_minusAgritech)
 
 
 # %%
+print(f"Total foodtech funding is: £{round(funding_total / 1e3, 2)} Billion.")
 print(
-    get_total_funding(category_ids["Health"], min_year=2017, max_year=2021)
-    / funding_total
-)
-print(
-    get_total_funding(category_ids["Health"], min_year=2017, max_year=2021)
-    / funding_total_minusAgritech
+    f"Total foodtech funding (excl. Agritech) is: £{round(funding_total_minusAgritech / 1e3, 2)} Billion."
 )
 
 # %%
+min_year = 2017
+max_year = 2021
+
 print(
     get_total_funding(category_ids["Delivery and logistics"], min_year=2017, max_year=2021)
     / funding_total
@@ -662,15 +647,25 @@ print(
     / funding_total_minusAgritech
 )
 
-# %%
-print(
-    get_total_funding(subcategory_ids["Delivery"], min_year=2017, max_year=2021)
-    / funding_total
-)
-print(
-    get_total_funding(subcategory_ids["Delivery"], min_year=2017, max_year=2021)
-    / funding_total_minusAgritech
-)
+
+def share_of_funding(
+    min_year: int, max_year: int, category_ids: DefaultDict, category: str
+):
+    funding = get_total_funding(
+        category_ids[category], min_year=min_year, max_year=max_year
+    )
+    print(
+        f"The {category} category has received {round(funding / funding_total * 100, 2)}% of total foodtech funding."
+    )
+    print(
+        f"The {category} category has received {round(funding / funding_total_minusAgritech * 100, 2)}% of total foodtech (excl. Agritech) funding."
+    )
+
+
+print(f"From {min_year} to {max_year}:")
+share_of_funding(min_year, max_year, category_ids=category_ids, category="Health")
+share_of_funding(min_year, max_year, category_ids=category_ids, category="Logistics")
+share_of_funding(min_year, max_year, category_ids=subcategory_ids, category="Delivery")
 
 # %% [markdown]
 # ### Trends analysis
@@ -756,18 +751,11 @@ data = (
 )
 
 fig = (
-    alt.Chart(
-        data,
-        width=400,
-        height=200,
-    )
+    alt.Chart(data, width=400, height=200)
     .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
         alt.X(f"{horizontal_column}:O", title=""),
-        alt.Y(
-            f"{values_column}:Q",
-            title=values_label,
-        ),
+        alt.Y(f"{values_column}:Q", title=values_label),
         tooltip=tooltip,
     )
 )
@@ -790,12 +778,12 @@ ids = company_to_taxonomy_df.query("Category == @category")
 # ### Export major category trends results
 
 # %%
+TRENDS_DIR = PROJECT_DIR / f"outputs/foodtech/trends/"
+TRENDS_DIR.mkdir(exist_ok=True, parents=True)
 # Magnitude vs growth data
 (
     chart_trends.estimate_trend_type(magnitude_vs_growth).to_csv(
-        PROJECT_DIR
-        / f"outputs/foodtech/trends/venture_capital_{VERSION_NAME}_Category.csv",
-        index=False,
+        TRENDS_DIR / f"venture_capital_{VERSION_NAME}_Category.csv", index=False
     )
 )
 
@@ -836,11 +824,7 @@ height = 500
 
 # Chart
 fig = (
-    alt.Chart(
-        data,
-        width=500,
-        height=height,
-    )
+    alt.Chart(data, width=500, height=height)
     .mark_circle(color=pu.NESTA_COLOURS[0], opacity=1)
     .encode(
         x=alt.X(
@@ -857,11 +841,7 @@ fig = (
                 # domain=(.1, 100), type="log",                
             ),
         ),
-        y=alt.Y(
-            "Sub Category:N",
-            sort=data["Sub Category"].to_list(),
-            axis=None,
-        ),
+        y=alt.Y("Sub Category:N", sort=data["Sub Category"].to_list(), axis=None),
         size=alt.Size(
             "Magnitude",
             title="Avg yearly investment (£ bn)",
@@ -898,11 +878,7 @@ text = (
 baseline_rule = (
     alt.Chart(pd.DataFrame({"x": [1.28]}))
     .mark_rule(strokeDash=[5, 7], size=1, color="k")
-    .encode(
-        x=alt.X(
-            "x:Q",
-        )
-    )
+    .encode(x=alt.X("x:Q"))
 )
 
 final_fig = pu.configure_titles(pu.configure_axes((baseline_rule + fig + text)), "", "")
@@ -953,11 +929,7 @@ ids = company_to_taxonomy_df.query("Category == @category")
 # %%
 # Get company ids for each category
 subcategory_ids = utils.get_category_ids(
-    taxonomy_df,
-    utils.rejected_tags,
-    company_to_taxonomy_df,
-    DR,
-    "Sub Category",
+    taxonomy_df, utils.rejected_tags, company_to_taxonomy_df, DR, "Sub Category"
 )
 # Get time series for each category
 variable = "raised_amount_gbp_total"
@@ -971,7 +943,7 @@ subcategory_ts = (
 
 
 # %%
-subcategory_ts.head(1)
+subcategory_ts
 
 # %%
 importlib.reload(pu);
@@ -1257,15 +1229,16 @@ data_countries_early = (
 data_countries_early.head(10)
 
 # %%
-data_countries_early.query("country in @utils.EU_countries").sum()["raised_amount_gbp"]
+eu_early_funding = data_countries_early.query("country in @utils.EU_countries").sum()[
+    "raised_amount_gbp"
+]
+print(
+    f"In EU countries, there has been £{round(eu_early_funding, 2)} billion early investment from 2017 to 2022."
+)
 
 # %%
 fig = (
-    alt.Chart(
-        data_countries_early.head(10),
-        width=200,
-        height=300,
-    )
+    alt.Chart(data_countries_early.head(10), width=200, height=300)
     .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
         alt.Y(f"country:N", sort="-x", title=""),
@@ -1302,15 +1275,16 @@ data_countries_late = (
 data_countries_late.head(10)
 
 # %%
-data_countries_late.query("country in @utils.EU_countries").sum()["raised_amount_gbp"]
+eu_late_funding = data_countries_late.query("country in @utils.EU_countries").sum()[
+    "raised_amount_gbp"
+]
+print(
+    f"In EU countries, there has been £{round(eu_late_funding, 2)} billion late stage investment from 2017 to 2022."
+)
 
 # %%
 fig = (
-    alt.Chart(
-        data_countries_late.head(10),
-        width=200,
-        height=300,
-    )
+    alt.Chart(data_countries_late.head(10), width=200, height=300)
     .mark_bar(color=pu.NESTA_COLOURS[1])
     .encode(
         alt.Y(f"country:N", sort="-x", title=""),
@@ -1328,7 +1302,7 @@ AltairSaver.save(fig, f"v{VERSION_NAME}_countries_late", filetypes=["html", "png
 # ### Early deals by category
 
 # %%
-# Dataframe with all countries and total investments by category
+# Dataframe with all countries and total early stage investments by category
 data = (
     DR.funding_rounds.query("id in @foodtech_ids")
     .query("`EACH ROUND TYPE` in @utils.EARLY_DEAL_TYPES")
@@ -1355,23 +1329,24 @@ cats = [
     "Food waste",
     # "Agritech",
 ]
-data_top8 = []
+top10_countries_per_cat = []
 for cat in cats:
-    data_top8.append(
+    top10_countries_per_cat.append(
         data.copy()
         .query("Category == @cat")
         .sort_values("raised_amount_gbp", ascending=False)
         .head(10)
     )
-data_top8 = pd.concat(data_top8, ignore_index=True)
+top10_countries_per_cat = pd.concat(top10_countries_per_cat, ignore_index=True)
 
 
 # %%
 data.query('Category == "Delivery and logistics"').raised_amount_gbp.sum()
 
 # %%
+# Plot top 10 countries for each category for early stage investments
 fig = (
-    alt.Chart((data_top8.query("Category in @cats")))
+    alt.Chart((top10_countries_per_cat.query("Category in @cats")))
     .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
         x=alt.X("raised_amount_gbp:Q", title="Investment (£ billions)"),
@@ -1381,10 +1356,7 @@ fig = (
         ),
         tooltip=[alt.Tooltip("raised_amount_gbp", format=".3f")],
     )
-    .properties(
-        width=180,
-        height=180,
-    )
+    .properties(width=180, height=180)
     .resolve_scale(x="independent", y="independent")
 )
 
@@ -1405,6 +1377,7 @@ country = "United Kingdom"
 countries = data_countries_early.country.head(10).to_list()
 
 # %%
+# Calculate early stage investment growth for countries
 growth = []
 for country in countries:
     df_companies = DR.company_data.query("id in @foodtech_ids").query(
@@ -1421,7 +1394,7 @@ for country in countries:
                 )
             ),
             period="year",
-            min_year=2010,
+            min_year=2010,  # There are different values here
             max_year=2022,
         )
         .assign(year=lambda df: df.time_period.dt.year)
@@ -1432,40 +1405,35 @@ for country in countries:
             country_ts_early.query("deal_type == 'Early'").drop(
                 ["time_period"], axis=1
             ),
-            2017,
+            2017,  # Compared to here
             2021,
         ).raised_amount_gbp_total
     )
 
-countries_growth = pd.DataFrame(
-    {
-        "country": countries,
-        "growth": growth,
-    }
-)
+countries_growth = pd.DataFrame({"country": countries, "growth": growth})
 
 
 # %%
+# View countries and their early stage investment growth
 countries_growth.sort_values("growth")
 
 # %%
+# Add magnitude/raised amount data and divide growth by 100
 countries_growth_magnitude = countries_growth.merge(
     data_countries_early, how="left"
-).assign(
-    growth=lambda df: df.growth / 100,
-    magnitude=lambda df: df.raised_amount_gbp,
-)
+).assign(growth=lambda df: df.growth / 100, magnitude=lambda df: df.raised_amount_gbp)
 countries_growth_magnitude.sort_values("growth")
 
 # %%
-countries_growth_magnitude.raised_amount_gbp.median()
+# Plot magnitude vs growth chart for countries' early stage investment
 
-# %%
+mid_point = countries_growth_magnitude.raised_amount_gbp.median()
+
 fig = chart_trends.mangitude_vs_growth_chart(
     countries_growth_magnitude,
     x_limit=45,
     y_limit=20,
-    mid_point=3.6,
+    mid_point=mid_point,
     baseline_growth=1.28,
     values_label="Investment (£ billions)",
     text_column="country",
@@ -1474,20 +1442,13 @@ fig = chart_trends.mangitude_vs_growth_chart(
 fig.interactive()
 
 # %%
+# Plot countries' early stage investment growth
 fig = (
-    alt.Chart(
-        countries_growth_magnitude,
-        width=200,
-        height=300,
-    )
+    alt.Chart(countries_growth_magnitude, width=200, height=300)
     .mark_bar(color=pu.NESTA_COLOURS[0])
     .encode(
         alt.Y(f"country:N", sort="-x", title=""),
-        alt.X(
-            f"growth:Q",
-            title="Growth",
-            axis=alt.Axis(format="%"),
-        ),
+        alt.X(f"growth:Q", title="Growth", axis=alt.Axis(format="%")),
     )
 )
 fig = pu.configure_plots(fig)

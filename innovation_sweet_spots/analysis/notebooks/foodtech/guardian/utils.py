@@ -1,63 +1,52 @@
 import pandas as pd
 import nltk.data
-
-tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
+import nltk
 from innovation_sweet_spots.analysis import analysis_utils as au
 from innovation_sweet_spots.utils import chart_trends
 
-# # Variables for colour scale (might be useful)
-# colour_domain = [
-#     "Health",
-#     "Innovative food",
-#     "Logistics",
-#     "Restaurants and retail",
-#     "Cooking and kitchen",
-#     "Food waste",
-# ]
-# colour_range_ = pu.NESTA_COLOURS[0 : len(domain)]
+nltk.download("punkt")
+tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
 
 def remove_space_after_comma(text):
-    """util function to process search terms with comma"""
+    """Process search terms with comma"""
     return ",".join([s.strip() for s in text.split(",")])
 
 
 def check_articles_for_comma_terms(text: str, terms: str):
+    """Return True if text contains comma terms"""
     terms = [term.strip() for term in terms.split(",")]
     sentences_with_terms = find_sentences_with_terms(text, terms, all_terms=True)
-    if len(sentences_with_terms) >= 1:
-        return True
-    else:
-        return False
+    return len(sentences_with_terms) >= 1
 
 
 def find_sentences_with_terms(text, terms, all_terms: bool = True):
-    """util function that finds terms in sentences"""
+    """Finds sentences which contain specified terms"""
     # split text into sentences
     sentences = tokenizer.tokenize(text)
     # keep sentences with terms
     sentences_with_terms = []
     # number of terms in the query
     n_terms = len(terms)
-    for i, sentence in enumerate(sentences):
+    for sentence in sentences:
         terms_detected = 0
         # check all terms
         for term in terms:
             if term in sentence.lower():
                 terms_detected += 1
         # check if all terms were found
-        if all_terms and (terms_detected == n_terms):
+        if (
+            all_terms
+            and terms_detected == n_terms
+            or not all_terms
+            and terms_detected > 0
+        ):
             sentences_with_terms.append(sentence)
-        # check if at least one term was found
-        elif (all_terms is False) and (terms_deteced > 0):
-            sentences_with_terms.append(sentence)
-        else:
-            pass
     return sentences_with_terms
 
 
 def get_ts(df_id_to_term, df_baseline, category="Category"):
-    """build time series"""
+    """Build time series"""
     return (
         df_id_to_term.drop_duplicates(["id", category], keep="first")
         .groupby(["year", category])
@@ -95,9 +84,7 @@ def get_magnitude_growth(
         )
     magnitude_growth_df = pd.DataFrame(
         magnitude_growth, columns=["magnitude", "growth", category]
-    ).assign(
-        growth=lambda df: df.growth / 100,
-    )
+    ).assign(growth=lambda df: df.growth / 100)
     return chart_trends.estimate_trend_type(
         magnitude_growth_df, magnitude_column="magnitude", growth_column="growth"
     )
