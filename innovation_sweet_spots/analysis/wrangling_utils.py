@@ -18,6 +18,7 @@ class GtrWrangler:
     """
 
     def __init__(self):
+        self.gtr = gtr
         self._gtr_projects = None
         # Funding
         self._link_gtr_funds = None
@@ -37,6 +38,8 @@ class GtrWrangler:
 
     def get_project_funds(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """
+        !Deprecated function!
+
         Adds funding amount and dates to the projects.
 
         NB: For a single project there are several funding entries, often with duplicated information,
@@ -77,6 +80,45 @@ class GtrWrangler:
             .astype({"fund_start": "datetime64[ns]", "fund_end": "datetime64[ns]"})
         )
 
+    def get_project_funds_n(
+        self, gtr_projects: pd.DataFrame, project_id_column: str = "id"
+    ) -> pd.DataFrame:
+        """
+        Updated project funds; n=new
+        """
+        gtr_projects = gtr_projects.copy()
+        if project_id_column != "project_id":
+            gtr_projects["project_id"] = gtr_projects[project_id_column]
+            gtr_projects = gtr_projects.drop(project_id_column, axis=1)
+
+        return (
+            # Add funding ids to the projects table
+            gtr_projects.drop(["start", "end"], axis=1, errors="ignore")
+            .merge(self.gtr_funds, on="project_id", how="left")
+            # Add funding amounts and dates to the table
+            .query(
+                "category==['INCOME_ACTUAL', 'EXPENDITURE_ACTUAL', 'EXPENDITURE_PROJECTED']"
+            )
+            # Remove the "Z" from the end of dates
+            .assign(fund_start=lambda df: df.start.apply(self.preprocess_datetime))
+            .assign(fund_end=lambda df: df.end.apply(self.preprocess_datetime))
+            .astype({"fund_start": "datetime64[ns]", "fund_end": "datetime64[ns]"})
+        )
+
+    @staticmethod
+    def preprocess_datetime(date: str) -> str:
+        """
+        Preprocesses datetime string from GtR funds table,
+        by removing the 'Z' at the end, which causes issues with pandas
+        """
+        if type(date) is str:
+            if int(date[0:4]) > 2500:
+                return np.nan
+            if date[-1] == "Z":
+                return date[:-1]
+        else:
+            return date
+
     def get_project_funds_api(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
         """Adds funding data to the projects (data that has been retrieved directly via API)"""
         return gtr_projects.merge(
@@ -87,9 +129,50 @@ class GtrWrangler:
             suffixes=("", "_drop"),
         ).filter(regex="^(?!.*_drop)")
 
-    def get_start_end_dates(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
+    def get_start_end_dates(
+        self, gtr_projects: pd.DataFrame, projects_with_funds: pd.DataFrame = None
+    ) -> pd.DataFrame:
         """
         Gets earliest start and latest end dates of project funds
+
+        Args:
+            gtr_projects: Data frame that must have a column "project_id"
+
+        Returns:
+            Same input data frame with the following extra columns:
+                - fund_start: Start of funding period
+                - fund_end: End of funding period
+        """
+        # Get project fund data
+        if projects_with_funds is None:
+            projects_with_funds = self.get_project_funds(gtr_projects)
+
+        # Get earliest values of "fund_start" for each project
+        earliest_start_data = (
+            projects_with_funds.groupby(["project_id", "fund_start"], sort=True)
+            .count()
+            .reset_index()
+            .drop_duplicates("project_id", keep="first")[["project_id", "fund_start"]]
+        )
+        # Get earliest values of "fund_start" for each project
+        latest_end_data = (
+            projects_with_funds.groupby(["project_id", "fund_end"], sort=True)
+            .count()
+            .reset_index()
+            .drop_duplicates("project_id", keep="last")[["project_id", "fund_end"]]
+        )
+        # Add project start and end dates to the input data frame
+        return (
+            gtr_projects.merge(
+                earliest_start_data, on="project_id", how="left", validate="many_to_one"
+            )
+            .merge(latest_end_data, on="project_id", how="left", validate="many_to_one")
+            .astype({"fund_start": "datetime64[ns]", "fund_end": "datetime64[ns]"})
+        )
+
+    def get_start_end_dates_n(self, gtr_projects: pd.DataFrame) -> pd.DataFrame:
+        """
+        Gets earliest start and latest end dates of project funds (updated)
 
         Args:
             gtr_projects: Data frame that must have a column "project_id"
@@ -334,77 +417,81 @@ class GtrWrangler:
     def gtr_projects(self):
         """GtR projects table"""
         if self._gtr_projects is None:
-            self._gtr_projects = gtr.get_gtr_projects()
+            self._gtr_projects = self.gtr.get_gtr_projects()
         return self._gtr_projects
 
     @property
     def gtr_funds(self):
         """GtR funding table"""
         if self._gtr_funds is None:
-            self._gtr_funds = gtr.get_gtr_funds()
+            self._gtr_funds = self.gtr.get_gtr_funds()
         return self._gtr_funds
 
     @property
     def link_gtr_funds(self):
         """Links between project ids and funding ids"""
         if self._link_gtr_funds is None:
-            self._link_gtr_funds = gtr.get_link_table("gtr_funds")
+            self._link_gtr_funds = self.gtr.get_link_table("gtr_funds")
         return self._link_gtr_funds
 
     @property
     def link_gtr_funds_api(self):
         """Links between project ids and funding ids, retrieved using API calls"""
         if self._link_gtr_funds_api is None:
-            self._link_gtr_funds_api = gtr.get_gtr_funds_api()
+            self._link_gtr_funds_api = self.gtr.get_gtr_funds_api()
         return self._link_gtr_funds_api
 
     @property
     def gtr_organisations(self):
         """Organisations participating in research projects"""
         if self._gtr_organisations is None:
-            self._gtr_organisations = gtr.get_gtr_organisations()
+            self._gtr_organisations = self.gtr.get_gtr_organisations()
         return self._gtr_organisations
 
     @property
     def gtr_organisations_locations(self):
         """Organisation locations"""
         if self._gtr_organisations_locations is None:
-            self._gtr_organisations_locations = gtr.get_gtr_organisations_locations()
+            self._gtr_organisations_locations = (
+                self.gtr.get_gtr_organisations_locations()
+            )
         return self._gtr_organisations_locations
 
     @property
     def link_gtr_organisations(self):
         """Links between project ids and organisation ids"""
         if self._link_gtr_organisations is None:
-            self._link_gtr_organisations = gtr.get_link_table("gtr_organisations")
+            self._link_gtr_organisations = self.gtr.get_link_table("gtr_organisations")
         return self._link_gtr_organisations
 
     @property
     def gtr_persons(self):
         """Links between project ids and organisation ids"""
         if self._gtr_persons is None:
-            self._gtr_persons = gtr.get_gtr_persons()
+            self._gtr_persons = self.gtr.get_gtr_persons()
         return self._gtr_persons
 
     @property
     def link_gtr_persons(self):
         """Links between project ids and organisation ids"""
         if self._link_gtr_persons is None:
-            self._link_gtr_persons = gtr.get_link_table("gtr_persons")
+            self._link_gtr_persons = self.gtr.get_link_table("gtr_persons")
         return self._link_gtr_persons
 
     @property
     def link_gtr_topics(self):
         """Links between project ids and research topic ids"""
         if self._link_gtr_topics is None:
-            self._link_gtr_topics = gtr.get_link_table("gtr_topic")
+            self._link_gtr_topics = self.gtr.get_link_table("gtr_topic")
         return self._link_gtr_topics
 
     @property
     def gtr_topics(self):
         """GtR research topics"""
         if self._gtr_topics is None:
-            self._gtr_topics = gtr.get_gtr_topics().rename(columns={"text": "topic"})
+            self._gtr_topics = self.gtr.get_gtr_topics().rename(
+                columns={"text": "topic"}
+            )
         return self._gtr_topics
 
     @property
@@ -995,6 +1082,8 @@ class DealroomWrangler:
         self._company_tags = None
         self._company_industries = None
         self._company_subindustries = None
+        self._company_labels = None
+        self._labels = None
         self._funding_rounds = None
 
     @property
@@ -1011,6 +1100,8 @@ class DealroomWrangler:
         if self._foodtech_data is None:
             self._foodtech_data = (
                 dealroom.get_foodtech_companies()
+                # Deduplicate IDs
+                .astype({"id": str})
                 .drop_duplicates("id", keep="first")
                 .pipe(self.process_input_data)
             )
@@ -1095,6 +1186,30 @@ class DealroomWrangler:
         """
         return column_name.split("(")[0].strip()
 
+    def get_ids_in_industry(self, industry: str):
+        """Get company ids in a subindustry"""
+        return self.company_industries.query("`INDUSTRIES` == @industry").id.to_list()
+
+    def get_ids_in_subindustry(self, subindustry: str):
+        """Get company ids in a subindustry"""
+        return self.company_subindustries.query(
+            "`SUB INDUSTRIES` == @subindustry"
+        ).id.to_list()
+
+    def get_companies_by_industry(self, industry: str):
+        """Get companies that are in the specific subindustry"""
+        ids_in_industry = self.get_ids_in_industry(industry)
+        return self.company_data.query("id in @ids_in_industry").assign(
+            industry=industry
+        )
+
+    def get_rounds_by_industry(self, industry: str):
+        """Get investment rounds for companies in the specific subindustry"""
+        ids_in_industry = self.get_ids_in_industry(industry)
+        return self.funding_rounds.query("id in @ids_in_industry").assign(
+            industry=industry
+        )
+
     def get_ids_in_subindustry(self, subindustry: str):
         """Get company ids in a subindustry"""
         return self.company_subindustries.query(
@@ -1115,23 +1230,65 @@ class DealroomWrangler:
             subindustry=subindustry
         )
 
-    def get_ids_in_industry(self, industry: str):
-        """Get company ids in a subindustry"""
-        return self.company_industries.query("`INDUSTRIES` == @industry").id.to_list()
+    def get_ids_by_labels(self, label: str, label_type: str):
+        """Get company ids corresponding to a given label"""
+        return self.company_labels.query(
+            "`Category` == @label and `label_type` == @label_type"
+        ).id.to_list()
 
-    def get_companies_by_industry(self, industry: str):
-        """Get companies that are in the specific subindustry"""
-        ids_in_industry = self.get_ids_in_industry(industry)
-        return self.company_data.query("id in @ids_in_industry").assign(
-            industry=industry
+    def get_companies_by_labels(self, label: str, label_type: str):
+        """Get companies that have the specific label"""
+        ids = self.get_ids_by_labels(label, label_type)
+        return self.company_data.query("id in @ids").assign(
+            Category=label, label_type=label_type
         )
 
-    def get_rounds_by_industry(self, industry: str):
-        """Get investment rounds for companies in the specific subindustry"""
-        ids_in_industry = self.get_ids_in_industry(industry)
-        return self.funding_rounds.query("id in @ids_in_industry").assign(
-            industry=industry
+    def get_rounds_by_labels(self, label: str, label_type: str):
+        """Get investment rounds for companies have the specific label"""
+        ids = self.get_ids_by_labels(label, label_type)
+        return self.funding_rounds.query("id in @ids").assign(
+            Category=label, label_type=label_type
         )
+
+    @property
+    def company_labels(self):
+        """Companies and all their industry, sub-industry and tag labels"""
+        if self._company_labels is None:
+            self._company_labels = self.get_all_company_labels()
+        return self._company_labels
+
+    @property
+    def labels(self):
+        """All unique industry, sub-industry and tag labels"""
+        if self._labels is None:
+            self._labels = (
+                self.company_labels.drop_duplicates("Category")
+                .sort_values("Category")
+                .drop("id", axis=1)
+                .reset_index(drop=True)
+            )
+        return self._labels
+
+    def get_all_company_labels(self) -> pd.DataFrame:
+        """Compiles all industry, sub-industry and tag labels into one dataframe"""
+        label = "SUB INDUSTRIES"
+        sub = self.company_subindustries.rename(columns={label: "Category"}).assign(
+            label_type=label
+        )
+
+        label = "INDUSTRIES"
+        ind = self.company_industries.rename(columns={label: "Category"}).assign(
+            label_type=label
+        )
+
+        label = "TAGS"
+        tags = self.company_tags.rename(columns={label: "Category"}).assign(
+            label_type=label
+        )
+
+        company_labels = pd.concat([sub, ind, tags], ignore_index=True)
+        company_labels = company_labels[-company_labels.Category.isnull()]
+        return company_labels
 
     def explode_timeseries(self, column_name: str) -> pd.DataFrame:
         """

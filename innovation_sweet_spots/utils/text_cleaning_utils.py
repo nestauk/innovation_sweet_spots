@@ -12,8 +12,11 @@ import nltk
 from functools import lru_cache
 import numpy as np
 
-nltk.download("stopwords")
-nltk.download("wordnet")
+
+def download_nltk_data():
+    nltk.download("stopwords")
+    nltk.download("wordnet")
+
 
 ### Compiling regex patterns as they might get used many times over ###
 
@@ -223,3 +226,13 @@ def remove_non_alphanumeric(text: str) -> str:
 
 def remove_non_alphabet(text: str) -> str:
     return " ".join([t.strip() for t in re.sub(r"[^a-zA-Z ]+", "", text).split()])
+
+
+def clean_dealroom_labels(text: str) -> str:
+    """Clean Dealroom labels"""
+    return " ".join(
+        [
+            t.strip()
+            for t in remove_non_alphabet(re.sub(r"\([^()]*\)", "", text)).split()
+        ]
+    )

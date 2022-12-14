@@ -79,6 +79,11 @@ pu.test_chart()
 # %%
 check_columns = ["name", "short_description", "long_description"]
 
+# %%
+import innovation_sweet_spots.utils.altair_save_utils as alt_save
+
+AltairSaver = alt_save.AltairSaver(path=PROJECT_DIR / "outputs/parenting/figures/")
+
 # %% [markdown]
 # # Get reviewed companies
 
@@ -326,11 +331,11 @@ for p in columns:
     print(p)
 
 # %%
-(
-    investors[columns].to_csv(
-        PROJECT_DIR / "outputs/finals/parenting/investors_list_all.csv", index=False
-    )
-)
+# (
+#     investors[columns].to_csv(
+#         PROJECT_DIR / "outputs/finals/parenting/investors_list_all.csv", index=False
+#     )
+# )
 
 # %%
 # CB.cb_organisations.head(3).info()
@@ -431,13 +436,24 @@ fig = (
         tooltip=tooltip,
     )
 )
-pu.configure_plots(fig)
+fig_final = pu.configure_plots(fig)
+fig_final
+
+# %%
+AltairSaver.save(
+    fig_final, f"parenting_tech_Total_investment", filetypes=["png", "html"]
+)
 
 # %%
 au.percentage_change(
     data.query("`Year`==2011")[values_label].iloc[0],
     data.query("`Year`==2021")[values_label].iloc[0],
 )
+
+# %%
+data.query("`Year`==2021")[values_label].iloc[0] / data.query("`Year`==2011")[
+    values_label
+].iloc[0]
 
 # %%
 au.percentage_change(
@@ -518,7 +534,13 @@ fig = (
         tooltip=tooltip,
     )
 )
-pu.configure_plots(fig)
+fig_final = pu.configure_plots(fig)
+fig_final
+
+# %%
+AltairSaver.save(
+    fig_final, f"parenting_tech_Country_investment", filetypes=["png", "html"]
+)
 
 # %% [markdown]
 # ### Rest of the graphs
@@ -1067,6 +1089,11 @@ fig_final = (
     #     .interactive()
 )
 fig_final
+
+# %%
+AltairSaver.save(fig_final, f"parenting_tech_Digital", filetypes=["png", "html"])
+
+# %%
 
 # %%
 industry_name = "internet of things"

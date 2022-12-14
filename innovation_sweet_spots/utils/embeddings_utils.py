@@ -101,29 +101,13 @@ class Vectors:
 
         """
         self.model_name = model_name
-        if vector_ids is None:
-            # Load from local disk
-            self.load_vectors(filename, model_name, folder)
-        else:
-            # Take the provided vectors and vector ids
-            self.vector_ids = np.array(vector_ids)
-            self.vectors = vectors
-        self._model = None
-        assert (
-            len(self.vector_ids) == self.vectors.shape[0]
-        ), "Number of vector ids does not match the number of vectors"
-        assert len(np.unique(self.vector_ids)) == len(
-            self.vector_ids
-        ), "All vector ids must be unique"
-
-        self.model_name = model_name
         self._model = None
         self.filename = filename
         self.folder = folder
         files_exist = os.path.exists(
             folder / self.filepath_vectors(filename, model_name, folder)
         )
-        print(files_exist)
+
         if (vector_ids is None) and ((filename is None) or (files_exist is False)):
             # Initialise empty vectors and ids
             self.vectors = None
@@ -131,9 +115,7 @@ class Vectors:
         else:
             if (vector_ids is None) and (filename is not None) and files_exist:
                 # Load from disk
-                self.load_vectors(filename, model_name, folder)
-                print(self.vectors.shape)
-                print(len(self.vector_ids))
+                self.load_vectors_and_ids(filename, model_name, folder)
             else:
                 # Take the provided vectors and vector ids
                 self.vector_ids = np.array(vector_ids)
@@ -145,7 +127,7 @@ class Vectors:
                 self.vector_ids
             ), "All vector ids must be unique"
 
-    def load_vectors(self, filename: str, model_name: str, folder):
+    def load_vectors_and_ids(self, filename: str, model_name: str, folder):
         """Loads in vectors and their corresponding document ids from disk"""
         self.vector_ids = np.array(
             read_text_items(self.filepath_vector_ids(filename, model_name, folder))
@@ -196,6 +178,8 @@ class Vectors:
         """Generates new vectors and adds them to the existing ones"""
         new_indexes = []
         # Check which ids to update
+        if self.vectors is not None:
+            print(len(self.vectors))
         for i, new_id in enumerate(new_document_ids):
             if force_update or (self.is_id_present(new_id) is False):
                 new_indexes.append(i)
@@ -204,10 +188,12 @@ class Vectors:
                 new_document_ids=np.array(new_document_ids)[new_indexes],
                 new_vectors=self.model.encode(np.array(texts)[new_indexes]),
             )
-        else:
+        elif self.vectors is None:
             # First time
             self.vectors = self.model.encode(np.array(texts)[new_indexes])
             self.vector_ids = np.array(new_document_ids)[new_indexes]
+        print(len(self.vectors))
+        logging.info(f"Added {len(new_indexes)} new vectors")
 
     def add_vectors(
         self, new_document_ids: Iterator[str], new_vectors: ArrayLike
@@ -270,7 +256,7 @@ class Vectors:
         # Save vectors
         vectors_filepath = self.filepath_vectors(filename, self.model_name, folder)
         np.save(vectors_filepath, self.vectors)
-        logging.info(f"Saved vectors in {vectors_filepath}")
+        logging.info(f"Saved {len(self.vectors)} vectors in {vectors_filepath}")
         # Save IDs
         save_text_items(
             list(self.vector_ids),

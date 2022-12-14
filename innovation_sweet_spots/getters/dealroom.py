@@ -5,7 +5,9 @@ Module for easy access to downloaded Dealroom data
 
 """
 import pandas as pd
+from innovation_sweet_spots import PROJECT_DIR
 from innovation_sweet_spots.getters.path_utils import DEALROOM_PATH
+import innovation_sweet_spots.utils.embeddings_utils as eu
 
 # Organising Dealroom data columns by themes
 COLUMN_CATEGORIES = {
@@ -149,4 +151,33 @@ COLUMN_CATEGORIES = {
 
 def get_foodtech_companies() -> pd.DataFrame:
     """Dataset used in the food tech themed Innovation Sweet Spots"""
-    return pd.read_csv(DEALROOM_PATH / "dealroom_foodtech.csv")
+    return (
+        pd.read_csv(
+            DEALROOM_PATH / "dealroom_foodtech.csv",
+        )
+        .query("id != 'Error retrieving row data'")
+        .astype({"id": "int32"})
+    )
+
+
+# Preprocessed embeddings
+MODEL = "all-mpnet-base-v2"
+DIR = PROJECT_DIR / "outputs/preprocessed/embeddings"
+
+
+def get_label_embeddings(model=MODEL, folder=DIR, filename="foodtech_may2022_labels"):
+    return eu.Vectors(
+        model_name=model,
+        folder=folder,
+        filename=filename,
+    )
+
+
+def get_company_embeddings(
+    model=MODEL, folder=DIR, filename="foodtech_may2022_companies"
+):
+    return eu.Vectors(
+        model_name=model,
+        folder=folder,
+        filename=filename,
+    )

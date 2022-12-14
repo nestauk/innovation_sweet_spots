@@ -10,19 +10,36 @@ import requests
 import json
 import os
 import dotenv
-
-dotenv.load_dotenv(PROJECT_DIR)
-dotenv.load_dotenv(PROJECT_DIR / ".env")
-
 from urllib.parse import urlencode, quote
 import requests
 import time
 
+# Base url for calling the api
 BASE_URL = "https://content.guardianapis.com/"
-API_KEY = open(os.environ["GUARDIAN_API_KEY"], "r").read()
-
+# Folders to store the api call results
 API_RESULTS_DIR = GUARDIAN_PATH / "api_results"
 API_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def setup_api_key(api_key: str = None, from_env_file: bool = True):
+    """Initialises The Guardian api key"""
+    if from_env_file:
+        # If .env file exists
+        if os.path.isfile(PROJECT_DIR / ".env"):
+            # Load the .env file
+            dotenv.load_dotenv(PROJECT_DIR / ".env")
+            try:
+                # Try loading API key
+                return open(os.environ["GUARDIAN_API_KEY"], "r").read()
+            except:
+                # If the key is not in the .env file
+                return None
+    else:
+        return api_key
+
+
+# API key
+API_KEY = setup_api_key()
 
 
 def create_url(
@@ -33,9 +50,18 @@ def create_url(
     parameters["api-key"] = api_key
     for key in adjusted_parameters:
         parameters[key] = adjusted_parameters[key]
-    search_query = f'q="{quote(search_term)}"&'
+    # Split the search terms on commmas and add ANDs between them
+    if len(search_term.split(','))<=1:
+        search_query = f'q="{quote(search_term)}"&'
+    else:
+        search_terms = search_term.split(',')
+        search_query = f'q="{quote(search_terms[0])}"&'
+        for i in search_terms[1:]:
+            search_query = search_query.replace('&', f' AND "{quote(i)}"&')
+
     url = f"{BASE_URL}search?" + search_query + urlencode(parameters)
     return url
+
 
 
 def get_request(url):
