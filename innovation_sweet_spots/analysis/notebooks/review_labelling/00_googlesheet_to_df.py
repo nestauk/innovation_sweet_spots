@@ -29,6 +29,7 @@ from innovation_sweet_spots.analysis.notebooks.review_labelling.utils import (
 # ## Downloading data from google sheets and converting into a dataframe
 #
 # The following process is for datasets that potentially have multiple rows with the same id but with different labels.
+# The functions used in the next stage, in the 01 notebook expect that the dataframes are in the same format as produced in this notebook i.e. id | text | label_1 | label_2 | .... | label_n | where the label columns contain values of 0s and 1s.
 
 # %%
 # Load and process foodtech GtR abstracts from googlesheets that have been partially reviewed
