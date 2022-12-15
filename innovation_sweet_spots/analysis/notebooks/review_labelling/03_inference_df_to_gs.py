@@ -34,6 +34,9 @@ from innovation_sweet_spots.analysis.notebooks.review_labelling.utils import (
 from innovation_sweet_spots.utils.io import load_pickle
 from innovation_sweet_spots.utils.google_sheets import upload_to_google_sheet
 
+# %% [markdown]
+# ## Use model to make predictions and reupload data to google sheets
+
 # %%
 # Load and process foodtech GtR abstracts from googlesheets that have been partially reviewed
 ft_gtr = (

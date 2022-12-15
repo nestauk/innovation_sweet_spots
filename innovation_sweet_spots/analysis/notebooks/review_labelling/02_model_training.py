@@ -24,6 +24,10 @@ from innovation_sweet_spots.analysis.notebooks.review_labelling.utils import (
 )
 from innovation_sweet_spots.utils.io import load_pickle
 
+# %% [markdown]
+# ## Model training
+# Train a classifier which can be used to label text.
+
 # %%
 # Load datasets
 LOAD_DS_PATH = PROJECT_DIR / "inputs/data/review_labelling/datasets/foodtech_gtr/"

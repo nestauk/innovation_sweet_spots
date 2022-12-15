@@ -19,6 +19,9 @@ from innovation_sweet_spots.utils.io import save_pickle, load_pickle
 from innovation_sweet_spots import PROJECT_DIR
 from innovation_sweet_spots.analysis.notebooks.review_labelling.utils import df_to_hf_ds
 
+# %% [markdown]
+# ## Converting dataframe into huggingface dataset
+
 # %%
 # Load dataframes
 LOAD_DF_PATH = PROJECT_DIR / "inputs/data/review_labelling/dataframes/foodtech_gtr/"

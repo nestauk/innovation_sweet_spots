@@ -61,7 +61,7 @@ SAVE_DF_PATH = PROJECT_DIR / "inputs/data/review_labelling/dataframes/foodtech_g
 SAVE_DF_PATH.mkdir(parents=True, exist_ok=True)
 
 # %%
-# Make and save training dataframe
+# Make and save training dataframe using records that have been human reviewed
 train_df = (
     ft_gtr.query("reviewed == 1")[:split]
     .drop(columns="reviewed")
@@ -71,7 +71,7 @@ save_pickle(train_df, SAVE_DF_PATH / "train_df.pickle")
 train_df.head(2)
 
 # %%
-# Make and save validation dataframe
+# Make and save validation dataframe using records that have been human reviewed
 valid_df = (
     ft_gtr.query("reviewed == 1")[split:]
     .drop(columns="reviewed")
@@ -81,7 +81,7 @@ save_pickle(valid_df, SAVE_DF_PATH / "valid_df.pickle")
 valid_df.head(2)
 
 # %%
-# Make and save set of records to be reviewed using the model
+# Make and save set of records to be classified using the model that have not been human reviewed
 to_review_df = (
     ft_gtr.query("reviewed == 0").drop(columns="reviewed").reset_index(drop=True)
 )
