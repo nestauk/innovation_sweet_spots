@@ -22,6 +22,10 @@ from typing import Union
 from pathlib import Path
 from datasets import Dataset
 from sklearn.preprocessing import MultiLabelBinarizer
+import seaborn as sns
+import matplotlib.pyplot as plt
+from collections import Counter
+import itertools
 
 
 def combine_labels(
@@ -289,3 +293,46 @@ def add_reviewer_and_predicted_labels(
             ]
         ]
     )
+
+
+def label_counts(df: pd.DataFrame, column_to_count: str) -> pd.DataFrame:
+    """Count labels
+
+    Args:
+        df: Dataframe with column containing labels to be counted
+        column_to_count: Column with labels
+
+    Returns:
+        Dataframe with columns 'label' and 'count'
+    """
+    not_relevant_count = len(df.query(f"{column_to_count} == ''"))
+    counts = dict(
+        Counter(list(itertools.chain.from_iterable(df[column_to_count].values)))
+    )
+    counts["not_relevant"] = not_relevant_count
+    return (
+        pd.DataFrame.from_dict(data=counts, orient="index", columns=["count"])
+        .reset_index()
+        .rename(columns={"index": "label"})
+        .sort_values("count", ascending=False)
+        .reset_index(drop=True)
+    )
+
+
+def plot_label_counts(
+    counts_df: pd.DataFrame, title: str, excl_labels: list = None
+) -> plt.Axes:
+    """Plot label counts
+
+    Args:
+        counts_df: Dataframe with columns 'label' and 'count'
+        title: Title for the plot
+        excl_labels: List of labels to exclude from the plot
+
+    Returns:
+        Seaborn plot of label counts
+    """
+    sns.set(style="darkgrid")
+    if excl_labels:
+        counts_df = counts_df.query(f"label not in {excl_labels}")
+    sns.barplot(data=counts_df, x="count", y="label", color="b").set_title(title)

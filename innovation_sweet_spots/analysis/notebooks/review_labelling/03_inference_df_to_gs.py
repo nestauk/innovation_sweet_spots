@@ -23,13 +23,13 @@ from innovation_sweet_spots import PROJECT_DIR
 from innovation_sweet_spots.utils.io import load_pickle
 import numpy as np
 from innovation_sweet_spots.analysis.notebooks.review_labelling.utils import (
-    dummies_to_labels,
-    binarise_predictions,
     load_tokenizer,
     load_training_args,
     load_model,
     load_trainer,
     add_reviewer_and_predicted_labels,
+    label_counts,
+    plot_label_counts,
 )
 from innovation_sweet_spots.utils.io import load_pickle
 from innovation_sweet_spots.utils.google_sheets import upload_to_google_sheet
@@ -102,4 +102,20 @@ upload_to_google_sheet(
     df=merged,
     google_sheet_id="1ZZQO6m6BSIiwTqgfHq9bNaf_FB1HG4EqwedgDLzESa0",
     wks_name="ukri_updated",
+)
+
+# %%
+# Plot model predicted label counts
+model_label_counts = label_counts(df=merged, column_to_count="model_labels")
+plot_label_counts(
+    model_label_counts,
+    excl_labels=["not_relevant"],
+    title="Model predicted label counts",
+)
+
+# %%
+# Plot reviewer label counts
+reviewer_label_counts = label_counts(df=merged, column_to_count="reviewer_labels")
+plot_label_counts(
+    reviewer_label_counts, excl_labels=["not_relevant"], title="Reviewer label counts"
 )
