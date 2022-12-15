@@ -11,6 +11,7 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
+from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.model_selection import ParameterGrid
 from typing import Iterator, Dict
 from collections import defaultdict
@@ -57,9 +58,7 @@ def umap_reducer(
 
 
 def hdbscan_clustering(
-    vectors: np.typing.ArrayLike,
-    hdbscan_params: dict = hdbscan_def_params,
-    random_hdbscan_state: int = 3333,
+    vectors: np.typing.ArrayLike, hdbscan_params: dict = hdbscan_def_params
 ) -> np.typing.ArrayLike:
     """Cluster vectors using HDBSCAN.
 
@@ -67,7 +66,6 @@ def hdbscan_clustering(
     and probability
     """
     logging.info(f"Clustering {len(vectors)} vectors with HDBSCAN.")
-    np.random.seed(random_hdbscan_state)
     clusterer = hdbscan.HDBSCAN(**hdbscan_params)
     clusterer.fit(vectors)
     cluster_probs = hdbscan.all_points_membership_vectors(clusterer)
@@ -89,44 +87,83 @@ def kmeans_clustering(
     return kmeans.labels_
 
 
-def param_grid_search(
-    vectors: np.typing.ArrayLike, search_params: dict, cluster_with_hdbscan: bool
+def kmeans_param_grid_search(
+    vectors: np.typing.ArrayLike, search_params: dict, random_seeds: list
 ) -> pd.DataFrame:
     """Perform grid search over search parameters and calculate
-    mean silhouette score.
+    mean silhouette score for K-means clustering
 
     Args:
         vectors: Embedding vectors.
         search_params: Dictionary with keys as parameter names
             and values as a list of parameters to search through.
-        cluster_with_hdbscan: True to cluster with HDBSCAN and
-            False to cluster with K-Means.
+        random_seeds: Param search will be performed for each
+            random seed specified and then the results averaged.
+
+    Returns:
+        Dataframe with information on clustering method,
+        parameters, random seed, mean silhouette score.
+    """
+    parameters_record = []
+    silhouette_score_record = []
+    method_record = []
+    random_seed_record = []
+    reduced_dims_vectors = umap_reducer(vectors)
+    distances = euclidean_distances(reduced_dims_vectors)
+    for random_seed in tqdm(random_seeds):
+        for parameters in tqdm(ParameterGrid(search_params)):
+            parameters["random_state"] = random_seed
+            clusters = kmeans_clustering(reduced_dims_vectors, kmeans_params=parameters)
+            silhouette = silhouette_score(distances, clusters, metric="precomputed")
+            method_record.append("K-Means clustering")
+            parameters.pop("random_state")
+            parameters_record.append(str(parameters))
+            silhouette_score_record.append(silhouette)
+            random_seed_record.append(random_seed)
+
+    return (
+        pd.DataFrame.from_dict(
+            {
+                "method": method_record,
+                "model_params": parameters_record,
+                "random_seed": random_seed_record,
+                "silhouette_score": silhouette_score_record,
+            }
+        )
+        .groupby(["method", "model_params"])["silhouette_score"]
+        .mean()
+        .reset_index()
+        .sort_values("silhouette_score", ascending=False)
+    )
+
+
+def hdbscan_param_grid_search(
+    vectors: np.typing.ArrayLike, search_params: dict
+) -> pd.DataFrame:
+    """Perform grid search over search parameters and calculate
+    mean silhouette score for HDBSCAN
+
+    Args:
+        vectors: Embedding vectors.
+        search_params: Dictionary with keys as parameter names
+            and values as a list of parameters to search through.
 
     Returns:
         Dataframe with information on clustering method, parameters,
             mean silhouette scoure.
     """
-    from sklearn.metrics.pairwise import euclidean_distances
-
     parameters_record = []
     silhouette_score_record = []
     method_record = []
     reduced_dims_vectors = umap_reducer(vectors)
     distances = euclidean_distances(reduced_dims_vectors)
     for parameters in tqdm(ParameterGrid(search_params)):
+        clusters = hdbscan_clustering(reduced_dims_vectors, hdbscan_params=parameters)
+        silhouette = silhouette_score(
+            distances, clusters.labels.values, metric="precomputed"
+        )
+        method_record.append("HDBSCAN")
         parameters_record.append(parameters)
-        if cluster_with_hdbscan:
-            clusters = hdbscan_clustering(
-                reduced_dims_vectors, hdbscan_params=parameters
-            )
-            silhouette = silhouette_score(
-                distances, clusters.labels.values, metric="precomputed"
-            )
-            method_record.append("HDBSCAN")
-        else:
-            clusters = kmeans_clustering(reduced_dims_vectors, kmeans_params=parameters)
-            silhouette = silhouette_score(distances, clusters, metric="precomputed")
-            method_record.append("K-Means clustering")
         silhouette_score_record.append(silhouette)
 
     return pd.DataFrame.from_dict(
@@ -242,11 +279,14 @@ def cluster_keywords(
 
     return top_cluster_tokens
 
+
 ## kk additions
 import altair as alt
+
 alt.data_transformers.disable_max_rows()
 import innovation_sweet_spots.utils.embeddings_utils as eu
 import innovation_sweet_spots.utils.plotting_utils as pu
+
 
 def cluster_visualisation(
     vectors,
@@ -254,7 +294,7 @@ def cluster_visualisation(
     width=600,
     height=600,
     random_state=1,
-    extra_data: pd.DataFrame=None
+    extra_data: pd.DataFrame = None,
 ):
     """ Reduces the vectors to 2D and plots them with altair """
     if vectors.shape[1] != 2:
@@ -262,11 +302,13 @@ def cluster_visualisation(
     else:
         vectors_2d = vectors
     # Create a dataframe
-    data = pd.DataFrame(data={
-        'x': vectors_2d[:,0],
-        'y': vectors_2d[:,1],
-        'cluster_label': [str(c) for c in cluster_labels],
-    })
+    data = pd.DataFrame(
+        data={
+            "x": vectors_2d[:, 0],
+            "y": vectors_2d[:, 1],
+            "cluster_label": [str(c) for c in cluster_labels],
+        }
+    )
     # Add extra data
     if extra_data is not None:
         extra_columns = list(extra_data.columns)
@@ -276,14 +318,17 @@ def cluster_visualisation(
         extra_columns = []
     # Plot the clusters
     fig = (
-        alt
-        .Chart(data, width=width, height=height)
+        alt.Chart(data, width=width, height=height)
         .mark_circle()
         .encode(
-            x=alt.X('x', axis=alt.Axis(labels=False, title="", ticks=False, domain=False)),
-            y=alt.Y('y', axis=alt.Axis(labels=False, title="", ticks=False, domain=False)),
-            color=alt.Color('cluster_label'),
-            tooltip=['cluster_label'] + extra_columns,
+            x=alt.X(
+                "x", axis=alt.Axis(labels=False, title="", ticks=False, domain=False)
+            ),
+            y=alt.Y(
+                "y", axis=alt.Axis(labels=False, title="", ticks=False, domain=False)
+            ),
+            color=alt.Color("cluster_label"),
+            tooltip=["cluster_label"] + extra_columns,
         )
     )
     fig = (
