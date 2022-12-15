@@ -28,7 +28,8 @@ nltk.download("stopwords")
 from innovation_sweet_spots.getters.gtr_2022 import get_gtr_file
 from innovation_sweet_spots.utils.embeddings_utils import Vectors
 from innovation_sweet_spots.utils.cluster_analysis_utils import (
-    param_grid_search,
+    hdbscan_param_grid_search,
+    kmeans_param_grid_search,
     highest_silhouette_model_params,
 )
 import innovation_sweet_spots.utils.cluster_analysis_utils as cau
@@ -97,16 +98,11 @@ hdbscan_search_params = {
     "prediction_data": [True],
 }
 
-# Define K-Means search parameters
-kmeans_search_params = {"n_clusters": [8, 20, 30], "init": ["k-means++"]}
-
 # %%
 # %%time
 # Parameter grid search using HDBSCAN
-hdbscan_search_results = param_grid_search(
-    vectors=gtr_vectors.vectors,
-    search_params=hdbscan_search_params,
-    cluster_with_hdbscan=True,
+hdbscan_search_results = hdbscan_param_grid_search(
+    vectors=gtr_vectors.vectors, search_params=hdbscan_search_params
 )
 
 # %%
@@ -119,12 +115,14 @@ optimal_hdbscan_params = highest_silhouette_model_params(hdbscan_search_results)
 optimal_hdbscan_params
 
 # %%
+# Define K-Means search parameters
+kmeans_search_params = {"n_clusters": [8, 20, 30], "init": ["k-means++"]}
+
+# %%
 # %%time
 # Parameter grid search using K-Means
-kmeans_search_results = param_grid_search(
-    vectors=gtr_vectors.vectors,
-    search_params=kmeans_search_params,
-    cluster_with_hdbscan=False,
+kmeans_search_results = kmeans_param_grid_search(
+    vectors=gtr_vectors.vectors, search_params=kmeans_search_params, random_seeds=[1, 2]
 )
 
 # %%
@@ -133,14 +131,11 @@ kmeans_search_results
 
 # %%
 # Find K-Means model params with highest silhouette score
-optimal_kmeans_params = highest_silhouette_model_params(kmeans_search_results)
+optimal_kmeans_params = eval(highest_silhouette_model_params(kmeans_search_results))
 optimal_kmeans_params
 
 # %% [markdown]
 # ## Visualising the optimal clustering result
-
-# %%
-importlib.reload(cau);
 
 # %% [markdown]
 # ### k-means result
@@ -152,12 +147,16 @@ optimal_labels = cau.kmeans_clustering(gtr_vectors.vectors, optimal_kmeans_param
 vectors_2d, fig = cau.cluster_visualisation(
     gtr_vectors.vectors,
     optimal_labels,
-    # Add short abstracts to the visualisation 
+    # Add short abstracts to the visualisation
     extra_data=(
-        gtr_project_abstracts[['id', 'abstract']]
-        .assign(abstract=lambda df: df.abstract.apply(lambda x: str(x)[0:300] + '...'))
+        gtr_project_abstracts[["id", "abstract"]].assign(
+            abstract=lambda df: df.abstract.apply(lambda x: str(x)[0:300] + "...")
+        )
     ),
 )
+
+# %%
+fig
 
 # %% [markdown]
 # ### hdbscan result
@@ -168,15 +167,14 @@ optimal_labels = cau.hdbscan_clustering(gtr_vectors.vectors, optimal_hdbscan_par
 # %%
 vectors_2d, fig = cau.cluster_visualisation(
     vectors_2d,
-    optimal_labels['labels'],
-    # Add short abstracts to the visualisation 
+    optimal_labels["labels"],
+    # Add short abstracts to the visualisation
     extra_data=(
-        gtr_project_abstracts[['id', 'abstract']]
-        .assign(abstract=lambda df: df.abstract.apply(lambda x: str(x)[0:300] + '...'))
+        gtr_project_abstracts[["id", "abstract"]].assign(
+            abstract=lambda df: df.abstract.apply(lambda x: str(x)[0:300] + "...")
+        )
     ),
 )
 
 # %%
 fig
-
-# %%
