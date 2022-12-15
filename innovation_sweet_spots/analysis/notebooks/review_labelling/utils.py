@@ -190,6 +190,22 @@ def dummies_to_labels(dummy_cols: pd.DataFrame) -> pd.Series:
     )
 
 
+def pred_probs_col(predictions: np.ndarray, threshold: float = 0.5) -> pd.DataFrame:
+    """Create a column that has a list for each
+    predicted probability greater than the threshold"""
+    sigmoid = torch.nn.Sigmoid()
+    probs = sigmoid(torch.Tensor(predictions))
+    return (
+        pd.DataFrame(probs)
+        .stack()
+        .loc[lambda x: x > threshold]
+        .reset_index()
+        .groupby("level_0")
+        .agg({0: list})
+        .rename(columns={0: "pred_probs"})
+    )
+
+
 def binarise_predictions(predictions: np.ndarray, threshold: float = 0.5) -> np.ndarray:
     """Apply sigmoid transformation to predictions and set
     values >= threshold to 1 and < threshold to 0"""
@@ -242,19 +258,18 @@ def add_reviewer_and_predicted_labels(
         Dataframe with reviewer and predicted labels and related columns
     """
     label_columns = df.drop(columns=["id", "text"]).columns
-
     trainer_predictions = trainer.predict(ds)
-    binarised_preds = binarise_predictions(
-        predictions=trainer_predictions.predictions, threshold=0.5
-    )
+    binarised_preds = binarise_predictions(predictions=trainer_predictions.predictions)
     binarised_preds = pd.DataFrame(binarised_preds)
     binarised_preds.columns = label_columns
+    prediction_probs = pred_probs_col(trainer_predictions.predictions)
     return (
         df.assign(
             model_labels=dummies_to_labels(binarised_preds),
             reviewer_labels=dummies_to_labels(
                 dummy_cols=df.drop(columns=["id", "text"])
             ),
+            pred_probs=prediction_probs,
             model_dataset=model_dataset_name,
         )
         .fillna("")
@@ -268,6 +283,7 @@ def add_reviewer_and_predicted_labels(
                 "text",
                 "reviewer_labels",
                 "model_labels",
+                "pred_probs",
                 "reviewer_model_match",
                 "model_dataset",
             ]
