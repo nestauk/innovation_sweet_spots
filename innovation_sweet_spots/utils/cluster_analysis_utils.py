@@ -3,10 +3,19 @@ innovation_sweet_spots.utils.cluster_analysis_utils
 
 Module for various cluster analysis (eg extracting cluster-specific keywords)
 """
+import nltk
+
+nltk.download("stopwords")
 import numpy as np
+import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.model_selection import ParameterGrid
 from typing import Iterator, Dict
 from collections import defaultdict
+from tqdm import tqdm
 
 import hdbscan
 import umap
@@ -35,35 +44,173 @@ hdbscan_def_params = {
 }
 
 
-def hdbscan_clustering(
-    vectors,
-    umap_params=umap_def_params,
-    hdbscan_params=hdbscan_def_params,
-    random_umap_state=1,
-    random_hdbscan_state=3333,
-    return_only_labels=True,
-):
-    """
-    Helper function for quickly getting some clusters
-
-    Outputs an array of shape (n_vectors, 2) with columns for best cluster index and probability
-    """
-    # UMAP
+def umap_reducer(
+    vectors: np.typing.ArrayLike,
+    umap_params: dict = umap_def_params,
+    random_umap_state: int = 1,
+) -> np.typing.ArrayLike:
+    """"Reduce dimensions of the input array using UMAP"""
     logging.info(
         f"Generating {umap_def_params['n_components']}-d UMAP embbedings for {len(vectors)} vectors"
     )
-    reducer_low_dim = umap.UMAP(random_state=random_umap_state, **umap_params)
-    embedding = reducer_low_dim.fit_transform(vectors)
-    logging.info(f"Clustering {len(embedding)} vectors")
-    # HDBSCAN
-    np.random.seed(random_hdbscan_state)
-    clusterer = hdbscan.HDBSCAN(**hdbscan_params)
-    clusterer.fit(embedding)
-    # Cluster probabilities
-    cluster_probs = hdbscan.all_points_membership_vectors(clusterer)
-    best_cluster_prob = np.array([(np.argmax(x), np.max(x)) for x in cluster_probs])
+    reducer = umap.UMAP(random_state=random_umap_state, **umap_params)
+    return reducer.fit_transform(vectors)
 
-    return best_cluster_prob
+
+def hdbscan_clustering(
+    vectors: np.typing.ArrayLike, hdbscan_params: dict, have_noise_labels: bool = False
+) -> np.typing.ArrayLike:
+    """Cluster vectors using HDBSCAN.
+
+    Args:
+        vectors: Vectors to cluster.
+        hdbscan_params: Clustering parameters.
+        have_noise_labels: If True, HDBSCAN will label vectors with
+            noise as -1. If False, no vectors will be labelled as noise
+            but vectors with 0 probability of being assigned to any cluster
+            will be labelled as -2.
+
+
+    Returns:
+        Dataframe with label assignment and probability of
+            belonging to that cluster.
+    """
+    logging.info(f"Clustering {len(vectors)} vectors with HDBSCAN.")
+    clusterer = hdbscan.HDBSCAN(**hdbscan_params)
+    clusterer.fit(vectors)
+    if have_noise_labels:
+        labels = clusterer.labels_
+        probabilities = clusterer.probabilities_
+    else:
+        cluster_probs = hdbscan.all_points_membership_vectors(clusterer)
+        probabilities = []
+        labels = []
+        for probs in cluster_probs:
+            probability = np.max(probs)
+            label = (
+                -2 if probability == 0 or np.isnan(probability) else np.argmax(probs)
+            )
+            probabilities.append(probability)
+            labels.append(label)
+        probabilities = np.array(probabilities)
+        labels = np.array(labels)
+
+    return pd.DataFrame({"labels": labels, "probability": probabilities}).astype(
+        {"labels": int}
+    )
+
+
+def kmeans_clustering(
+    vectors: np.typing.ArrayLike, kmeans_params: dict
+) -> pd.DataFrame:
+    """Cluster vectors using K-Means clustering"""
+    logging.info(f"Clustering {len(vectors)} vectors with K-Means clustering")
+    kmeans = KMeans(**kmeans_params).fit(vectors)
+    return kmeans.labels_
+
+
+def kmeans_param_grid_search(
+    vectors: np.typing.ArrayLike, search_params: dict, random_seeds: list
+) -> pd.DataFrame:
+    """Perform grid search over search parameters and calculate
+    mean silhouette score for K-means clustering
+
+    Args:
+        vectors: Embedding vectors.
+        search_params: Dictionary with keys as parameter names
+            and values as a list of parameters to search through.
+        random_seeds: Param search will be performed for each
+            random seed specified and then the results averaged.
+
+    Returns:
+        Dataframe with information on clustering method,
+        parameters, random seed, mean silhouette score.
+    """
+    parameters_record = []
+    silhouette_score_record = []
+    method_record = []
+    random_seed_record = []
+    reduced_dims_vectors = umap_reducer(vectors)
+    distances = euclidean_distances(reduced_dims_vectors)
+    for random_seed in tqdm(random_seeds):
+        for parameters in tqdm(ParameterGrid(search_params)):
+            parameters["random_state"] = random_seed
+            clusters = kmeans_clustering(reduced_dims_vectors, kmeans_params=parameters)
+            silhouette = silhouette_score(distances, clusters, metric="precomputed")
+            method_record.append("K-Means clustering")
+            parameters.pop("random_state")
+            parameters_record.append(str(parameters))
+            silhouette_score_record.append(silhouette)
+            random_seed_record.append(random_seed)
+
+    return (
+        pd.DataFrame.from_dict(
+            {
+                "method": method_record,
+                "model_params": parameters_record,
+                "random_seed": random_seed_record,
+                "silhouette_score": silhouette_score_record,
+            }
+        )
+        .groupby(["method", "model_params"])["silhouette_score"]
+        .mean()
+        .reset_index()
+        .sort_values("silhouette_score", ascending=False)
+    )
+
+
+def hdbscan_param_grid_search(
+    vectors: np.typing.ArrayLike, search_params: dict, have_noise_labels: bool = False
+) -> pd.DataFrame:
+    """Perform grid search over search parameters and calculate
+    mean silhouette score for HDBSCAN
+
+    Args:
+        vectors: Embedding vectors.
+        search_params: Dictionary with keys as parameter names
+            and values as a list of parameters to search through.
+        have_noise_labels: If True, HDBSCAN will label vectors with
+            noise as -1. If False, no vectors will be labelled as noise
+            but vectors with 0 probability of being assigned to any cluster
+            will be labelled as -2.
+
+    Returns:
+        Dataframe with information on clustering method, parameters,
+            mean silhouette scoure.
+    """
+    parameters_record = []
+    silhouette_score_record = []
+    method_record = []
+    reduced_dims_vectors = umap_reducer(vectors)
+    distances = euclidean_distances(reduced_dims_vectors)
+    for parameters in tqdm(ParameterGrid(search_params)):
+        clusters = hdbscan_clustering(
+            reduced_dims_vectors,
+            hdbscan_params=parameters,
+            have_noise_labels=have_noise_labels,
+        )
+        silhouette = silhouette_score(
+            distances, clusters.labels.values, metric="precomputed"
+        )
+        method_record.append("HDBSCAN")
+        parameters_record.append(parameters)
+        silhouette_score_record.append(silhouette)
+
+    return pd.DataFrame.from_dict(
+        {
+            "method": method_record,
+            "model_params": parameters_record,
+            "silhouette_score": silhouette_score_record,
+        }
+    ).sort_values("silhouette_score", ascending=False)
+
+
+def highest_silhouette_model_params(param_search_results: pd.DataFrame) -> dict:
+    """Return dictionary of model params with the highest
+    scoring mean silhouette score"""
+    return param_search_results.query(
+        "silhouette_score == silhouette_score.max()"
+    ).model_params.values[0]
 
 
 def simple_preprocessing(text: str, stopwords=DEFAULT_STOPWORDS) -> str:
@@ -161,3 +308,63 @@ def cluster_keywords(
         top_cluster_tokens[unique_cluster_labels[i]] = [id_to_token[j] for j in x]
 
     return top_cluster_tokens
+
+
+## kk additions
+import altair as alt
+
+alt.data_transformers.disable_max_rows()
+import innovation_sweet_spots.utils.embeddings_utils as eu
+import innovation_sweet_spots.utils.plotting_utils as pu
+
+
+def cluster_visualisation(
+    vectors,
+    cluster_labels: list,
+    width=600,
+    height=600,
+    random_state=1,
+    extra_data: pd.DataFrame = None,
+):
+    """ Reduces the vectors to 2D and plots them with altair """
+    if vectors.shape[1] != 2:
+        vectors_2d = eu.reduce_to_2D(vectors, random_state)
+    else:
+        vectors_2d = vectors
+    # Create a dataframe
+    data = pd.DataFrame(
+        data={
+            "x": vectors_2d[:, 0],
+            "y": vectors_2d[:, 1],
+            "cluster_label": [str(c) for c in cluster_labels],
+        }
+    )
+    # Add extra data
+    if extra_data is not None:
+        extra_columns = list(extra_data.columns)
+        for col in extra_columns:
+            data[col] = extra_data[col].to_list()
+    else:
+        extra_columns = []
+    # Plot the clusters
+    fig = (
+        alt.Chart(data, width=width, height=height)
+        .mark_circle()
+        .encode(
+            x=alt.X(
+                "x", axis=alt.Axis(labels=False, title="", ticks=False, domain=False)
+            ),
+            y=alt.Y(
+                "y", axis=alt.Axis(labels=False, title="", ticks=False, domain=False)
+            ),
+            color=alt.Color("cluster_label"),
+            tooltip=["cluster_label"] + extra_columns,
+        )
+    )
+    fig = (
+        pu.configure_plots(fig)
+        .configure_axis(grid=False)
+        .configure_view(strokeWidth=0)
+        .interactive()
+    )
+    return vectors_2d, fig
