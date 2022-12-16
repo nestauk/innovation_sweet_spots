@@ -100,8 +100,6 @@ class Vectors:
         """
         self.model_name = model_name
         self._model = None
-        self.model_name = model_name
-        self._model = None
         self.filename = filename
         self.folder = folder
         files_exist = os.path.exists(

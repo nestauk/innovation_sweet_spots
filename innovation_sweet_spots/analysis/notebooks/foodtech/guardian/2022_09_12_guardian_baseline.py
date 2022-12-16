@@ -36,9 +36,6 @@ r = requests.get(
 
 
 # %%
-["Animals farmed", "Opinion", "Technology", "UK News"]
-
-# %%
 # for i, s in enumerate(r.json()['response']['results']):
 #     print(i, s['webTitle'])
 

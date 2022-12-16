@@ -5,7 +5,8 @@ used for predicting future investment sucess for companies.
 Run the following command in the terminal to see the options for creating the dataset:
 python innovation_sweet_spots/pipeline/pilot/investment_predictions/create_dataset/create_dataset.py --help
 
-On an M1 macbook it takes ~14 mins to run on the full dataset and ~1 mins 30 secs to run in test mode.
+On an M1 macbook it takes ~14 mins to run on the uk only dataset and ~2 days for the worldwide data.
+There is a test mode which on a small subset of the data that executes in a few mins.
 """
 import typer
 from innovation_sweet_spots import PROJECT_DIR
@@ -100,6 +101,7 @@ def create_dataset(
     window_start_date: str = "01/01/2011",
     window_end_date: str = "01/01/2019",
     industries_or_groups: str = "groups",
+    uk_only: bool = False,
     test: bool = False,
 ):
     """Loads crunchbase data, processes and saves dataset which can be used
@@ -107,12 +109,14 @@ def create_dataset(
 
     Args:
         window_start_date: Start date for window that simulates the
-            evaluation period for assessing companies. Defaults to "01/01/2014".
+            evaluation period for assessing companies. Defaults to "01/01/2011".
         window_end_date: End date for window that simulates the evaluation period
-            for assessing companies. Defaults to "01/01/2018".
+            for assessing companies. Defaults to "01/01/2019".
         industries_or_groups: 'industries' to have a column to indicate which
             industries the company is in or 'groups' to have a column to indicate
             which wider industry group the company is in.
+        uk_only: If set to True, limits dataset to UK based countries. If set to
+            False, includes all companies worldwide.
         test: If set to True, reduces crunchbase orgs to 5000 records. Set to
             True to quickly check functionality.
     """
@@ -127,11 +131,12 @@ def create_dataset(
     # Load datasets
     nrows = 20_000 if test else None
     cb_orgs = (
-        get_crunchbase_orgs(nrows)
-        .query("country_code == 'GBR'")
+        get_crunchbase_orgs(nrows, filter_invalid_ids=True)
         .assign(founded_on=lambda x: pd.to_datetime(x.founded_on, errors="coerce"))
         .reset_index(drop=True)
     )
+    cb_orgs = cb_orgs.query("country_code == 'GBR'") if uk_only else cb_orgs
+
     cb_acquisitions = get_crunchbase_acquisitions()
     cb_ipos = get_crunchbase_ipos()
     cb_funding_rounds_grants = get_crunchbase_funding_rounds().assign(
@@ -237,9 +242,9 @@ def create_dataset(
     cb_orgs = cb_orgs[KEEP_COLS]
 
     # Add dummy columns for industry information
-    if industries_or_groups is "industries":
+    if industries_or_groups == "industries":
         cb_orgs = cb_orgs.pipe(utils.add_industry_dummies)
-    if industries_or_groups is "groups":
+    if industries_or_groups == "groups":
         cb_orgs = cb_orgs.pipe(utils.add_group_dummies, industry_to_group_map)
 
     # Add founder info to people info
@@ -344,8 +349,7 @@ def create_dataset(
         )
         # Add col for number of months since last investment
         .pipe(
-            utils.add_n_months_since_last_investment_in_window,
-            end_date=window_end_date,
+            utils.add_n_months_since_last_investment_in_window, end_date=window_end_date
         )
         # Add col for number of months since founded
         .pipe(utils.add_n_months_since_founded, end_date=window_end_date)
@@ -374,20 +378,18 @@ def create_dataset(
         # Drop rows without a location_id
         .dropna(subset=["location_id"])
         # Drop columns
-        .pipe(
-            utils.drop_multi_cols,
-            cols_to_drop_str_containing=DROP_MULTI_COLS,
-        )
+        .pipe(utils.drop_multi_cols, cols_to_drop_str_containing=DROP_MULTI_COLS)
         .drop(columns=DROP_COLS, errors="ignore")
         .reset_index(drop=True)
     )
     test_indicator = "_test" if test else ""
+    region_indicator = "_ukonly" if uk_only else "_worldwide"
     dataset.to_csv(
         PROJECT_DIR
         / "outputs/finals/pilot_outputs"
         / "investment_predictions/company_data_window_"
         f"{str(window_start_date).split(' ')[0]}-{str(window_end_date).split(' ')[0]}"
-        f"{test_indicator}.csv"
+        f"{test_indicator}{region_indicator}.csv"
     )
 
 
