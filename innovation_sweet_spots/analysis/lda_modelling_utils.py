@@ -336,7 +336,11 @@ def make_pyLDAvis(topic_model: LDAModel, output_filepath: PathLike):
 
 
 def topic_model_param_search(
-    n_topics: list, max_iterations: int, n_iters_logging: int, corpus: tp.utils.Corpus
+    n_topics: list,
+    max_iterations: int,
+    n_iters_logging: int,
+    corpus: tp.utils.Corpus,
+    random_seeds: list,
 ) -> pd.DataFrame:
     """Train a tomotopy LDAModel with different numbers of topics.
     After a specfiied number of iterations, record the coherence scores.
@@ -346,6 +350,8 @@ def topic_model_param_search(
         max_iterations: Max number of model training iterations
         n_iters_logging: Log results after this number of iterations
         corpus: Text corpus
+        random_seeds: Param search will be performed for each
+            random seed specified and then the results averaged
 
     Returns:
         Dataframe with columns for iterations, n_topics, coherence_score.
@@ -353,23 +359,36 @@ def topic_model_param_search(
     iteration_record = []
     n_topics_record = []
     coherence_score_record = []
-    for k in tqdm(n_topics):
-        model = tp.LDAModel(k=k, corpus=corpus, min_df=1)
-        for i in tqdm(
-            range(0, max_iterations + n_iters_logging, n_iters_logging),
-            desc=f"{k} topics iterations",
-        ):
-            model.train(n_iters_logging)
-            coherence_score = tp.coherence.Coherence(model, coherence="c_v").get_score()
-            iteration_record.append(i)
-            n_topics_record.append(k)
-            coherence_score_record.append(coherence_score)
-    return pd.DataFrame.from_dict(
-        {
-            "iterations": iteration_record,
-            "n_topics": n_topics_record,
-            "coherence_score": coherence_score_record,
-        }
+    random_seed_record = []
+    for random_seed in tqdm(random_seeds):
+        for k in tqdm(n_topics):
+            model = tp.LDAModel(k=k, corpus=corpus, min_df=1, seed=random_seed)
+            for i in tqdm(
+                range(0, max_iterations + n_iters_logging, n_iters_logging),
+                desc=f"{k} topics iterations",
+            ):
+                model.train(n_iters_logging)
+                coherence_score = tp.coherence.Coherence(
+                    model, coherence="c_v"
+                ).get_score()
+                iteration_record.append(i)
+                n_topics_record.append(k)
+                random_seed_record.append(random_seed)
+                coherence_score_record.append(coherence_score)
+    return (
+        pd.DataFrame.from_dict(
+            {
+                "iterations": iteration_record,
+                "n_topics": n_topics_record,
+                "random_seed": random_seed_record,
+                "coherence_score": coherence_score_record,
+            }
+        )
+        .groupby(["iterations", "n_topics"])["coherence_score"]
+        .mean()
+        .reset_index()
+        .sort_values("coherence_score", ascending=False)
+        .reset_index(drop=True)
     )
 
 

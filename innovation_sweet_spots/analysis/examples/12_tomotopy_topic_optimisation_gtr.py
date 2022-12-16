@@ -22,7 +22,6 @@
 
 # %%
 from innovation_sweet_spots.getters.gtr_2022 import get_gtr_file
-from innovation_sweet_spots import PROJECT_DIR
 from innovation_sweet_spots.analysis.lda_modelling_utils import (
     topic_model_param_search,
     plot_param_search_results,
@@ -67,9 +66,10 @@ for abstract in tqdm(
 
 # %%
 # Set training parameters
-N_TOPICS = [20, 40, 80]  # Number of topics to search through in param_search
+N_TOPICS = [20, 40]  # Number of topics to search through in param_search
 ITERATIONS = 200
 N_ITERS_LOGGING = 20
+RANDOM_SEEDS = [1, 2]
 
 # %%
 # Train topic models with specified parameters above
@@ -78,6 +78,7 @@ search_results = topic_model_param_search(
     max_iterations=ITERATIONS,
     n_iters_logging=N_ITERS_LOGGING,
     corpus=corpus,
+    random_seeds=RANDOM_SEEDS,
 )
 
 # %%
