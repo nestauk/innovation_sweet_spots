@@ -4,16 +4,14 @@ innovation_sweet_spots.analysis.lda_modelling_utils
 Module for analysing LDA topic modelling results and querying documents using a model
 """
 from innovation_sweet_spots import PROJECT_DIR, logging
-from innovation_sweet_spots.utils.io import (
-    save_text_items,
-    read_text_items,
-)
-
+from innovation_sweet_spots.utils.io import save_text_items, read_text_items
+from tqdm import tqdm
 import pandas as pd
 import numpy as np
 import tomotopy as tp
 from tomotopy import LDAModel
 import pyLDAvis
+import altair as alt
 
 from typing import Iterator, Dict
 from os import PathLike
@@ -335,6 +333,90 @@ def make_pyLDAvis(topic_model: LDAModel, output_filepath: PathLike):
         ),
         str(output_filepath),
     )
+
+
+def topic_model_param_search(
+    n_topics: list,
+    max_iterations: int,
+    n_iters_logging: int,
+    corpus: tp.utils.Corpus,
+    random_seeds: list,
+) -> pd.DataFrame:
+    """Train a tomotopy LDAModel with different numbers of topics.
+    After a specfiied number of iterations, record the coherence scores.
+
+    Args:
+        n_topics: List of number of topics to search through
+        max_iterations: Max number of model training iterations
+        n_iters_logging: Log results after this number of iterations
+        corpus: Text corpus
+        random_seeds: Param search will be performed for each
+            random seed specified and then the results averaged
+
+    Returns:
+        Dataframe with columns for iterations, n_topics, coherence_score.
+    """
+    iteration_record = []
+    n_topics_record = []
+    coherence_score_record = []
+    random_seed_record = []
+    for random_seed in tqdm(random_seeds):
+        for k in tqdm(n_topics):
+            model = tp.LDAModel(k=k, corpus=corpus, min_df=1, seed=random_seed)
+            for i in tqdm(
+                range(0, max_iterations, n_iters_logging),
+                desc=f"{k} topics, {random_seed} seed",
+            ):
+                model.train(n_iters_logging)
+                coherence_score = tp.coherence.Coherence(
+                    model, coherence="c_v"
+                ).get_score()
+                iteration_record.append(i + n_iters_logging)
+                n_topics_record.append(k)
+                random_seed_record.append(random_seed)
+                coherence_score_record.append(coherence_score)
+    return (
+        pd.DataFrame.from_dict(
+            {
+                "iterations": iteration_record,
+                "n_topics": n_topics_record,
+                "random_seed": random_seed_record,
+                "coherence_score": coherence_score_record,
+            }
+        )
+        .groupby(["iterations", "n_topics"])["coherence_score"]
+        .mean()
+        .reset_index()
+        .sort_values("coherence_score", ascending=False)
+        .reset_index(drop=True)
+    )
+
+
+def plot_param_search_results(param_search_results: pd.DataFrame) -> alt.Chart:
+    """Plot topic model parameter search results"""
+    return (
+        alt.Chart(param_search_results)
+        .mark_line()
+        .encode(
+            x=alt.X("iterations"),
+            y=alt.Y(
+                "coherence_score",
+                scale=alt.Scale(
+                    domain=[
+                        param_search_results.coherence_score.min(),
+                        param_search_results.coherence_score.max(),
+                    ]
+                ),
+            ),
+            color="n_topics:N",
+        )
+    )
+
+
+def highest_coherence_model_params(param_search_results: pd.DataFrame) -> dict:
+    """Return dictionary of topic model params
+    with the highest coherence score"""
+    return param_search_results.query("coherence_score == coherence_score.max()")
 
 
 class QueryTopics:
