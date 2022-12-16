@@ -364,14 +364,14 @@ def topic_model_param_search(
         for k in tqdm(n_topics):
             model = tp.LDAModel(k=k, corpus=corpus, min_df=1, seed=random_seed)
             for i in tqdm(
-                range(0, max_iterations + n_iters_logging, n_iters_logging),
-                desc=f"{k} topics iterations",
+                range(0, max_iterations, n_iters_logging),
+                desc=f"{k} topics, {random_seed} seed",
             ):
                 model.train(n_iters_logging)
                 coherence_score = tp.coherence.Coherence(
                     model, coherence="c_v"
                 ).get_score()
-                iteration_record.append(i)
+                iteration_record.append(i + n_iters_logging)
                 n_topics_record.append(k)
                 random_seed_record.append(random_seed)
                 coherence_score_record.append(coherence_score)
