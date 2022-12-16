@@ -379,7 +379,7 @@ au.estimate_magnitude_growth(data_early.drop(["deal_type"], axis=1), 2017, 2021)
 au.estimate_magnitude_growth(data_early.drop(["deal_type"], axis=1), 2011, 2021)
 
 # %%
-data_early.to_csv('test.csv')
+# data_early.to_csv('test.csv')
 
 # %%
 # Chart with only the late stage deals
@@ -1799,3 +1799,44 @@ pu.configure_plots(
         amount_div=1,
     )
 )
+
+# %% [markdown]
+# ### Exporting funds
+
+# %%
+len(DR.company_data)
+
+# %%
+df = (
+    DR.funding_rounds
+    .merge(DR.company_data[['id', 'NAME', 'COMPANY STATUS', 'LAUNCH DATE', 'CLOSING DATE', 'TAGLINE', 'country', 'city', 'PROFILE URL', 'WEBSITE']], how='left')
+    .merge(company_to_taxonomy_df[['id', 'Category', 'level']], how='left')
+)
+
+# %%
+df.sort_values('announced_on')
+
+
+# %%
+def tag_deals(deal_type: str) -> str:
+    if deal_type in utils.EARLY_DEAL_TYPES:
+        return 'early'
+    elif deal_type in utils.LATE_DEAL_TYPES:
+        return 'late'
+    else:
+        return 'n/a'
+
+
+# %%
+df['deal_type'] = df['EACH ROUND TYPE'].apply(tag_deals)
+
+# %%
+df.to_csv(PROJECT_DIR / 'outputs/foodtech/interim/dealroom_foodtech_all_rounds.csv', index=False)
+
+# %%
+list(df.columns)
+
+# %%
+df[['NAME', 'Category', 'level']]
+
+# %%
