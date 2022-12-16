@@ -33,7 +33,6 @@ from innovation_sweet_spots.utils.cluster_analysis_utils import (
     highest_silhouette_model_params,
 )
 import innovation_sweet_spots.utils.cluster_analysis_utils as cau
-import innovation_sweet_spots.utils.embeddings_utils as eu
 from innovation_sweet_spots import PROJECT_DIR
 
 # %% [markdown]
@@ -87,13 +86,13 @@ gtr_vectors.save_vectors()
 # <br><br>
 # Note that the search parameters need to be in the dictionary format below, with keys being the parameter and the value being a list of values to search through. For example for `hdbscan_search_params`, when performing grid search values `10` and `100` will be input for `min_cluster_size`.
 # <br><br>
-# `param_grid_search` will search through all combinations of the parameters in the dictionary.
+# The grid search functions will search through all combinations of the parameters in the dictionary.
 
 # %%
 # Define HDBSCAN search parameters
 hdbscan_search_params = {
     "min_cluster_size": [10, 100],
-    "min_samples": [1, 25],
+    "min_samples": [1, 10, 25],
     "cluster_selection_method": ["leaf"],
     "prediction_data": [True],
 }
@@ -102,7 +101,9 @@ hdbscan_search_params = {
 # %%time
 # Parameter grid search using HDBSCAN
 hdbscan_search_results = hdbscan_param_grid_search(
-    vectors=gtr_vectors.vectors, search_params=hdbscan_search_params
+    vectors=gtr_vectors.vectors,
+    search_params=hdbscan_search_params,
+    have_noise_labels=False,
 )
 
 # %%
@@ -141,7 +142,9 @@ optimal_kmeans_params
 # ### k-means result
 
 # %%
-optimal_labels = cau.kmeans_clustering(gtr_vectors.vectors, optimal_kmeans_params)
+optimal_labels = cau.kmeans_clustering(
+    gtr_vectors.vectors, kmeans_params=optimal_kmeans_params
+)
 
 # %%
 vectors_2d, fig = cau.cluster_visualisation(
@@ -162,7 +165,9 @@ fig
 # ### hdbscan result
 
 # %%
-optimal_labels = cau.hdbscan_clustering(gtr_vectors.vectors, optimal_hdbscan_params)
+optimal_labels = cau.hdbscan_clustering(
+    gtr_vectors.vectors, hdbscan_params=optimal_hdbscan_params, have_noise_labels=False
+)
 
 # %%
 vectors_2d, fig = cau.cluster_visualisation(
