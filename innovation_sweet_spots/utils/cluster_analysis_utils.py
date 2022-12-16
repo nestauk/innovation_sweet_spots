@@ -58,24 +58,46 @@ def umap_reducer(
 
 
 def hdbscan_clustering(
-    vectors: np.typing.ArrayLike, hdbscan_params: dict = hdbscan_def_params
+    vectors: np.typing.ArrayLike, hdbscan_params: dict, have_noise_labels: bool = False
 ) -> np.typing.ArrayLike:
     """Cluster vectors using HDBSCAN.
 
-    Returns a dataframe with columns for highest probability cluster index
-    and probability
+    Args:
+        vectors: Vectors to cluster.
+        hdbscan_params: Clustering parameters.
+        have_noise_labels: If True, HDBSCAN will label vectors with
+            noise as -1. If False, no vectors will be labelled as noise
+            but vectors with 0 probability of being assigned to any cluster
+            will be labelled as -2.
+
+
+    Returns:
+        Dataframe with label assignment and probability of
+            belonging to that cluster.
     """
     logging.info(f"Clustering {len(vectors)} vectors with HDBSCAN.")
     clusterer = hdbscan.HDBSCAN(**hdbscan_params)
     clusterer.fit(vectors)
-    cluster_probs = hdbscan.all_points_membership_vectors(clusterer)
-    highest_cluster_prob = np.array([(np.argmax(x), np.max(x)) for x in cluster_probs])
-    return pd.DataFrame(
-        {
-            "labels": highest_cluster_prob[:, 0],
-            "probability": highest_cluster_prob[:, 1],
-        }
-    ).astype({"labels": int})
+    if have_noise_labels:
+        labels = clusterer.labels_
+        probabilities = clusterer.probabilities_
+    else:
+        cluster_probs = hdbscan.all_points_membership_vectors(clusterer)
+        probabilities = []
+        labels = []
+        for probs in cluster_probs:
+            probability = np.max(probs)
+            label = (
+                -2 if probability == 0 or np.isnan(probability) else np.argmax(probs)
+            )
+            probabilities.append(probability)
+            labels.append(label)
+        probabilities = np.array(probabilities)
+        labels = np.array(labels)
+
+    return pd.DataFrame({"labels": labels, "probability": probabilities}).astype(
+        {"labels": int}
+    )
 
 
 def kmeans_clustering(
@@ -138,7 +160,7 @@ def kmeans_param_grid_search(
 
 
 def hdbscan_param_grid_search(
-    vectors: np.typing.ArrayLike, search_params: dict
+    vectors: np.typing.ArrayLike, search_params: dict, have_noise_labels: bool = False
 ) -> pd.DataFrame:
     """Perform grid search over search parameters and calculate
     mean silhouette score for HDBSCAN
@@ -147,6 +169,10 @@ def hdbscan_param_grid_search(
         vectors: Embedding vectors.
         search_params: Dictionary with keys as parameter names
             and values as a list of parameters to search through.
+        have_noise_labels: If True, HDBSCAN will label vectors with
+            noise as -1. If False, no vectors will be labelled as noise
+            but vectors with 0 probability of being assigned to any cluster
+            will be labelled as -2.
 
     Returns:
         Dataframe with information on clustering method, parameters,
@@ -158,7 +184,11 @@ def hdbscan_param_grid_search(
     reduced_dims_vectors = umap_reducer(vectors)
     distances = euclidean_distances(reduced_dims_vectors)
     for parameters in tqdm(ParameterGrid(search_params)):
-        clusters = hdbscan_clustering(reduced_dims_vectors, hdbscan_params=parameters)
+        clusters = hdbscan_clustering(
+            reduced_dims_vectors,
+            hdbscan_params=parameters,
+            have_noise_labels=have_noise_labels,
+        )
         silhouette = silhouette_score(
             distances, clusters.labels.values, metric="precomputed"
         )
