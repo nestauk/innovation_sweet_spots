@@ -4,6 +4,7 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent

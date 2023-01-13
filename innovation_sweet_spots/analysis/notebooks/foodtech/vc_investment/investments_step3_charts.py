@@ -585,12 +585,9 @@ foodtech_ts_late
 # %%
 (3490.258340 - 1707.778906)/3490.258340
 
+
 # %% [markdown]
 # ### Category proportion of total investment
-
-# %%
-DR.funding_rounds
-
 
 # %%
 def get_total_funding(
@@ -664,7 +661,7 @@ def share_of_funding(
 
 print(f"From {min_year} to {max_year}:")
 share_of_funding(min_year, max_year, category_ids=category_ids, category="Health")
-share_of_funding(min_year, max_year, category_ids=category_ids, category="Logistics")
+share_of_funding(min_year, max_year, category_ids=category_ids, category="Delivery and logistics")
 share_of_funding(min_year, max_year, category_ids=subcategory_ids, category="Delivery")
 
 # %% [markdown]
@@ -1623,8 +1620,6 @@ fig_points = (
 fig_points
 
 # %%
-
-# %%
 import altair as alt
 from vega_datasets import data
 
@@ -1650,9 +1645,6 @@ alt.Chart(source.query("price > 100")).transform_filter(
     y=alt.Y('price:Q', scale=alt.Scale(type='linear', domain=(100, 1000))),
     y2 = alt.value(0),
 )
-
-# %% [markdown]
-# ### Checking robotics companies
 
 # %% [markdown]
 # ### Manually added
@@ -1838,5 +1830,63 @@ list(df.columns)
 
 # %%
 df[['NAME', 'Category', 'level']]
+
+# %% [markdown]
+# ### Investor stakeholders
+
+# %%
+investor_column = 'EACH ROUND INVESTORS'
+
+
+# %%
+def split_investors(text):
+    if type(text) is str:
+        return text.split("++")
+    else:
+        return []
+
+
+# %%
+df = (
+    DR.funding_rounds
+    .merge(DR.company_data[['id', 'NAME', 'COMPANY STATUS', 'LAUNCH DATE', 'CLOSING DATE', 'TAGLINE', 'country', 'city', 'PROFILE URL', 'WEBSITE']], how='left')
+    .merge(company_to_taxonomy_df[['id', 'Category', 'level']], how='left')
+    # .query("country == 'United Kingdom'")
+)
+df = df[-df[investor_column].isnull()]
+df["investors"] = df[investor_column].apply(split_investors)
+df = df.explode("investors")
+
+# %%
+# df.groupby(["investors", 
+
+# %%
+df_investors = (
+    df.groupby(["level", "Category", "investors"], as_index=False)
+    .agg(
+        total_round_amount=("raised_amount_gbp", "sum"),
+        companies=("NAME", lambda x: np.unique(x)),
+    )
+    .sort_values(["level", "Category", "total_round_amount"], ascending=False)
+)
+
+# %%
+df_investors_unique = (
+    df
+    .drop_duplicates(["NAME", "investors"])
+    .groupby(["investors"], as_index=False)
+    .agg(
+        total_round_amount=("raised_amount_gbp", "sum"),
+        total_companies=("NAME", "count"),
+        companies=("NAME", lambda x: np.unique(x)),
+    )
+    .sort_values(["total_companies"], ascending=False)
+)
+
+# %%
+df_investors.to_csv(PROJECT_DIR / "outputs/foodtech/venture_capital/investors/investors_into_UK_startups.csv", index=False)
+
+# %%
+df_investors_unique.to_csv(PROJECT_DIR / "outputs/foodtech/venture_capital/investors/investors_into_startups_unique.csv", index=False)
 
 # %%
