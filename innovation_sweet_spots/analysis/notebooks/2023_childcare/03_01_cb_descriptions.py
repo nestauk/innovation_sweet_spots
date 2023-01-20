@@ -39,7 +39,10 @@ def create_industries_string(industries: List, suffix: str = "Industries: ") -> 
 
 def replace_company_names(text: str, company_name: str) -> str:
     """Replaces company names with the word "company" in a given text"""
-    return text.replace(company_name, "The company")
+    if (type(company_name) is str) and (len(company_name) > 0):
+        return text.replace(company_name, "The company")
+    else:
+        return text
 
 
 def fix_double_puncts(text: str) -> str:
@@ -84,16 +87,19 @@ def remove_multiple_puncts(text: str) -> str:
 
 def process_company_description(text: str, company_name: str, nlp) -> str:
     """Processes a company description"""
-    return pipe(
-        text,
-        lambda x: replace_company_names(x, company_name),
-        lambda x: remove_websites(x),
-        lambda x: remove_locations_orgs_and_people_names(x, nlp),
-        lambda x: tcu.unpad_punctuation(x),
-        lambda x: remove_parenthesis(x),
-        lambda x: remove_multiple_puncts(x),
-        lambda x: fix_multiple_spaces(x),
-    )
+    if type(text) is str:
+        return pipe(
+                text,
+                lambda x: replace_company_names(x, company_name),
+                lambda x: remove_websites(x),
+                lambda x: remove_locations_orgs_and_people_names(x, nlp),
+                lambda x: tcu.unpad_punctuation(x),
+                lambda x: remove_parenthesis(x),
+                lambda x: remove_multiple_puncts(x),
+                lambda x: fix_multiple_spaces(x),
+            )
+    else:
+        return ""
 
 
 # %%
@@ -122,6 +128,9 @@ def process_descriptions(
     cb_data["_industries"] = cb_industries["industry"].apply(
         lambda x: create_industries_string(x)
     )
+
+    logging.info(f"Selecting text data: {COLUMNS}")
+
     # Unprocessed descriptions
     text_documents_raw = create_documents_from_dataframe(cb_data, columns=COLUMNS)
 
@@ -130,16 +139,15 @@ def process_descriptions(
     # Get the indices of the valid descriptions
     indices_ok = [i for i, l in enumerate(lens) if l >= 75]
 
-    ids = [cb_id for i, cb_id in enumerate(cb_data.id.to_list()) if i in indices_ok]
-    names = [name for i, name in enumerate(cb_data.name.to_list()) if i in indices_ok]
-    text_documents_raw = [
-        text for i, text in enumerate(text_documents_raw) if i in indices_ok
-    ]
+    logging.info(f"Processing descriptions, total: {len(indices_ok)}")
+
+    ids = cb_data.id.to_list()
+    names = cb_data.name.to_list()
 
     with open(OUTPUT_FILE, mode="a") as file:
         writer = csv.writer(file)
-        for i, _ in enumerate(indices_ok):
-            if i <= last_index:
+        for i, _ in enumerate(ids):
+            if i < last_index:
                 continue
             else:
                 writer.writerow(
@@ -152,7 +160,7 @@ def process_descriptions(
                     ]
                 )
                 # Output the progress every 5000 rows
-                if i % 5000 == 0:
+                if i % 100 == 0:
                     logging.info(f"Processed {i} rows")
 
 

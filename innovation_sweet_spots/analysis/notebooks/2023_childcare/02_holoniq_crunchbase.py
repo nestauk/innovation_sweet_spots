@@ -96,18 +96,22 @@ def find_companies_in_crunchbase(
     ).merge(
         add_normalised_names_and_websites(cb_df, "name", "homepage_url"),
         how="left",
-        on=["company_name_norm", "websites_norm"],
+        on=["websites_norm"],
     )
 
 
 # %%
 holoniq_cb_df = find_companies_in_crunchbase(holoniq_df_unique, CB.cb_organisations)
-holoniq_cb_df
 
+# %%
+holoniq_cb_df = holoniq_cb_df.query("websites != 'https://'")
 
 # %%
 # Check how many companies were found in Crunchbase
 holoniq_cb_df["name"].notnull().sum()
+
+# %%
+len(holoniq_cb_df)
 
 # %%
 # Add crunchbase IDs and URLs to holoniq_df

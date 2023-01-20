@@ -4,35 +4,38 @@ from bs4 import BeautifulSoup, NavigableString, Tag
 from innovation_sweet_spots import PROJECT_DIR
 import pandas as pd
 from innovation_sweet_spots.utils.google_sheets import upload_to_google_sheet
+import utils
 
-GOOGLE_SHEET_ID = "14LOSu8QurLH9kwEmWM-_TDCAbew4_nncR7BQn04CP38"
-GOOGLE_SHEET_TAB = "HolonIQ_taxonomy"
 
 def extract_website_link(html_element: Tag) -> str:
     """Extract the website link from the html element"""
     website_link = html_element.find("a", href=True)
     if website_link:
         # Replace `////` with http:// and return the string
-        if website_link['href'].startswith("////"):
-            return website_link['href'].replace("////", "http://")
+        if website_link["href"].startswith("////"):
+            return website_link["href"].replace("////", "https://")
         else:
-            return website_link['href']
+            return website_link["href"]
     else:
-        return None    
+        return None
+
 
 def extract_image_link(html_element: Tag) -> str:
     """Extract the image link from the html element"""
     image_link = html_element.find("img", src=True)
     if image_link:
-        return image_link['src']
+        return image_link["src"]
     else:
-        return None        
+        return None
+
 
 # %%
 # Import a website text (obtained using 'Inspect Element')
-with open(PROJECT_DIR / 'inputs/data/misc/2023_childcare/holoniq_taxonomy.txt', 'r') as f:
+with open(
+    PROJECT_DIR / "inputs/data/misc/2023_childcare/holoniq_taxonomy.txt", "r"
+) as f:
     webpage = f.read()
-    
+
 # Pass a string with html text into beautiful soup
 page_soup = BeautifulSoup(webpage, "html.parser")
 
@@ -78,14 +81,14 @@ df = (
         image_links=lambda x: x["image_links"].astype(str),
     )
     # Remove rows that contain the string 'Add to HolonIQ'
-    .loc[lambda x: ~x['h3_tags'].str.contains('Add to HolonIQ')]
-    .sort_values('no')
-    .drop(columns=['no'])
+    .loc[lambda x: ~x["h3_tags"].str.contains("Add to HolonIQ")]
+    .sort_values("no")
+    .drop(columns=["no"])
     # Rename columns
-    .rename(columns={'h3_tags': 'company_name', 'h2_tags': 'category'})
+    .rename(columns={"h3_tags": "company_name", "h2_tags": "category"})
     # Reorder columns
-    .reindex(columns=['category', 'company_name', 'websites', 'image_links'])
-    .reset_index(drop=True)    
+    .reindex(columns=["category", "company_name", "websites", "image_links"])
+    .reset_index(drop=True)
 )
 
 
@@ -93,12 +96,13 @@ df = (
 df
 
 # %%
-upload_to_google_sheet(df, google_sheet_id=GOOGLE_SHEET_ID, wks_name=GOOGLE_SHEET_TAB)
+upload_to_google_sheet(
+    df, google_sheet_id=utils.GOOGLE_SHEET_ID, wks_name=utils.GOOGLE_SHEET_TAB
+)
 
 # %%
-df.to_csv(PROJECT_DIR / 'inputs/data/misc/2023_childcare/holoniq_taxonomy.csv', index=False)
+df.to_csv(
+    PROJECT_DIR / "inputs/data/misc/2023_childcare/holoniq_taxonomy.csv", index=False
+)
 
 # %%
-
-
-
