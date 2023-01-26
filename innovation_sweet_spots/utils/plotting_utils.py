@@ -5,6 +5,8 @@ Functions for generating graphs
 import innovation_sweet_spots.analysis.analysis_utils as au
 import altair as alt
 import pandas as pd
+import numpy as np
+from typing import Iterable
 
 # ChartType = alt.vegalite.v4.api.Chart
 
@@ -15,6 +17,11 @@ TITLE_FONT = "Averta"
 
 FONTSIZE_TITLE = 16
 FONTSIZE_NORMAL = 13
+
+
+def export_table(df: pd.DataFrame, chart_name: str, tables_folder) -> None:
+    """Exports a table to a csv file"""
+    df.to_csv(tables_folder + "/" + chart_name + ".csv", index=False)
 
 
 def configure_plots(fig, chart_title: str = "", chart_subtitle: str = ""):
@@ -689,7 +696,7 @@ def ts_smooth_incomplete(
         height,
         line_point_filled=False,
     ).transform_filter(f"datum.year <= {max_complete_year}")
-    
+
     fig_dashed = ts_smooth(
         ts,
         categories_to_show,
@@ -704,7 +711,7 @@ def ts_smooth_incomplete(
         line_point_filled=False,
     ).transform_filter(f"datum.year >= {max_complete_year}")
 
-    return fig_solid_stroke+ fig_solid + fig_dashed
+    return fig_solid_stroke + fig_solid + fig_dashed
 
 
 def ts_bar(
@@ -721,31 +728,33 @@ def ts_bar(
     filled=True,
     fillOpacity=1,
 ):
-    """ Grouped bar plot showing time series """
+    """Grouped bar plot showing time series"""
     # Time column
     horizontal_column = "year"
     horizontal_label = "Year"
     # Tooltips
-    if tooltip:    
+    if tooltip:
         tooltip = [
-            alt.Tooltip(f"{category_column}:N", title=category_label),    
+            alt.Tooltip(f"{category_column}:N", title=category_label),
             alt.Tooltip(f"{horizontal_column}:O", title=horizontal_label),
             alt.Tooltip(f"{variable}:Q", format=",.3f", title=variable_title),
         ]
     else:
         tooltip = []
-    
+
     return (
         alt.Chart(
             (
-                ts
-                .query(f"`{category_column}` in @categories_to_show")
-                .assign(**{variable: lambda df: df[variable] / amount_div})
+                ts.query(f"`{category_column}` in @categories_to_show").assign(
+                    **{variable: lambda df: df[variable] / amount_div}
+                )
             ),
             width=width,
             height=height,
         )
-        .mark_bar(filled=filled, fillOpacity=fillOpacity, strokeWidth=1.5, strokeOpacity=1)
+        .mark_bar(
+            filled=filled, fillOpacity=fillOpacity, strokeWidth=1.5, strokeOpacity=1
+        )
         .encode(
             alt.X(f"{horizontal_column}:O", title=""),
             alt.Y(
@@ -755,10 +764,12 @@ def ts_bar(
             xOffset=f"{category_column}",
             tooltip=tooltip,
             color=alt.Color(
-                f"{category_column}:N", legend=alt.Legend(orient='top', title=f"{category_label}")
+                f"{category_column}:N",
+                legend=alt.Legend(orient="top", title=f"{category_label}"),
             ),
         )
     )
+
 
 def ts_bar_incomplete(
     ts,
@@ -773,7 +784,7 @@ def ts_bar_incomplete(
     tooltip=True,
     max_complete_year=2021,
 ):
-    """ Incomplete year """
+    """Incomplete year"""
     fig_solid = ts_bar(
         ts,
         categories_to_show,
@@ -817,8 +828,7 @@ def ts_bar_incomplete(
         filled=True,
         fillOpacity=0.25,
     ).transform_filter(f"datum.year >= {max_complete_year}")
-    
-    
+
     return fig_solid + fig_stroke + fig_faint
 
 
@@ -840,3 +850,79 @@ def ts_funding_projects(ts, categories_to_show, width: int = 400, height: int = 
         height=height,
     )
     return configure_plots(alt.vconcat(fig_funding, fig_projects))
+
+
+def prepare_ts_table_for_flourish(
+    df: pd.DataFrame,
+    categories: Iterable[str],
+    category_column: str = "Sub Category",
+    max_complete_year: int = 2021,
+    values_column: str = "raised_amount_gbp_total",
+    values_label: str = "Investment (£ billions)",
+):
+    """
+    Prepares time series data table for plotting with Flourish:
+    Keeps only data for specified categories, and splits values_column into two columns, the first with values for years up to max_complete_year,
+    the second with values for years after max_complete_year. The second column name is values_column + " (incomplete)"
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Time series data table
+    categories : Iterable[str]
+        List of categories to keep
+    category_column : str, optional
+        Name of the column with categories, by default "Sub Category"
+    max_complete_year : int, optional
+        Last year for which data is complete, by default 2021
+    values_column : str, optional
+        Name of the column with values, by default "raised_amount_gbp_total"
+    values_label : str, optional
+        Label for the values column, by default "Investment (£ billions)"
+
+    Returns
+    -------
+    pd.DataFrame
+        Time series data table with two new columns
+    """
+    # Keep only data for specified categories
+    df_flourish = df.query(f"`{category_column}` in @categories").copy()
+    # Make sure year is integer
+    df_flourish["year"] = df_flourish["year"].astype(int)
+    # Create a new column with values for years up to max_complete_year
+    df_flourish[f"{values_label}"] = df_flourish.apply(
+        lambda row: row[values_column] if row["year"] <= max_complete_year else np.nan,
+        axis=1,
+    )
+    # Create a new column with values for years after max_complete_year
+    df_flourish[f"{values_label} (incomplete)"] = df_flourish.apply(
+        lambda row: row[values_column] if row["year"] >= max_complete_year else np.nan,
+        axis=1,
+    )
+    # Pivot the table from long to wide format based on categories
+    df_flourish = df_flourish.pivot_table(
+        index=["year"],
+        columns=[category_column],
+        values=[f"{values_label}", f"{values_label} (incomplete)"],
+    )
+    # Simplify the column names by combining the names of first and second level
+    df_flourish.columns = adjust_ts_column_names_for_flourish(df_flourish.columns)
+    return df_flourish.reset_index()
+
+
+def adjust_ts_column_names_for_flourish(col_names: Iterable[str]):
+    """
+    Adjusts column names for time series data table for plotting with Flourish
+    """
+    col_names = ["_".join(col) for col in col_names]
+    return [adjust_column_name(col_name) for col_name in col_names]
+
+
+def adjust_column_name(col_name: str):
+    """
+    Adjusts column name for time series data table for plotting with Flourish
+    """
+    if "incomplete" in col_name:
+        return col_name.split("_")[-1] + " (incomplete)"
+    else:
+        return col_name.split("_")[-1]
