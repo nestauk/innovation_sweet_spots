@@ -27,6 +27,7 @@ from bertopic._bertopic import BERTopic
 
 ### Dependecies for calculating simpler co-located unigram frequencies
 import re
+import nltk
 
 nltk.download("wordnet")
 nltk.download("omw-1.4")
@@ -35,7 +36,6 @@ from nltk.stem import WordNetLemmatizer
 lemmatizer = WordNetLemmatizer()
 from nltk.corpus import stopwords
 import nltk.data
-import nltk
 
 nltk.download("punkt")
 tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
