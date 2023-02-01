@@ -55,14 +55,13 @@ import altair as alt
 import innovation_sweet_spots.utils.altair_save_utils as alt_save
 from innovation_sweet_spots.utils import plotting_utils as pu
 
-figure_folder = alt_save.FIGURE_PATH + "/foodtech"
-AltairSaver = alt_save.AltairSaver(path=figure_folder)
-
-# %%
 # Figure version name
 fig_version_name = "Report_GTR_NIHR"
+figure_folder = alt_save.FIGURE_PATH + "/foodtech"
 # Folder for data tables
 tables_folder = figure_folder + "/tables"
+
+AltairSaver = alt_save.AltairSaver(path=figure_folder)
 
 # %% [markdown]
 # ## Helper functions
@@ -953,8 +952,7 @@ export_chart(subcategory_ts_2022, cats, chart_number, chart_name, fig)
 
 
 # %%
-importlib.reload(pu)
-["Delivery", "Supply chain"]
+cats = ["Waste reduction", "Packaging"]
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(
         subcategory_ts_2022,
@@ -966,25 +964,20 @@ fig = pu.configure_plots(
 )
 fig
 
+
 # %%
 # Name the chart
 chart_number = "Ch4-Fig36"
-chart_name = f"{chart_number}_ts_subcategory_Logistics"
+chart_name = f"{chart_number}_ts_subcategory_Food_waste"
 export_chart(subcategory_ts_2022, cats, chart_number, chart_name, fig)
 
 
 # %%
-AltairSaver.save(
-    fig,
-    f"v{fig_version_name}_ts_subcategory_Logistics",
-    filetypes=["html", "svg", "png"],
-)
-
-# %%
+cats = ["Alt protein", "Innovative food (other)", "Reformulation"]
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(
         subcategory_ts_2022,
-        ["Waste reduction", "Packaging"],
+        cats,
         "amount_total",
         "Funding (£ millions)",
         height=125,
@@ -994,17 +987,18 @@ fig
 
 
 # %%
-AltairSaver.save(
-    fig,
-    f"v{fig_version_name}_ts_subcategory_Food_waste",
-    filetypes=["html", "svg", "png"],
-)
+# Name the chart
+chart_number = "Ch4-Fig37"
+chart_name = f"{chart_number}_ts_subcategory_Innovative_food"
+export_chart(subcategory_ts_2022, cats, chart_number, chart_name, fig)
+
 
 # %%
+cats = ["Restaurants", "Retail"]
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(
         subcategory_ts_2022,
-        ["Alt protein", "Innovative food (other)", "Reformulation"],
+        cats,
         "amount_total",
         "Funding (£ millions)",
         height=125,
@@ -1014,31 +1008,11 @@ fig
 
 
 # %%
-AltairSaver.save(
-    fig,
-    f"v{fig_version_name}_ts_subcategory_Innovative_food",
-    filetypes=["html", "svg", "png"],
-)
+# Name the chart
+chart_number = "Ch4-Fig38"
+chart_name = f"{chart_number}_ts_subcategory_Restaurants_retail"
+export_chart(subcategory_ts_2022, cats, chart_number, chart_name, fig)
 
-# %%
-fig = pu.configure_plots(
-    pu.ts_smooth_incomplete(
-        subcategory_ts_2022,
-        ["Restaurants", "Retail"],
-        "amount_total",
-        "Funding (£ millions)",
-        height=125,
-    )
-)
-fig
-
-
-# %%
-AltairSaver.save(
-    fig,
-    f"v{fig_version_name}_ts_subcategory_Restaurants_retail",
-    filetypes=["html", "svg", "png"],
-)
 
 # %%
 fig = pu.configure_plots(

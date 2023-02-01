@@ -41,15 +41,16 @@ import importlib
 # %%
 # Plotting utils
 import innovation_sweet_spots.utils.altair_save_utils as alt_save
+figure_folder = alt_save.FIGURE_PATH + "/foodtech"
+# Folder for data tables
+tables_folder = figure_folder + "/tables"
 
-AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
+AltairSaver = alt_save.AltairSaver(path=figure_folder)
 
 # %%
 VERSION_NAME = "Report_Guardian"
 
-figure_folder = alt_save.FIGURE_PATH + "/foodtech"
-# Folder for data tables
-tables_folder = figure_folder + "/tables"
+
 
 # %%
 importlib.reload(utils);
@@ -615,7 +616,7 @@ fig
 # Name the chart
 chart_number = "Ch5-Fig44"
 chart_name = f"{chart_number}_ts_subcategory_Health"
-export_chart(data_.assign(percentage = lambda df: df.fraction * 100), cats, chart_number, chart_name, fig)
+export_chart(data_.assign(percentage = lambda df: df.fraction * 100), cats, chart_number, chart_name, fig, "Category")
 
 
 # %%
