@@ -11,7 +11,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.14.1
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: innovation_sweet_spots
 #     language: python
 #     name: python3
 # ---
@@ -29,6 +29,15 @@ from innovation_sweet_spots.utils import plotting_utils as pu
 from innovation_sweet_spots.analysis import analysis_utils as au
 from innovation_sweet_spots.utils import chart_trends
 import innovation_sweet_spots.utils.altair_save_utils as alt_save
+
+# %%
+# Plotting utils
+import innovation_sweet_spots.utils.altair_save_utils as alt_save
+figure_folder = alt_save.FIGURE_PATH + "/foodtech"
+# Folder for data tables
+tables_folder = figure_folder + "/tables"
+
+AltairSaver = alt_save.AltairSaver(path=figure_folder)
 
 # %% [markdown]
 # ## Load Hansard speeches data
@@ -129,6 +138,9 @@ fig = (
 )
 fig
 
+# %%
+import utils
+
 
 # %%
 def plot_proportion_of_speeches_over_time(
@@ -151,16 +163,62 @@ def plot_proportion_of_speeches_over_time(
         "Category",
         amount_div=1,
     )
-    return pu.configure_plots(fig)
+    return pu.configure_plots(fig), data
+
+from typing import Iterable
+from innovation_sweet_spots.utils import plotting_utils as pu
+import innovation_sweet_spots.utils.google_sheets as gs
+
+def export_chart(data_: pd.DataFrame, cats: Iterable[str], chart_number: str, chart_name: str, fig, category_column: str="Sub Category"):
+    """ Prepares table for plotting with Flourish, saves it locally and on Google Sheets, and exports altair plot """
+    # Prepare the table
+    df = pu.prepare_ts_table_for_flourish(
+        data_,
+        cats,
+        category_column,
+        max_complete_year=2021,
+        values_column="percentage",
+        values_label="Percentage of speeches",
+    )
+    #  Upload the prepared table to google sheet
+    gs.upload_to_google_sheet(
+        df,
+        google_sheet_id=utils.REPORT_TABLES_SHEET,
+        wks_name=chart_number,
+        overwrite=True,
+    )
+    # Export the chart
+    AltairSaver.save(
+        fig, chart_name, filetypes=["html", "svg", "png"]
+    )
+    pu.export_table(df, chart_name, tables_folder)
 
 
 # %%
 #  Plot food waste proportion of speeches over time
-plot_proportion_of_speeches_over_time(category="Food waste")
+cats = ["Food waste"]
+fig, data_ = plot_proportion_of_speeches_over_time(category=cats[0])
+fig
 
 # %%
-#  Plot health proportion of speeches over time
-plot_proportion_of_speeches_over_time(category="Health")
+# Name the chart
+chart_number = "Ch5-Fig43"
+chart_name = f"{chart_number}_ts_category_Food_waste"
+export_chart(data_.assign(percentage = lambda df: df.fraction), cats, chart_number, chart_name, fig, "Category")
+
+
+# %%
+#  Plot food waste proportion of speeches over time
+cats = ["Health"]
+fig, data_ = plot_proportion_of_speeches_over_time(category=cats[0])
+fig
+
+# %%
+# Name the chart
+chart_number = "Ch5-Fig45"
+chart_name = f"{chart_number}_ts_category_Health"
+export_chart(data_.assign(percentage = lambda df: df.fraction), cats, chart_number, chart_name, fig, "Category")
+
 
 # %%
 #  Plot innovative food proportion of speeches over time

@@ -4,14 +4,13 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
-#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
 #       jupytext_version: 1.14.1
 #   kernelspec:
-#     display_name: innovation_sweet_spots
+#     display_name: Python 3 (ipykernel)
 #     language: python
 #     name: python3
 # ---
@@ -42,10 +41,6 @@ pd.options.display.float_format = "{:.3f}".format
 import importlib
 import numpy as np
 
-# %%
-import utils
-import innovation_sweet_spots.utils.google_sheets as gs
-
 # %% [markdown]
 # ### Plotting utils
 
@@ -65,38 +60,6 @@ fig_version_name = "Report_GTR_NIHR"
 tables_folder = figure_folder + "/tables"
 
 # %% [markdown]
-# ## Helper functions
-
-# %%
-from typing import Iterable
-from innovation_sweet_spots.utils import plotting_utils as pu
-
-def export_chart(data_: pd.DataFrame, cats: Iterable[str], chart_number: str, chart_name: str, fig):
-    """ Prepares table for plotting with Flourish, saves it locally and on Google Sheets, and exports altair plot """
-    # Prepare the table
-    df = pu.prepare_ts_table_for_flourish(
-        data_,
-        cats,
-        category_column="Sub Category",
-        max_complete_year=2021,
-        values_column="amount_total",
-        values_label="Investment (£ millions)",
-    )
-    #  Upload the prepared table to google sheet
-    gs.upload_to_google_sheet(
-        df,
-        google_sheet_id=utils.REPORT_TABLES_SHEET,
-        wks_name=chart_number,
-        overwrite=True,
-    )
-    # Export the chart
-    AltairSaver.save(
-        fig, chart_name, filetypes=["html", "svg", "png"]
-    )
-    pu.export_table(df, chart_name, tables_folder)
-
-
-# %% [markdown]
 # ### Load data
 
 # %%
@@ -106,11 +69,6 @@ data_dir = PROJECT_DIR / "outputs/foodtech/research_funding/"
 taxonomy_df = pd.read_csv(data_dir / "research_funding_tech_taxonomy.csv")
 # Reviewed final table of research projects
 research_project_funding = pd.read_csv(data_dir / "research_funding_projects.csv")
-
-# %%
-# in taxonomy_df replace "Logistics" in the 'Category' column with "Delivery and logstics"
-taxonomy_df.loc[taxonomy_df["Category"] == "Logistics", "Category"] = "Delivery and logistics"
-
 
 # %%
 # Check number of projects
@@ -126,12 +84,6 @@ gtr_projects = gtr.get_wrangled_projects()
 # Get NIHR project data
 NIHR_DIR = PROJECT_DIR / "inputs/data/nihr/nihr_summary_data.csv"
 nihr_df = pd.read_csv(NIHR_DIR)
-
-# %%
-# Replace all "Logistics" with "Delivery and logistics" in the column Category
-research_project_funding["Category"] = research_project_funding["Category"].replace(
-    "Logistics", "Delivery and logistics"
-)
 
 # %% [markdown]
 # ## Baseline funding growth
@@ -273,10 +225,9 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
-# chart_number = "Ch4"
-# chart_name = f"{chart_number}_v{fig_version_name}_total_funding_per_year"
-# AltairSaver.save(fig, chart_name, filetypes=["html", "svg", "png"])
-# pu.export_table(chart_name, figure_folder)
+chart_name = f"v{fig_version_name}_total_funding_per_year"
+AltairSaver.save(fig, chart_name, filetypes=["html", "svg", "png"])
+data.to_csv(tables_folder + "/" + chart_name + ".csv", index=False)
 
 # %%
 # Magnitude and growth of the total funding
@@ -397,7 +348,7 @@ research_project_funding.Category.unique()
 major_categories_to_check = [
     "Health",
     "Innovative food",
-    "Delivery and logistics",
+    "Logistics",
     "Restaurants and retail",
     "Cooking and kitchen",
     "Food waste",
@@ -427,15 +378,6 @@ category_funding_df = (
 
 # %%
 category_funding_df
-
-# %%
-chart_number = "Ch4-Fig32"
-chart_name = f"{chart_number}_v{fig_version_name}_total_funding_by_category"
-# Upload table to google sheet
-gs.upload_to_google_sheet(category_funding_df, utils.REPORT_TABLES_SHEET, chart_number, overwrite=True)
-# Export table to csv
-pu.export_table(category_funding_df, chart_name, tables_folder)
-    
 
 # %%
 total_funding = (
@@ -488,9 +430,6 @@ AltairSaver.save(
     filetypes=["html", "svg", "png"],
 )
 
-# %%
-category_funding_df
-
 # %% [markdown]
 # ### Major category trends
 
@@ -509,19 +448,13 @@ category_amount_magnitude_growth = utils.get_magnitude_vs_growth_plot(
 )
 
 # %%
-chart_trends.estimate_trend_type(
-    category_amount_magnitude_growth, magnitude_column="magnitude"
-)
+chart_trends.estimate_trend_type(category_amount_magnitude_growth, magnitude_column='magnitude')
 
 # %%
 (
-    chart_trends.estimate_trend_type(
-        category_amount_magnitude_growth, magnitude_column="magnitude"
-    ).to_csv(
-        PROJECT_DIR
-        / f"outputs/foodtech/trends/research_{fig_version_name}_Categories.csv",
-        index=False,
-    )
+    chart_trends
+    .estimate_trend_type(category_amount_magnitude_growth, magnitude_column='magnitude')
+    .to_csv(PROJECT_DIR / f'outputs/foodtech/trends/research_{fig_version_name}_Categories.csv', index=False)
 )
 
 # %% [markdown]
@@ -531,7 +464,7 @@ chart_trends.estimate_trend_type(
 domain = [
     "Health",
     "Innovative food",
-    "Delivery and logistics",
+    "Logistics",
     "Restaurants and retail",
     "Cooking and kitchen",
     "Food waste",
@@ -555,47 +488,9 @@ fig = chart_trends.mangitude_vs_growth_chart(
 fig
 
 # %%
-category_amount_magnitude_growth.magnitude.describe(percentiles=[0.25, 0.5, 0.75])
-
-# %%
-# Baseline
-baseline_rule = (
-    alt.Chart(pd.DataFrame({"x": [mid_point]}))
-    .mark_rule(strokeDash=[5, 7], size=1, color="k")
-    .encode(
-        x=alt.X(
-            "x:Q",
-        )
-    )
-)
-
-baseline_rule_1= (
-    alt.Chart(pd.DataFrame({"x": [1.945]}))
-    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
-    .encode(
-        x=alt.X(
-            "x:Q",
-        )
-    )
-)
-
-baseline_rule_2 = (
-    alt.Chart(pd.DataFrame({"x": [7.272]}))
-    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
-    .encode(
-        x=alt.X(
-            "x:Q",
-        )
-    )
-)
-
-fig_guidelines = fig + baseline_rule + baseline_rule_1 + baseline_rule_2
-fig_guidelines
-
-# %%
 AltairSaver.save(
     fig,
-    f"v{fig_version_name}_major_magnitude_vs_growth_colour_guidelines",
+    f"v{fig_version_name}_major_magnitude_vs_growth_colour",
     filetypes=["html", "svg", "png"],
 )
 
@@ -750,7 +645,7 @@ categories_to_check = [
 ]
 
 # %%
-importlib.reload(utils)
+importlib.reload(utils);
 
 # %%
 subcategory_ts = utils.get_time_series(
@@ -767,14 +662,13 @@ subcategory_amount_magnitude_growth = utils.get_magnitude_vs_growth_plot(
 ).merge(taxonomy_df, how="left")
 
 # %%
+subcategory_amount_magnitude_growth
+
+# %%
 (
-    chart_trends.estimate_trend_type(
-        subcategory_amount_magnitude_growth, magnitude_column="magnitude"
-    ).to_csv(
-        PROJECT_DIR
-        / f"outputs/foodtech/trends/research_{fig_version_name}_SubCategories.csv",
-        index=False,
-    )
+    chart_trends
+    .estimate_trend_type(subcategory_amount_magnitude_growth, magnitude_column='magnitude')
+    .to_csv(PROJECT_DIR / f'outputs/foodtech/trends/research_{fig_version_name}_SubCategories.csv', index=False)
 )
 
 # %%
@@ -799,8 +693,6 @@ data = subcategory_amount_magnitude_growth.merge(taxonomy_df, how="left")
 data["Category"] = pd.Categorical(data["Category"], categories=major_sort_order)
 data = data.sort_values(["Category", "growth"], ascending=False)
 data = data.merge(yearly_projects_minor, how="left")
-# remove meal kits and dark kitchen categories
-data = data.query("`Sub Category` not in ['Meal kits', 'Dark kitchen']")
 
 # %%
 colour_field = "Category"
@@ -862,27 +754,9 @@ final_fig
 # fig
 
 # %%
-# Export tables
-chart_number = 'Ch4-Fig34'
-chart_name = f"{chart_number}_{fig_version_name}_growth_SubCategories"
-AltairSaver.save(
-    final_fig, chart_name, filetypes=["html", "svg", "png"]
-)
-data.to_csv(tables_folder + "/" + chart_name + ".csv", index=False)
-
-# %%
 AltairSaver.save(
     final_fig, f"v{fig_version_name}_minor_growth", filetypes=["html", "svg", "png"]
 )
-
-# %%
-# Name the chart
-chart_number = "Ch2-Fig15"
-chart_name = f"{chart_number}_ts_SubCategory_innovative_food"
-export_chart(data_, cats, chart_number, chart_name)
-
-# %% [markdown]
-# ### Trends figure
 
 # %%
 data.magnitude.median()
@@ -933,45 +807,29 @@ subcategory_ts_2022.head(1)
 
 # %%
 # fig = pu.ts_funding_projects(subcategory_ts, ['Delivery', 'Supply chain'], height=100)
-cats = ["Delivery", "Supply chain"]
 fig = pu.configure_plots(
-    pu.ts_smooth_incomplete(
+    pu.ts_smooth(
         subcategory_ts_2022,
-        cats,
+        ["Delivery", "Supply chain"],
         "amount_total",
         "Funding (£ millions)",
         height=125,
     )
 )
 fig
-
-# %%
-# Name the chart
-chart_number = "Ch4-Fig35"
-chart_name = f"{chart_number}_ts_subcategory_Logistics"
-export_chart(subcategory_ts_2022, cats, chart_number, chart_name, fig)
-
 
 # %%
 importlib.reload(pu)
-["Delivery", "Supply chain"]
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(
         subcategory_ts_2022,
-        cats,
+        ["Delivery", "Supply chain"],
         "amount_total",
         "Funding (£ millions)",
         height=125,
     )
 )
 fig
-
-# %%
-# Name the chart
-chart_number = "Ch4-Fig36"
-chart_name = f"{chart_number}_ts_subcategory_Logistics"
-export_chart(subcategory_ts_2022, cats, chart_number, chart_name, fig)
-
 
 # %%
 AltairSaver.save(
@@ -1072,227 +930,11 @@ AltairSaver.save(
 
 # %%
 trends_combined = (
-    pd.concat([category_amount_magnitude_growth, subcategory_amount_magnitude_growth])
-    .fillna("n/a (category level)")
-    .sort_values(["Category", "Sub Category"])
+    pd.concat([category_amount_magnitude_growth,subcategory_amount_magnitude_growth])
+    .fillna('n/a (category level)')
+    .sort_values(['Category', 'Sub Category'])
 )
-trends_combined.to_csv(
-    PROJECT_DIR / f"outputs/foodtech/trends/research_{fig_version_name}_all.csv",
-    index=False,
-)
-
-# %% [markdown]
-# ### Plot combined trends
-
-# %%
-# %%
-# %%
-BASELINE_GROWTH = 0.11417
-
-trends_combined = pd.read_csv(PROJECT_DIR / 'outputs/foodtech/trends/research_Report_GTR_NIHR_all.csv')
-
-# %%
-full_titles = [f'{x[0]}: {x[1]}' for x in list(zip(trends_combined['Category'], trends_combined['Sub Category']))]
-trends_combined['full_titles'] = full_titles
-
-# %%
-trends_combined
-
-# %%
-categories_to_show = [
-    'Innovative food: Alt protein',
-    'Delivery and logistics: Delivery',
-    'Food waste: n/a (category level)',
-    'Health: Biomedical',
-    'Restaurants and retail: n/a (category level)',
-    'Innovative food: Reformulation',
-    # 'Logistics: Meal kits',
-    # 'Cooking and kitchen: Dark kitchen',
-    'Cooking and kitchen: Kitchen tech',
-    'Health: Personalised nutrition',
-    'Logistics: Delivery',
-]
-
-# %%
-trends_combined_ = (
-    trends_combined.query('full_titles in @categories_to_show')
-    # .assign(magnitude=lambda df: df.Magnitude)
-)
-
-# %%
-trends_combined_[['magnitude', 'growth', 'full_titles']]
-
-# %%
-# importlib.reload(chart_trends);
-mid_point = trends_combined_.magnitude.median()
-mid_point
-
-# %%
-trends_combined_.magnitude.describe(percentiles=[0.25, 0.5, 0.75])
-
-# %%
-# color gradient width
-chart_trends._epsilon = 0.01
-
-fig = chart_trends.mangitude_vs_growth_chart(
-    trends_combined_,
-    x_limit=30,
-    y_limit=2.5,
-    mid_point=mid_point,
-    baseline_growth=BASELINE_GROWTH,
-    values_label="Average new research funding per year (£ millions)",
-    text_column='full_titles',
-    width=425,
-    horizontal_log=True,
-    x_min=0.7,
-)
-
-# Baseline
-baseline_rule = (
-    alt.Chart(pd.DataFrame({"x": [mid_point]}))
-    .mark_rule(strokeDash=[5, 7], size=1, color="k")
-    .encode(
-        x=alt.X(
-            "x:Q",
-        )
-    )
-)
-
-baseline_rule_1= (
-    alt.Chart(pd.DataFrame({"x": [0.766]}))
-    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
-    .encode(
-        x=alt.X(
-            "x:Q",
-        )
-    )
-)
-
-baseline_rule_2 = (
-    alt.Chart(pd.DataFrame({"x": [2.964]}))
-    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
-    .encode(
-        x=alt.X(
-            "x:Q",
-        )
-    )
-)
-
-fig = fig + baseline_rule + baseline_rule_1 + baseline_rule_2
-fig
-
-
-# %%
-# %%
-AltairSaver.save(
-    fig, f"v{fig_version_name}_magnitude_growth_Synthesis_research_log", filetypes=["html", "svg", "png"]
-)
-
-
-# %%
-# %%
-# %%
-BASELINE_GROWTH = 0.11417
-
-trends_combined = pd.read_csv(PROJECT_DIR / 'outputs/foodtech/trends/research_Report_GTR_NIHR_all.csv')
-
-# %%
-full_titles = [f'{x[0]}: {x[1]}' for x in list(zip(trends_combined['Category'], trends_combined['Sub Category']))]
-trends_combined['full_titles'] = full_titles
-
-# %%
-trends_combined
-
-# %%
-categories_to_show = [
-    'Innovative food: Alt protein',
-    'Delivery and logistics: Delivery',
-    'Food waste: n/a (category level)',
-    'Health: Biomedical',
-    'Restaurants and retail: n/a (category level)',
-    'Innovative food: Reformulation',
-    # 'Logistics: Meal kits',
-    # 'Cooking and kitchen: Dark kitchen',
-    'Cooking and kitchen: Kitchen tech',
-    'Health: Personalised nutrition',
-    'Logistics: Delivery',
-]
-
-# %%
-trends_combined_ = (
-    trends_combined.query('full_titles in @categories_to_show')
-    # .assign(magnitude=lambda df: df.Magnitude)
-)
-
-# %%
-trends_combined_[['magnitude', 'growth', 'full_titles']]
-
-# %%
-# importlib.reload(chart_trends);
-mid_point = trends_combined_.magnitude.median()
-mid_point
-
-# %%
-trends_combined_.magnitude.describe(percentiles=[0.25, 0.5, 0.75])
-
-# %%
-# color gradient width
-chart_trends._epsilon = 0.01
-
-fig = chart_trends.mangitude_vs_growth_chart(
-    trends_combined_,
-    x_limit=25,
-    y_limit=2.5,
-    mid_point=mid_point,
-    baseline_growth=BASELINE_GROWTH,
-    values_label="Average new research funding per year (£ millions)",
-    text_column='full_titles',
-    width=425,
-    horizontal_log=False,
-    x_min=0.7,
-)
-
-# Baseline
-baseline_rule = (
-    alt.Chart(pd.DataFrame({"x": [mid_point]}))
-    .mark_rule(strokeDash=[5, 7], size=1, color="k")
-    .encode(
-        x=alt.X(
-            "x:Q",
-        )
-    )
-)
-
-baseline_rule_1= (
-    alt.Chart(pd.DataFrame({"x": [0.766]}))
-    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
-    .encode(
-        x=alt.X(
-            "x:Q",
-        )
-    )
-)
-
-baseline_rule_2 = (
-    alt.Chart(pd.DataFrame({"x": [2.964]}))
-    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
-    .encode(
-        x=alt.X(
-            "x:Q",
-        )
-    )
-)
-
-fig = fig + baseline_rule + baseline_rule_1 + baseline_rule_2
-fig
-
-
-# %%
-# %%
-AltairSaver.save(
-    fig, f"v{fig_version_name}_magnitude_growth_Synthesis_research", filetypes=["html", "svg", "png"]
-)
-
+trends_combined.to_csv(PROJECT_DIR / f'outputs/foodtech/trends/research_{fig_version_name}_all.csv', index=False)
 
 # %% [markdown]
 # ## Checking alt protein

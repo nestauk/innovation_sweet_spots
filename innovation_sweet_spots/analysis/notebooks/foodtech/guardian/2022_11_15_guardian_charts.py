@@ -11,7 +11,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.14.1
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: innovation_sweet_spots
 #     language: python
 #     name: python3
 # ---
@@ -46,6 +46,46 @@ AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
 
 # %%
 VERSION_NAME = "Report_Guardian"
+
+figure_folder = alt_save.FIGURE_PATH + "/foodtech"
+# Folder for data tables
+tables_folder = figure_folder + "/tables"
+
+# %%
+importlib.reload(utils);
+
+# %% [markdown]
+# ## Helper functions
+
+# %%
+from typing import Iterable
+from innovation_sweet_spots.utils import plotting_utils as pu
+import innovation_sweet_spots.utils.google_sheets as gs
+
+def export_chart(data_: pd.DataFrame, cats: Iterable[str], chart_number: str, chart_name: str, fig, category_column: str="Sub Category"):
+    """ Prepares table for plotting with Flourish, saves it locally and on Google Sheets, and exports altair plot """
+    # Prepare the table
+    df = pu.prepare_ts_table_for_flourish(
+        data_,
+        cats,
+        category_column,
+        max_complete_year=2021,
+        values_column="percentage",
+        values_label="Percentage of articles",
+    )
+    #  Upload the prepared table to google sheet
+    gs.upload_to_google_sheet(
+        df,
+        google_sheet_id=utils.REPORT_TABLES_SHEET,
+        wks_name=chart_number,
+        overwrite=True,
+    )
+    # Export the chart
+    AltairSaver.save(
+        fig, chart_name, filetypes=["html", "svg", "png"]
+    )
+    pu.export_table(df, chart_name, tables_folder)
+
 
 # %% [markdown]
 # ### Loading data
@@ -271,6 +311,51 @@ fig = chart_trends.mangitude_vs_growth_chart(
 fig
 
 # %%
+
+magnitude_growth_df.magnitude.describe(percentiles=[0.25, 0.5, 0.75])
+
+# %%
+# Baseline
+baseline_rule = (
+    alt.Chart(pd.DataFrame({"x": [0.092123]}))
+    .mark_rule(strokeDash=[5, 7], size=1, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+baseline_rule_1= (
+    alt.Chart(pd.DataFrame({"x": [0.045914]}))
+    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+baseline_rule_2 = (
+    alt.Chart(pd.DataFrame({"x": [0.127115]}))
+    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+fig_guidelines = fig + baseline_rule + baseline_rule_1 + baseline_rule_2
+fig_guidelines
+
+# %%
+# %%
+AltairSaver.save(
+    fig_guidelines, f"Ch5_Fig39_magnitude_growth_news", filetypes=["html", "svg", "png"]
+)
+
+# %%
 variable = "counts"
 magnitude_growth = []
 for tech_area in categories_to_check:
@@ -335,13 +420,14 @@ ts_df = ts_subcategory.query("`Sub Category` in @cats")
 # scale = 'log'
 scale = "linear"
 
+data_ = ts_df.query("year >= 2000")
 fig = (
-    alt.Chart(ts_df.query("year >= 2000")).mark_line(size=3, interpolate="monotone")
+    alt.Chart(data_).mark_line(size=3, interpolate="monotone")
     # .mark_bar(size=5, interpolate="monotone")
     .encode(
         x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
         y=alt.Y(
-            "fraction:Q", title="Proportion of articles", axis=alt.Axis(format=".2%")
+            "fraction:Q", title="Percentage of articles", axis=alt.Axis(format=".2%")
         ),
         color=alt.Color("Sub Category:N"),
         # size=alt.Size('magnitude'),
@@ -353,9 +439,11 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
-AltairSaver.save(
-    fig, f"Guardian_articles_per_year_InnovativeFood", filetypes=["html", "svg", "png"]
-)
+# Name the chart
+chart_number = "Ch5-Fig41"
+chart_name = f"{chart_number}_ts_subcategory_Innovative_food"
+export_chart(data_.assign(percentage = lambda df: df.fraction * 100), cats, chart_number, chart_name, fig)
+
 
 # %%
 cats = [
@@ -394,9 +482,10 @@ ts_df = ts_subcategory.query("`Sub Category` in @cats")
 
 # scale = 'log'
 scale = "linear"
+data_ = ts_df.query("year >= 2000")
 
 fig = (
-    alt.Chart(ts_df)
+    alt.Chart(data_)
     .mark_line(size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3])
     .encode(
         x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
@@ -413,9 +502,11 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
-AltairSaver.save(
-    fig, f"Guardian_articles_per_year_Delivery", filetypes=["html", "svg", "png"]
-)
+# Name the chart
+chart_number = "Ch5-Fig40"
+chart_name = f"{chart_number}_ts_subcategory_Delivery"
+export_chart(data_.assign(percentage = lambda df: df.fraction * 100), cats, chart_number, chart_name, fig)
+
 
 # %%
 cats = ["Restaurants", "Retail"]
@@ -470,9 +561,10 @@ ts_df = ts_subcategory.query("`Sub Category` in @cats")
 
 # scale = 'log'
 scale = "linear"
+data_ = ts_df.query("year >= 2000")
 
 fig = (
-    alt.Chart(ts_df)
+    alt.Chart(data_)
     .mark_line(size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3])
     .encode(
         x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
@@ -489,14 +581,21 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
+# Name the chart
+chart_number = "Ch5-Fig42"
+chart_name = f"{chart_number}_ts_subcategory_Food_waste"
+export_chart(data_.assign(percentage = lambda df: df.fraction * 100), cats, chart_number, chart_name, fig)
+
+
+# %%
 cats = ["Health"]
 ts_df = ts_category.query("`Category` in @cats")
 
 # scale = 'log'
 scale = "linear"
-
+data_ = ts_df.query("year >= 2000")
 fig = (
-    alt.Chart(ts_df)
+    alt.Chart(data_)
     .mark_line(size=3, interpolate="monotone", color=pu.NESTA_COLOURS[3])
     .encode(
         x=alt.X("year:O", scale=alt.Scale(type=scale), title=""),
@@ -511,6 +610,13 @@ fig = (
 )
 fig = pu.configure_plots(fig)
 fig
+
+# %%
+# Name the chart
+chart_number = "Ch5-Fig44"
+chart_name = f"{chart_number}_ts_subcategory_Health"
+export_chart(data_.assign(percentage = lambda df: df.fraction * 100), cats, chart_number, chart_name, fig)
+
 
 # %%
 cats = ["Food waste"]
