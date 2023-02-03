@@ -1,3 +1,19 @@
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     comment_magics: true
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.14.1
+#   kernelspec:
+#     display_name: innovation_sweet_spots
+#     language: python
+#     name: python3
+# ---
+
 # %%
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup, NavigableString, Tag

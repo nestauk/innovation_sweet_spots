@@ -1,3 +1,19 @@
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     comment_magics: true
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.14.1
+#   kernelspec:
+#     display_name: innovation_sweet_spots
+#     language: python
+#     name: python3
+# ---
+
 # %%
 from innovation_sweet_spots import PROJECT_DIR
 from innovation_sweet_spots.utils.google_sheets import (
