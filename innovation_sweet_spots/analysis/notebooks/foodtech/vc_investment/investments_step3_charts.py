@@ -61,20 +61,16 @@ DR = wu.DealroomWrangler()
 len(DR.company_data)
 
 # %%
-# Folder for data tables
-figure_folder = alt_save.FIGURE_PATH + "/foodtech"
-
-# %%
 # Plotting utils
 import innovation_sweet_spots.utils.altair_save_utils as alt_save
 
+# Folder for data tables
+figure_folder = alt_save.FIGURE_PATH + "/foodtech"
 AltairSaver = alt_save.AltairSaver(path=figure_folder)
+tables_folder = figure_folder + "/tables"
 
 # Figure version name
 VERSION_NAME = "Report_VC"
-
-# %%
-tables_folder = figure_folder + "/tables"
 
 # %%
 fig_filetypes = ["html", "svg", "png"]
@@ -1343,7 +1339,7 @@ data_countries_late.head(10)
 chart_number = "Ch2-Fig25"
 chart_name = f"{chart_number}_Country_Late_magnitude"
 df = (
-    data_countries_early.head(10)
+    data_countries_late.head(10)
     .rename(columns={"country": "Country", 'raised_amount_gbp': 'Investment (£ billions)'})
     .reset_index(drop=True)
 )

@@ -1016,7 +1016,7 @@ dr_cb_lookup = pd.read_csv(folder / "dr_cb_lookup.csv")
 company_predictions = pd.read_csv(folder / "all_uk_companies_success_preds.csv")
 
 len(company_predictions)
-    
+
 
 # %%
 company_predictions.success_pred_binary.mean()

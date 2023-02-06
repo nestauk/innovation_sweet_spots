@@ -434,7 +434,7 @@ chart_name = f"{chart_number}_v{fig_version_name}_total_funding_by_category"
 gs.upload_to_google_sheet(category_funding_df, utils.REPORT_TABLES_SHEET, chart_number, overwrite=True)
 # Export table to csv
 pu.export_table(category_funding_df, chart_name, tables_folder)
-    
+
 
 # %%
 total_funding = (
