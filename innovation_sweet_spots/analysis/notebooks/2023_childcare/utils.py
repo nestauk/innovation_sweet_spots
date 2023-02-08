@@ -3,6 +3,7 @@ This file contains the utils and constants used in the notebooks
 """
 from innovation_sweet_spots import PROJECT_DIR
 import pandas as pd
+from typing import Iterable
 
 PROJECT_INPUTS_DIR = PROJECT_DIR / "inputs/data/misc/2023_childcare"
 PARENT_TECH_DIR = PROJECT_INPUTS_DIR / "parenting_tech_proj"
@@ -26,6 +27,11 @@ GOOGLE_WORKSHEET_NAME = "startups"
 
 # Another custom list with FamTech companies
 FAMTECH = "fam-tech-startups-18-01-2023.csv"
+
+# Text path
+COMPANY_DESCRIPTIONS_PATH = (
+    PROJECT_DIR / "outputs/preprocessed/texts/cb_descriptions_formatted.csv"
+)
 
 ## Keyword search parameters
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
@@ -122,3 +128,156 @@ def process_keywords(
         lambda x: [add_spaces(t) for t in x]
     )
     return terms_df
+
+
+# Function that outputs a list of European countries
+def list_of_countries_in_europe() -> Iterable[str]:
+    return [
+        "Austria",
+        "Belgium",
+        "Bulgaria",
+        "Croatia",
+        "Cyprus",
+        "Czechia",
+        "Denmark",
+        "Estonia",
+        "Finland",
+        "France",
+        "Germany",
+        "Greece",
+        "Hungary",
+        "Ireland",
+        "Italy",
+        "Latvia",
+        "Lithuania",
+        "Luxembourg",
+        "Malta",
+        "Netherlands",
+        "Norway",
+        "Poland",
+        "Portugal",
+        "Romania",
+        "Slovakia",
+        "Slovenia",
+        "Spain",
+        "Sweden",
+        "United Kingdom",
+    ]
+
+
+def list_of_countries_in_north_america() -> Iterable[str]:
+    return [
+        "United States",
+        "Canada",
+    ]
+
+
+list_of_select_countries = (
+    list_of_countries_in_europe()
+    + list_of_countries_in_north_america()
+    + ["Australia", "New Zealand"]
+)
+
+
+def investibility_indicator(
+    df: pd.DataFrame, funding_threshold_gbp: float = 1
+) -> pd.DataFrame:
+    """Add an investibility indicator to the dataframe"""
+    df["investible"] = funding_threshold_gbp / df["funding_since_2020_gbp"]
+    return df
+
+
+# Get last rounds for each org_id
+def get_last_rounds(funding_rounds: pd.DataFrame) -> pd.DataFrame:
+    """
+    Get the last round for each org_id
+
+    Args:
+        funding_rounds (pd.DataFrame): Dataframe containing the funding rounds
+
+    Returns:
+        pd.DataFrame: Dataframe containing the last round for each org_id
+    """
+    return (
+        funding_rounds.sort_values("announced_on_date")
+        .groupby("org_id")
+        .last()
+        .reset_index()
+        .rename(
+            columns={
+                "org_id": "cb_id",
+                "announced_on_date": "last_round_date",
+                "raised_amount_gbp": "last_round_gbp",
+                "raised_amount_usd": "last_round_usd",
+                "post_money_valuation_usd": "last_valuation_usd",
+                "investor_count": "last_round_investor_count",
+                "cb_url": "deal_url",
+            }
+        )
+        # convert funding to millions
+        .assign(last_round_gbp=lambda x: x.last_round_gbp / 1e3)
+        .assign(last_round_usd=lambda x: x.last_round_usd / 1e3)
+        .assign(last_valuation_usd=lambda x: x.last_valuation_usd / 1e6)
+    )[
+        [
+            "cb_id",
+            "last_round_date",
+            "investment_type",
+            "last_round_gbp",
+            "last_round_usd",
+            "last_valuation_usd",
+            "last_round_investor_count",
+            "deal_url",
+        ]
+    ]
+
+
+# Get rounds since 2020
+def get_last_rounds_since_2020(funding_rounds: pd.DataFrame) -> pd.DataFrame:
+    """
+    Get the the money raised since 2020 for each org_id
+
+    Args:
+        funding_rounds (pd.DataFrame): Dataframe containing the funding rounds
+
+    Returns:
+        pd.DataFrame: Dataframe containing the money raised since 2020 for each org_id
+
+    """
+    return (
+        funding_rounds[funding_rounds.announced_on_date >= "2020-01-01"]
+        .groupby("org_id")
+        .agg({"raised_amount_gbp": "sum", "funding_round_id": "count"})
+        # convert funding to millions
+        .assign(raised_amount_gbp=lambda x: x.raised_amount_gbp / 1e3)
+        .reset_index()
+        .rename(
+            columns={
+                "org_id": "cb_id",
+                "raised_amount_gbp": "funding_since_2020_gbp",
+                "funding_round_id": "funding_rounds_since_2020",
+            }
+        )
+    )
+
+
+# Total funding
+def get_total_funding(funding_rounds: pd.DataFrame) -> pd.DataFrame:
+    """
+    Get the total funding for each org_id
+
+    Args:
+        funding_rounds (pd.DataFrame): Dataframe containing the funding rounds
+
+    Returns:
+        pd.DataFrame: Dataframe containing the total funding for each org_id
+
+    """
+    return (
+        funding_rounds.groupby("org_id")
+        .agg({"raised_amount_gbp": "sum"})
+        .reset_index()
+        .rename(columns={"org_id": "cb_id", "raised_amount_gbp": "total_funding_gbp"})
+        # convert funding to millions
+        .assign(total_funding_gbp=lambda x: x.total_funding_gbp / 1e3)
+    )
