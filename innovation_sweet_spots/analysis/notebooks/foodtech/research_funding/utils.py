@@ -14,6 +14,8 @@
 from innovation_sweet_spots.analysis import analysis_utils as au
 import pandas as pd
 
+REPORT_TABLES_SHEET = "1P6Qr2qDVf9JZxakksEhUhyrjDr64XNm7A9aFF5hQ0PE"
+
 
 def get_time_series(
     research_project_funding,

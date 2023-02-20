@@ -23,3 +23,16 @@ def get_gtr_file(filename: str) -> pd.DataFrame:
         return pd.read_csv(filepath)
     if filepath.suffix == ".json":
         return pd.DataFrame(load_json(filepath))
+
+def get_gtr_projects():
+    """Main project table"""
+    return get_gtr_file('gtr_projects-projects.json')
+
+def get_gtr_funds():
+    """Funding table"""
+    return get_gtr_file('gtr_projects-funds.json')
+
+def get_wrangled_projects():
+    """Wrangled projects"""    
+    return get_gtr_file('gtr_projects-wrangled_project_data.csv')
+    

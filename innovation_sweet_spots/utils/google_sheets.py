@@ -57,7 +57,10 @@ def download_google_sheet(google_sheet_id: str, wks_name: str) -> pd.DataFrame:
 
 
 def upload_to_google_sheet(
-    df: pd.DataFrame, google_sheet_id: str, wks_name: str = "Sheet1"
+    df: pd.DataFrame,
+    google_sheet_id: str,
+    wks_name: str = "Sheet1",
+    overwrite: bool = False,
 ):
     """Upload a dataframe to a Google Sheet.
 
@@ -72,10 +75,11 @@ def upload_to_google_sheet(
     logging.warn(
         f"Uploading will overwrite any existing data on worksheet {wks_name} on Google Sheet with id {google_sheet_id}."
     )
-    confirmation = input(
-        "Enter 'upload' to continue with uploading the dataframe. Type anything else to not upload:"
-    )
-    if confirmation.lower() == "upload":
+    if overwrite is False:
+        confirmation = input(
+            "Enter 'upload' to continue with uploading the dataframe. Type anything else to not upload:"
+        )
+    if overwrite or (confirmation.lower() == "upload"):
         logging.info("Uploading...")
         d2g.upload(df=df, gfile=google_sheet_id, wks_name=wks_name, start_cell="A1")
         gc = gspread.authorize(d2g_utils.get_credentials())

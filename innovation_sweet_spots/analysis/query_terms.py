@@ -189,7 +189,10 @@ def get_document_hits(
         query_df = Query_instance.find_matches(
             tech_area_terms[tech_area], return_only_matches=True
         )
-        hits = set(query_df.id.to_list()).intersection(set(filter_hits.id.to_list()))
+        if filter_hits is None:
+            hits = set(query_df.id.to_list())
+        else:
+            hits = set(query_df.id.to_list()).intersection(set(filter_hits.id.to_list()))
         query_df = (
             get_hit_terms(query_df.query("id in @hits"))
             .assign(tech_area=tech_area)

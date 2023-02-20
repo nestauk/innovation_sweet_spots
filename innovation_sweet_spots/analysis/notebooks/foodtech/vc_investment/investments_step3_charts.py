@@ -11,7 +11,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.14.1
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: innovation_sweet_spots
 #     language: python
 #     name: python3
 # ---
@@ -51,7 +51,7 @@ COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
 
 # %%
 import innovation_sweet_spots.getters.dealroom
-importlib.reload(innovation_sweet_spots.getters.dealroom);
+import innovation_sweet_spots.utils.google_sheets as gs
 
 # %%
 # Initialise a Dealroom wrangler instance
@@ -64,7 +64,10 @@ len(DR.company_data)
 # Plotting utils
 import innovation_sweet_spots.utils.altair_save_utils as alt_save
 
-AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
+# Folder for data tables
+figure_folder = alt_save.FIGURE_PATH + "/foodtech"
+AltairSaver = alt_save.AltairSaver(path=figure_folder)
+tables_folder = figure_folder + "/tables"
 
 # Figure version name
 VERSION_NAME = "Report_VC"
@@ -334,9 +337,14 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
+chart_name = f"v{VERSION_NAME}_total_early_investment"
 AltairSaver.save(
-    fig, f"v{VERSION_NAME}_total_early_investment", filetypes=fig_filetypes
+    fig, chart_name, filetypes=fig_filetypes
 )
+
+# %%
+# Export tables
+data_early.query("year > 2009").to_csv(tables_folder + "/" + chart_name + ".csv", index=False)
 
 # %%
 # Smoothed growth estimate from 2011 to 2021
@@ -377,9 +385,6 @@ au.estimate_magnitude_growth(data_early.drop(["deal_type"], axis=1), 2017, 2021)
 # %%
 # Magnitude and growth between 2017 and 2021
 au.estimate_magnitude_growth(data_early.drop(["deal_type"], axis=1), 2011, 2021)
-
-# %%
-data_early.to_csv('test.csv')
 
 # %%
 # Chart with only the late stage deals
@@ -514,12 +519,16 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
+chart_name = f"Figure_Ch2_Fig3_total_investment_early_late"
 AltairSaver.save(
     fig,
-    f"v{VERSION_NAME}_total_investment_early_late",
+    chart_name,
     # filetypes=["html", "svg", "png"],
     filetypes=fig_filetypes,
 )
+
+# %%
+utils.export_table(df_major_amount_deal_type, chart_name, figure_folder)
 
 # %%
 category_label = "Category"
@@ -585,12 +594,9 @@ foodtech_ts_late
 # %%
 (3490.258340 - 1707.778906)/3490.258340
 
+
 # %% [markdown]
 # ### Category proportion of total investment
-
-# %%
-DR.funding_rounds
-
 
 # %%
 def get_total_funding(
@@ -664,7 +670,7 @@ def share_of_funding(
 
 print(f"From {min_year} to {max_year}:")
 share_of_funding(min_year, max_year, category_ids=category_ids, category="Health")
-share_of_funding(min_year, max_year, category_ids=category_ids, category="Logistics")
+share_of_funding(min_year, max_year, category_ids=category_ids, category="Delivery and logistics")
 share_of_funding(min_year, max_year, category_ids=subcategory_ids, category="Delivery")
 
 # %% [markdown]
@@ -690,9 +696,6 @@ magnitude_vs_growth_plot = magnitude_vs_growth.assign(
 chart_trends.estimate_trend_type(magnitude_vs_growth).sort_values("growth")
 
 # %%
-importlib.reload(chart_trends);
-
-# %%
 # Chart configs
 # mid point
 mid_point = magnitude_vs_growth_plot.magnitude.median()
@@ -701,7 +704,7 @@ chart_trends._epsilon = 0.05
 
 fig = chart_trends.mangitude_vs_growth_chart(
     magnitude_vs_growth_plot,
-    x_limit=18,
+    x_limit=15,
     y_limit=7,
     mid_point=mid_point,
     baseline_growth=BASELINE_GROWTH,
@@ -714,8 +717,53 @@ fig
 # %%
 AltairSaver.save(
     fig,
-    f"v{VERSION_NAME}_growth_vs_magnitude_Category",
-    filetypes=["html"],
+    f"Ch2_Fig10_v{VERSION_NAME}_growth_vs_magnitude_Category",
+    filetypes=["html", "svg"],
+)
+
+# %%
+magnitude_vs_growth_plot.magnitude.describe(percentiles=[0.25, 0.5, 0.75])
+
+# %%
+# Baseline
+baseline_rule = (
+    alt.Chart(pd.DataFrame({"x": [mid_point]}))
+    .mark_rule(strokeDash=[5, 7], size=1, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+baseline_rule_1= (
+    alt.Chart(pd.DataFrame({"x": [0.636922]}))
+    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+baseline_rule_2 = (
+    alt.Chart(pd.DataFrame({"x": [2.863496]}))
+    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+fig_guidelines = fig + baseline_rule + baseline_rule_1 + baseline_rule_2
+fig_guidelines
+
+# %%
+AltairSaver.save(
+    fig_guidelines,
+    f"Ch2_Fig10_v{VERSION_NAME}_growth_vs_magnitude_Category_guides",
+    filetypes=["html", "svg"],
 )
 
 # %% [markdown]
@@ -885,9 +933,12 @@ final_fig = pu.configure_titles(pu.configure_axes((baseline_rule + fig + text)),
 final_fig
 
 # %%
+# Export tables
+chart_name = f"v{VERSION_NAME}_growth_SubCategories"
 AltairSaver.save(
-    final_fig, f"v{VERSION_NAME}_growth_SubCategories", filetypes=["html", "svg", "png"]
+    final_fig, chart_name, filetypes=["html", "svg", "png"]
 )
+data.to_csv(tables_folder + "/" + chart_name + ".csv", index=False)
 
 
 # %%
@@ -927,6 +978,33 @@ ids = company_to_taxonomy_df.query("Category == @category")
 # ### Subcategory time series
 
 # %%
+from typing import Iterable
+def export_chart(data_: pd.DataFrame, cats: Iterable[str], chart_number: str, chart_name: str):
+    """ Prepares table for plotting with Flourish, saves it locally and on Google Sheets, and exports altair plot """
+    # Prepare the table
+    df = pu.prepare_ts_table_for_flourish(
+        data_,
+        cats,
+        category_column="Sub Category",
+        max_complete_year=2021,
+        values_column="raised_amount_gbp_total",
+        values_label="Investment (£ billions)",
+    )
+    #  Upload the prepared table to google sheet
+    gs.upload_to_google_sheet(
+        df,
+        google_sheet_id=utils.REPORT_TABLES_SHEET,
+        wks_name=chart_number,
+        overwrite=True,
+    )
+    # Export the chart
+    AltairSaver.save(
+        fig, chart_name, filetypes=["html", "svg", "png"]
+    )
+    utils.export_table(df, chart_name, tables_folder)
+
+
+# %%
 # Get company ids for each category
 subcategory_ids = utils.get_category_ids(
     taxonomy_df, utils.rejected_tags, company_to_taxonomy_df, DR, "Sub Category"
@@ -946,14 +1024,13 @@ subcategory_ts = (
 subcategory_ts
 
 # %%
-importlib.reload(pu);
+data_ = subcategory_ts.assign(**{variable: lambda df: df[variable] / 1000})
 
 # %%
 cats = ["Kitchen tech", "Dark kitchen"]
-
 fig = pu.configure_plots(
     pu.ts_smooth_incomplete(
-        subcategory_ts.assign(**{variable: lambda df: df[variable] / 1000}),
+        data_,
         cats,
         variable="raised_amount_gbp_total",
         variable_title="Investment (£ billions)",
@@ -964,23 +1041,10 @@ fig = pu.configure_plots(
 fig
 
 # %%
-# pu.configure_plots(pu.ts_bar_incomplete(
-#     subcategory_ts,
-#     categories_to_show=cats,
-#     variable= "raised_amount_gbp_total",
-#     variable_title= "Investment (£ billions)",
-#     category_column= "Sub Category",
-#     category_label= "Sub category",
-#     amount_div= 1000,
-#     width= 400,
-#     height= 200,
-#     tooltip=True,
-# ))
-
-# %%
-AltairSaver.save(
-    fig, f"v{VERSION_NAME}_ts_SubCategory_cooking", filetypes=["html", "svg", "png"]
-)
+# Name the chart
+chart_number = "Ch2-Fig13"
+chart_name = f"{chart_number}_ts_SubCategory_cooking"
+export_chart(data_, cats, chart_number, chart_name)
 
 
 # %%
@@ -999,26 +1063,10 @@ fig = pu.configure_plots(
 fig
 
 # %%
-importlib.reload(pu);
-
-# %%
-pu.configure_plots(pu.ts_bar_incomplete(
-    subcategory_ts,
-    categories_to_show=cats,
-    variable= "raised_amount_gbp_total",
-    variable_title= "Investment (£ billions)",
-    category_column= "Sub Category",
-    category_label= "Sub-categories",
-    amount_div= 1000,
-    width= 450,
-    height= 200,
-    tooltip=True,
-))
-
-# %%
-AltairSaver.save(
-    fig, f"v{VERSION_NAME}_ts_SubCategory_alt_protein", filetypes=["html", "svg", "png"]
-)
+# Name the chart
+chart_number = "Ch2-Fig14"
+chart_name = f"{chart_number}_ts_SubCategory_alt_protein"
+export_chart(data_, cats, chart_number, chart_name)
 
 
 # %%
@@ -1037,11 +1085,10 @@ fig = pu.configure_plots(
 fig
 
 # %%
-AltairSaver.save(
-    fig,
-    f"v{VERSION_NAME}_ts_SubCategory_innovative_food",
-    filetypes=["html", "svg", "png"],
-)
+# Name the chart
+chart_number = "Ch2-Fig15"
+chart_name = f"{chart_number}_ts_SubCategory_innovative_food"
+export_chart(data_, cats, chart_number, chart_name)
 
 
 # %%
@@ -1060,9 +1107,10 @@ fig = pu.configure_plots(
 fig
 
 # %%
-AltairSaver.save(
-    fig, f"v{VERSION_NAME}_ts_SubCategory_health", filetypes=["html", "svg", "png"]
-)
+# Name the chart
+chart_number = "Ch2-Fig16"
+chart_name = f"{chart_number}_ts_SubCategory_health"
+export_chart(data_, cats, chart_number, chart_name)
 
 # %%
 cats = ["Waste reduction", "Packaging"]
@@ -1080,9 +1128,10 @@ fig = pu.configure_plots(
 fig
 
 # %%
-AltairSaver.save(
-    fig, f"v{VERSION_NAME}_ts_SubCategory_Food_waste", filetypes=["html", "svg", "png"]
-)
+# Name the chart
+chart_number = "Ch2-Fig17"
+chart_name = f"{chart_number}_ts_SubCategory_Food_waste"
+export_chart(data_, cats, chart_number, chart_name)
 
 # %%
 cats = ["Retail", "Restaurants"]
@@ -1100,11 +1149,10 @@ fig = pu.configure_plots(
 fig
 
 # %%
-AltairSaver.save(
-    fig,
-    f"v{VERSION_NAME}_ts_SubCategory_Retail_restaurant",
-    filetypes=["html", "svg", "png"],
-)
+# Name the chart
+chart_number = "Ch2-Fig18"
+chart_name = f"{chart_number}_ts_SubCategory_Retail_restaurant"
+export_chart(data_, cats, chart_number, chart_name)
 
 # %% [markdown]
 # ## Exporting the list of startups
@@ -1229,6 +1277,18 @@ data_countries_early = (
 data_countries_early.head(10)
 
 # %%
+# Export table
+chart_number = "Ch2-Fig22"
+chart_name = f"{chart_number}_Country_magnitude"
+df = (
+    data_countries_early.head(10)
+    .rename(columns={"country": "Country", 'raised_amount_gbp': 'Investment (£ billions)'})
+    .reset_index(drop=True)
+)
+utils.export_table(df, chart_name, tables_folder)
+gs.upload_to_google_sheet(df, utils.REPORT_TABLES_SHEET, chart_number, overwrite=True)
+
+# %%
 eu_early_funding = data_countries_early.query("country in @utils.EU_countries").sum()[
     "raised_amount_gbp"
 ]
@@ -1273,6 +1333,18 @@ data_countries_late = (
     .drop_duplicates()
 )
 data_countries_late.head(10)
+
+# %%
+# Export table
+chart_number = "Ch2-Fig25"
+chart_name = f"{chart_number}_Country_Late_magnitude"
+df = (
+    data_countries_late.head(10)
+    .rename(columns={"country": "Country", 'raised_amount_gbp': 'Investment (£ billions)'})
+    .reset_index(drop=True)
+)
+utils.export_table(df, chart_name, tables_folder)
+gs.upload_to_google_sheet(df, utils.REPORT_TABLES_SHEET, chart_number, overwrite=True)
 
 # %%
 eu_late_funding = data_countries_late.query("country in @utils.EU_countries").sum()[
@@ -1365,6 +1437,26 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
+# Export table
+chart_number = "Ch2-Fig24"
+chart_name = f"{chart_number}_Country_categories"
+df = (
+    top10_countries_per_cat.query("Category in @cats")
+    .rename(columns={"country": "Country", 'raised_amount_gbp': 'Investment (£ billions)'})
+    .reset_index(drop=True)
+)
+utils.export_table(df, chart_name, tables_folder)
+gs.upload_to_google_sheet(df, utils.REPORT_TABLES_SHEET, chart_number, overwrite=True)
+
+# %%
+blu = "#0000FF"
+red = "#EB003B"
+
+for p in sorted(list(top10_countries_per_cat.country.unique())):
+    print(f"{p}: {blu}")
+
+
+# %%
 AltairSaver.save(
     fig, f"v{VERSION_NAME}_countries_major_early", filetypes=["html", "png"]
 )
@@ -1416,6 +1508,18 @@ countries_growth = pd.DataFrame({"country": countries, "growth": growth})
 # %%
 # View countries and their early stage investment growth
 countries_growth.sort_values("growth")
+
+# %%
+# Export table
+chart_number = "Ch2-Fig23"
+chart_name = f"{chart_number}_Country_growth"
+df = (
+    countries_growth.sort_values("growth")
+    .rename(columns={"country": "Country", 'growth': 'Growth'})
+    .reset_index(drop=True)
+)
+utils.export_table(df, chart_name, tables_folder)
+gs.upload_to_google_sheet(df, utils.REPORT_TABLES_SHEET, chart_number, overwrite=True)
 
 # %%
 # Add magnitude/raised amount data and divide growth by 100
@@ -1587,6 +1691,70 @@ fig
 
 # %%
 AltairSaver.save(
+    fig, f"v{VERSION_NAME}_magnitude_growth_Synthesis_venture_log", filetypes=["html", "svg", "png"]
+)
+
+# %%
+trends_combined_.magnitude.describe(percentiles=[0.25, 0.5, 0.75])
+
+# %%
+# importlib.reload(chart_trends);
+mid_point = trends_combined_.magnitude.median()
+# color gradient width
+chart_trends._epsilon = 0.015
+
+fig = chart_trends.mangitude_vs_growth_chart(
+    trends_combined_,
+    x_limit=12_000,
+    y_limit=10,
+    mid_point=mid_point,
+    baseline_growth=BASELINE_GROWTH,
+    values_label="Average investment per year (£ millions)",
+    text_column='full_titles',
+    width=425,
+    horizontal_log=False,
+    x_min=50,
+)
+
+# Baseline
+baseline_rule = (
+    alt.Chart(pd.DataFrame({"x": [mid_point]}))
+    .mark_rule(strokeDash=[5, 7], size=1, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+baseline_rule_1= (
+    alt.Chart(pd.DataFrame({"x": [192.682263]}))
+    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+baseline_rule_2 = (
+    alt.Chart(pd.DataFrame({"x": [1059.097782]}))
+    .mark_rule(strokeDash=[2, 2], size=.5, color="k")
+    .encode(
+        x=alt.X(
+            "x:Q",
+        )
+    )
+)
+
+fig = fig + baseline_rule + baseline_rule_1 + baseline_rule_2
+fig
+
+# fig = fig + baseline_rule
+# fig
+
+# %%
+AltairSaver.save(
     fig, f"v{VERSION_NAME}_magnitude_growth_Synthesis_venture", filetypes=["html", "svg", "png"]
 )
 
@@ -1623,8 +1791,6 @@ fig_points = (
 fig_points
 
 # %%
-
-# %%
 import altair as alt
 from vega_datasets import data
 
@@ -1650,9 +1816,6 @@ alt.Chart(source.query("price > 100")).transform_filter(
     y=alt.Y('price:Q', scale=alt.Scale(type='linear', domain=(100, 1000))),
     y2 = alt.value(0),
 )
-
-# %% [markdown]
-# ### Checking robotics companies
 
 # %% [markdown]
 # ### Manually added
@@ -1799,3 +1962,102 @@ pu.configure_plots(
         amount_div=1,
     )
 )
+
+# %% [markdown]
+# ### Exporting funds
+
+# %%
+len(DR.company_data)
+
+# %%
+df = (
+    DR.funding_rounds
+    .merge(DR.company_data[['id', 'NAME', 'COMPANY STATUS', 'LAUNCH DATE', 'CLOSING DATE', 'TAGLINE', 'country', 'city', 'PROFILE URL', 'WEBSITE']], how='left')
+    .merge(company_to_taxonomy_df[['id', 'Category', 'level']], how='left')
+)
+
+# %%
+df.sort_values('announced_on')
+
+
+# %%
+def tag_deals(deal_type: str) -> str:
+    if deal_type in utils.EARLY_DEAL_TYPES:
+        return 'early'
+    elif deal_type in utils.LATE_DEAL_TYPES:
+        return 'late'
+    else:
+        return 'n/a'
+
+
+# %%
+df['deal_type'] = df['EACH ROUND TYPE'].apply(tag_deals)
+
+# %%
+df.to_csv(PROJECT_DIR / 'outputs/foodtech/interim/dealroom_foodtech_all_rounds.csv', index=False)
+
+# %%
+list(df.columns)
+
+# %%
+df[['NAME', 'Category', 'level']]
+
+# %% [markdown]
+# ### Investor stakeholders
+
+# %%
+investor_column = 'EACH ROUND INVESTORS'
+
+
+# %%
+def split_investors(text):
+    if type(text) is str:
+        return text.split("++")
+    else:
+        return []
+
+
+# %%
+df = (
+    DR.funding_rounds
+    .merge(DR.company_data[['id', 'NAME', 'COMPANY STATUS', 'LAUNCH DATE', 'CLOSING DATE', 'TAGLINE', 'country', 'city', 'PROFILE URL', 'WEBSITE']], how='left')
+    .merge(company_to_taxonomy_df[['id', 'Category', 'level']], how='left')
+    # .query("country == 'United Kingdom'")
+)
+df = df[-df[investor_column].isnull()]
+df["investors"] = df[investor_column].apply(split_investors)
+df = df.explode("investors")
+
+# %%
+# df.groupby(["investors", 
+
+# %%
+df_investors = (
+    df.groupby(["level", "Category", "investors"], as_index=False)
+    .agg(
+        total_round_amount=("raised_amount_gbp", "sum"),
+        companies=("NAME", lambda x: np.unique(x)),
+    )
+    .sort_values(["level", "Category", "total_round_amount"], ascending=False)
+)
+
+# %%
+df_investors_unique = (
+    df
+    .drop_duplicates(["NAME", "investors"])
+    .groupby(["investors"], as_index=False)
+    .agg(
+        total_round_amount=("raised_amount_gbp", "sum"),
+        total_companies=("NAME", "count"),
+        companies=("NAME", lambda x: np.unique(x)),
+    )
+    .sort_values(["total_companies"], ascending=False)
+)
+
+# %%
+df_investors.to_csv(PROJECT_DIR / "outputs/foodtech/venture_capital/investors/investors_into_UK_startups.csv", index=False)
+
+# %%
+df_investors_unique.to_csv(PROJECT_DIR / "outputs/foodtech/venture_capital/investors/investors_into_startups_unique.csv", index=False)
+
+# %%

@@ -4,11 +4,12 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.13.6
+#       jupytext_version: 1.14.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -360,6 +361,9 @@ df_id_to_term_filtered_ = df_id_to_term_filtered[
 len(df_id_to_term_filtered_)
 
 # %%
+1-(26393/42659)
+
+# %%
 # df_id_to_term.query("`Sub Category` == 'Alt protein'").to_csv(PROJECT_DIR / 'outputs/foodtech/interim/test_guardian_articles.csv', index=False)
 
 # %%
@@ -413,6 +417,9 @@ df_id_to_term = df_id_to_term_filtered_[
 
 # %%
 len(df_id_to_term)
+
+# %%
+1-(12866/26393)
 
 # %% [markdown]
 # ### Check category counts

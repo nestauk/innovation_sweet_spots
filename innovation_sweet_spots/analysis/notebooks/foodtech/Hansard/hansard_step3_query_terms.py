@@ -4,6 +4,7 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
+#     formats: ipynb,py:percent
 #     text_representation:
 #       extension: .py
 #       format_name: percent
@@ -99,6 +100,15 @@ innovation_hits = Query_hansard.find_matches(
 )
 
 # %%
+import importlib
+importlib.reload(query_terms)
+
+## Get speeches with technology terms
+gtr_query_results__, gtr_all_hits__ = query_terms.get_document_hits(
+    Query_hansard, tech_area_terms, tech_areas_to_check, None
+)
+
+# %%
 ## Get speeches with technology terms
 gtr_query_results, gtr_all_hits = query_terms.get_document_hits(
     Query_hansard, tech_area_terms, tech_areas_to_check, food_hits
@@ -106,7 +116,17 @@ gtr_query_results, gtr_all_hits = query_terms.get_document_hits(
 
 # %%
 # Check how many hits we found
+len(gtr_query_results__)
+
+# %%
+2793695-(1393761)
+
+# %%
+# Check how many hits we found
 len(gtr_query_results)
+
+# %%
+1-(61380/1399934)
 
 # %% [markdown]
 # ### Additional filtering: Check that terms are in the same sentence

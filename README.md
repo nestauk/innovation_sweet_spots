@@ -4,13 +4,13 @@
 
 ## :wave: Welcome!
 
-Innovation Sweet Spots is an experimental, data-driven horizon scanning project, led by Nesta's [Discovery Hub](https://www.nesta.org.uk/project/discovery-hub/). Read more about our motivation on [Medium](https://medium.com/@nesta_uk/in-search-of-innovation-sweet-spots-can-data-science-help-us-see-through-tech-hype-1f140f50c18b), and check out our [first report on green technologies](https://www.nesta.org.uk/data-visualisation-and-interactive/innovation-sweet-spots/).
+Innovation Sweet Spots is an experimental, data-driven horizon scanning project, led by Nesta's [Discovery Hub](https://www.nesta.org.uk/project/discovery-hub/). Read more about our motivation on [Medium](https://medium.com/@nesta_uk/in-search-of-innovation-sweet-spots-can-data-science-help-us-see-through-tech-hype-1f140f50c18b), and check out our [first report on green technologies](https://www.nesta.org.uk/data-visualisation-and-interactive/innovation-sweet-spots/). The project code has also been used to analyse [parenting technologies](https://www.nesta.org.uk/project/mapping-parenting-technology/whats-next-for-parenting-tech/), and we're soon publishing a new report on [food tech and innovation](https://www.nesta.org.uk/project/innovation-sweet-spots-food-innovation-obesity-and-food-environments/).
 
 We are building upon Nesta's [Data Analytics Practice](https://www.nesta.org.uk/project/data-analytics/) expertise and previous work on [innovation mapping](https://www.nesta.org.uk/feature/innovation-methods/innovation-mapping/), leveraging data science and machine-learning methods to track the trajectory of innovations and technologies for social good.
 
 By combining insights across several large [datasets](#datasets) that are commonly only analysed in isolation, we paint a multi-dimensional picture of the innovations indicating the resources they are attracting and how they are perceived.
 
-_NB: The codebase and these guidelines are still under development, with several parts of the analyses being presently refactored into modules._
+_NB: This codebase and documentation is still under development, where some of the code is still living in Jupyter notebooks whereas some utilities have already been neatly factored out into modules. Please [contact us](mailto:karlis.kanders@nesta.org.uk) if you're interested in re-using parts of the codebase, and we'll be happy to help._
 
 ## :hammer_and_wrench: Installation
 
@@ -61,16 +61,20 @@ $ conda activate innovation_sweet_spots
 To uncover research, investment and public discourse trends, we are presently using the following data:
 
 - **[Gateway to Research (GtR)](https://gtr.ukri.org/)**: Research projects funded by UKRI
-- **[Crunchbase](https://crunchbase.com/)**: Global company directory
+- **[Crunchbase](https://crunchbase.com/)** or **[Dealroom](https://dealroom.co)**: Venture capital investment databases
 - **[The Guardian news](https://open-platform.theguardian.com/)**: to the best of our knowledge, the only major UK newspaper to make its text freely available for research.
 - **[Hansard](https://zenodo.org/record/4066772#.YXCN1kbYrlw)**: Records of parliamentary debates
 
-All these datasets except Crunchbase are freely available. Note, however, that this project accesses some of these large datasets (namely GtR and Crunchbase) via our internal Nesta database and as such are intended for internal use.
+All these datasets except Crunchbase and Dealroom are freely available. Note, however, that this project accesses some of these large datasets (namely GtR and Crunchbase) via our internal Nesta database and as such are intended for internal use.
 
 In the future, we might add other datasets to our approach.
 
 <details>
   <summary>Click to read data access guidelines</summary>
+
+<br>
+
+_NB: This information is slightly out of date and will be updated soon_
 
 ### Research project and company data
 
@@ -100,9 +104,7 @@ To see examples of using our public discourse analysis tools, check `innovation_
 
 ### Hansard
 
-Coming soon...
-
-  </details>
+Please ask Karlis to access the Hansard dataset. More details coming soon...
 
 ## :handshake: Contributor guidelines
 
