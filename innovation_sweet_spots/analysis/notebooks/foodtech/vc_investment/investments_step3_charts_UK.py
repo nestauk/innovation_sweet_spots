@@ -11,7 +11,7 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.14.1
 #   kernelspec:
-#     display_name: Python 3 (ipykernel)
+#     display_name: innovation_sweet_spots
 #     language: python
 #     name: python3
 # ---
@@ -49,6 +49,9 @@ import itertools
 COLUMN_CATEGORIES = wu.dealroom.COLUMN_CATEGORIES
 
 # %%
+import innovation_sweet_spots.utils.google_sheets as gs
+
+# %%
 # Plotting utils
 import innovation_sweet_spots.utils.altair_save_utils as alt_save
 
@@ -56,6 +59,12 @@ AltairSaver = alt_save.AltairSaver(path=alt_save.FIGURE_PATH + "/foodtech")
 
 # Figure version name
 VERSION_NAME = "Report_VC"
+
+# %%
+# Folder for data tables
+figure_folder = alt_save.FIGURE_PATH + "/foodtech"
+tables_folder = figure_folder + "/tables"
+fig_filetypes = ["html", "svg", "png"]
 
 # %%
 # Initialise a Dealroom wrangler instance
@@ -326,8 +335,19 @@ fig = pu.configure_plots(fig)
 fig
 
 # %%
+chart_number = "Ch2-Fig19"
+chart_name = f"{chart_number}_{VERSION_NAME}_total_early_investment"
+
+df = data_early.rename(
+    columns={'raised_amount_gbp_total': 'Investment (£ millions)'},
+)
+
+utils.export_table(df, chart_name, tables_folder)
+gs.upload_to_google_sheet(df, utils.REPORT_TABLES_SHEET, chart_number, overwrite=True)
+
+# %%
 AltairSaver.save(
-    fig, f"v{VERSION_NAME}_total_early_investment", filetypes=["html", "png"]
+    fig, chart_name, filetypes=fig_filetypes
 )
 
 # %%
@@ -671,7 +691,28 @@ fig_2 = pu.configure_plots(fig_2_rule + fig_2_bars)
 fig_1
 
 # %%
+magnitude_vs_growth
+
+# %%
+chart_number = "Ch2-Fig20"
+chart_name = f"{chart_number}_{VERSION_NAME}_category_early_investment"
+
+df = magnitude_vs_growth.rename(
+    columns={'Magnitude': 'Investment (£ millions)'},
+)
+
+utils.export_table(df, chart_name, tables_folder)
+gs.upload_to_google_sheet(df, utils.REPORT_TABLES_SHEET, chart_number, overwrite=True)
+
+# %%
 fig_2
+
+# %%
+chart_number = "Ch2-Fig21"
+chart_name = f"{chart_number}_{VERSION_NAME}_category_early_investment_growth"
+
+utils.export_table(magnitude_vs_growth, chart_name, tables_folder)
+gs.upload_to_google_sheet(magnitude_vs_growth, utils.REPORT_TABLES_SHEET, chart_number, overwrite=True)
 
 # %%
 AltairSaver.save(
@@ -965,5 +1006,131 @@ AltairSaver.save(
     fig, f"v{VERSION_NAME}_ts_SubCategory_cooking", filetypes=["html", "svg", "png"]
 )
 
+
+# %% [markdown]
+# ## Success predictions
+
+# %%
+folder = PROJECT_DIR / "inputs/data/dr_cb_lookup"
+dr_cb_lookup = pd.read_csv(folder / "dr_cb_lookup.csv")
+company_predictions = pd.read_csv(folder / "all_uk_companies_success_preds.csv")
+
+len(company_predictions)
+
+
+# %%
+company_predictions.success_pred_binary.mean()
+
+# %%
+company_predictions.success_pred_prob.mean()
+
+# %%
+company_predictions.success_pred_prob.median()
+
+# %%
+# %%
+company_to_taxonomy_df_cb = company_to_taxonomy_df.merge(
+    dr_cb_lookup.assign(id_dr=lambda df: df.id_dr.astype(str)),
+    left_on="id",
+    right_on="id_dr",
+    how="left",
+)
+
+
+# %%
+# Coverage
+1 - (
+    company_to_taxonomy_df_cb.drop_duplicates("id").id_cb.isnull().sum()
+    / len(company_to_taxonomy_df_cb)
+)
+
+
+# %%
+# %%
+foodtech_predictions = company_to_taxonomy_df_cb.merge(
+    company_predictions.rename(columns={"id": "id_cb"}), on="id_cb", how="left"
+).merge(DR.company_data[["id", "NAME"]], how="left")
+
+
+# %%
+# %%
+foodtech_predictions_ = foodtech_predictions[
+    [
+        "id",
+        "id_cb",
+        "NAME",
+        "name",
+        "Category",
+        "level",
+        "success_pred_prob",
+        "success_pred_binary",
+    ]
+].copy()
+foodtech_predictions_ = foodtech_predictions_[
+    foodtech_predictions_.success_pred_prob.isnull() == False
+]
+
+# %%
+foodtech_predictions_.head(5)
+
+# %%
+foodtech_predictions_.drop_duplicates('id').success_pred_binary.mean()
+
+# %%
+cat = "Category"
+alt.Chart(
+    foodtech_predictions_.drop_duplicates(["id", cat]).query("level == 'Sub Category'")
+).mark_boxplot(extent="min-max").encode(
+    y=alt.Y(f"{cat}:O", sort="-x"), x="success_pred_prob:Q"
+)
+
+# %%
+# %%
+(
+    foodtech_predictions_.query("level == 'Category'")
+    .drop_duplicates(["id", "Category"])
+    .groupby("Category")
+    .agg(
+        success_fract=("success_pred_binary", "mean"),
+        success_count=("success_pred_binary", "sum"),
+        total=("id", "count"),
+    )
+    .reset_index()
+    .sort_values("success_fract", ascending=False)
+)
+
+# %%
+len(foodtech_predictions_.id.unique())
+
+# %%
+len(foodtech_ids)
+
+# %%
+201 / 497
+
+# %%
+
+# %%
+(
+    foodtech_predictions[foodtech_predictions.success_pred_binary.isnull()]
+    .query("level == 'Category'")
+    .drop_duplicates(["id", "Category"])
+    .groupby("Category")
+    .agg(
+        total=("id", "count"),
+    )
+    .reset_index()
+)
+
+# %%
+foodtech_predictions_.drop_duplicates(["id"]).success_pred_binary.mean()
+
+# %%
+
+# %%
+foodtech_predictions_.drop_duplicates(["id"]).success_pred_prob.mean()
+
+# %%
+foodtech_predictions_.drop_duplicates(["id"]).success_pred_prob.median()
 
 # %%

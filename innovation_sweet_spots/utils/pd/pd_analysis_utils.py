@@ -24,8 +24,24 @@ from tqdm import tqdm
 from innovation_sweet_spots import logger
 from bertopic._bertopic import BERTopic
 
+
+### Dependecies for calculating simpler co-located unigram frequencies
+import re
+import nltk
+
+nltk.download("wordnet")
+nltk.download("omw-1.4")
+from nltk.stem import WordNetLemmatizer
+
+lemmatizer = WordNetLemmatizer()
+from nltk.corpus import stopwords
+import nltk.data
+
+nltk.download("punkt")
+tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
+
 MIN_YEAR = 2000
-MAX_YEAR = 2022
+MAX_YEAR = 2023
 
 # Load a language model
 NLP = spacy.load("en_core_web_sm")
@@ -44,6 +60,7 @@ def get_guardian_articles(
     query_identifier: str = "",
     save_outputs: bool = False,
     outputs_path=DEFAULT_OUTPUTS_DIR,
+    api_key: str = guardian.API_KEY,
 ):
     """
     Fetches articles from the Guardian API and filters them based on category
@@ -55,7 +72,7 @@ def get_guardian_articles(
     """
     # For each search term/phrase, download corresponding articles
     articles = [
-        guardian.search_content(search_term, use_cached=use_cached)
+        guardian.search_content(search_term, api_key=api_key, use_cached=use_cached)
         for search_term in search_terms
     ]
     # Combine results across set of search terms
@@ -763,3 +780,116 @@ class DiscourseAnalysis:
                     tooltip="mentions:Q",
                 )
             )
+
+    #### Simple co-located unigram frequencies utils
+    def analyse_colocated_unigrams(self):
+        """Analyse the frequency of co-located unigrams"""
+        self.lemmatised_sentences = get_sentences(self.document_text, self.search_terms)
+        self.lemmas = get_lemmas(self.lemmatised_sentences)
+        self.good_lemmas = filtered_lemmas(self.lemmas)
+        self.lemmas_ts = get_lemmas_ts(self.lemmas, self.good_lemmas)
+        return self.good_lemmas
+
+    def plot_colocated_unigrams(self, term: str):
+        """Plot the frequency of co-located unigrams for a specified term"""
+        plot_lemmas_mentions(self.lemmas_ts, term)
+
+
+def find_sentences_with_terms(text, terms, all_terms: bool = True):
+    """Finds sentences which contain specified terms"""
+    # split text into sentences
+    sentences = tokenizer.tokenize(text)
+    # keep sentences with terms
+    sentences_with_terms = []
+    # number of terms in the query
+    n_terms = len(terms)
+    for sentence in sentences:
+        terms_detected = 0
+        # check all terms
+        for term in terms:
+            if term in sentence.lower():
+                terms_detected += 1
+        # check if all terms were found
+        if (
+            all_terms
+            and terms_detected == n_terms
+            or not all_terms
+            and terms_detected > 0
+        ):
+            sentences_with_terms.append(sentence)
+    return sentences_with_terms
+
+
+def sentence_to_lemmas(sentence):
+    if type(sentence) is str:
+        return [
+            lemmatizer.lemmatize(re.sub(r"\W+", "", w))
+            for w in sentence.lower().split()
+        ]
+    else:
+        return [""]
+
+
+def get_sentences(df: pd.DataFrame, terms):
+    df_text = df[["id", "year", "text"]].copy()
+    df_text["sentences"] = df_text.text.apply(
+        lambda x: find_sentences_with_terms(x, terms, all_terms=False)
+    )
+    df_sentences = df_text.explode("sentences")
+    df_sentences["lemmas"] = df_sentences["sentences"].apply(sentence_to_lemmas)
+    df_sentences["sentence_id"] = list(range(0, len(df_sentences)))
+    return df_sentences
+
+
+def get_all_sentences(df):
+    df_text = df[["id", "year", "text"]].copy()
+    df_text["sentences"] = df_text.text.apply(lambda x: tokenizer.tokenize(x))
+    df_sentences = df_text.explode("sentences")
+    df_sentences["lemmas"] = df_sentences["sentences"].apply(sentence_to_lemmas)
+    df_sentences["sentence_id"] = list(range(0, len(df_sentences)))
+    return df_sentences
+
+
+def get_lemmas(df_sentences):
+    return (
+        df_sentences[["id", "year", "lemmas", "sentence_id"]]
+        .explode("lemmas")
+        .assign(count=1)
+    )
+
+
+def filtered_lemmas(df_lemmas):
+    df_lemmas_included = (
+        df_lemmas.groupby(["lemmas"], as_index=False)
+        .agg(counts=("count", "count"))
+        .query("counts > 10")
+        .query("lemmas not in @stopwords.words('english')")
+        .query("lemmas != ''")
+    )
+    return df_lemmas_included
+
+
+def get_lemmas_ts(df_lemmas, df_lemmas_included):
+    return (
+        df_lemmas.groupby(["lemmas", "year"], as_index=False)
+        .count()
+        .astype({"year": str})
+        .query("lemmas in @df_lemmas_included.lemmas.to_list()")
+    )
+
+
+def plot_lemmas_mentions(df_lemmas_ts, co_term):
+    df_ts = impute_empty_periods(
+        df_lemmas_ts.query("lemmas == @co_term").assign(
+            period=lambda df: pd.to_datetime(df.year)
+        ),
+        "period",
+        "Y",
+        MIN_YEAR,
+        MAX_YEAR,
+    ).assign(year=lambda df: df.period.dt.year)
+    return (
+        alt.Chart(df_ts)
+        .mark_line()
+        .encode(x="year", y="count", tooltip=["year", "count"])
+    )

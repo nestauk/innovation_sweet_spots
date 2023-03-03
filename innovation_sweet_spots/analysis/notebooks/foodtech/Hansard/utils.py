@@ -6,6 +6,7 @@ nlp = tpu.setup_spacy_model()
 import nltk.data
 
 tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
+REPORT_TABLES_SHEET = "1P6Qr2qDVf9JZxakksEhUhyrjDr64XNm7A9aFF5hQ0PE"
 
 
 def remove_space_after_comma(text):

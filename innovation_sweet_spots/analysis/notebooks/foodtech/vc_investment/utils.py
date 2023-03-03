@@ -19,12 +19,13 @@ from collections import defaultdict
 import itertools
 import numpy as np
 
-# EXCLUDED_DEAL_TYPES = [
-#     "GRANT",
-#     '-',
-#     # np.nan,
-#     'ICO',
-# ]
+
+def export_table(df: pd.DataFrame, chart_name: str, tables_folder) -> None:
+    """Exports a table to a csv file"""
+    df.to_csv(tables_folder + "/" + chart_name + ".csv", index=False)
+
+
+REPORT_TABLES_SHEET = "1P6Qr2qDVf9JZxakksEhUhyrjDr64XNm7A9aFF5hQ0PE"
 
 EARLY_DEAL_TYPES = [
     "SERIES B",

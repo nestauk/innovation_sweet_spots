@@ -109,14 +109,14 @@ def get_foodtech_reviewed_nihr(
 
 
 def get_foodtech_heat_map(
-    from_local: bool = True, save_locally: bool = True
+    from_local: bool = True, save_locally: bool = True, wks_name: str="heatmap",
 ) -> pd.DataFrame:
     """Get heatmap data for food tech project"""
     return (
         get_sheet_data(
             local_path=PROJECT_DIR / "outputs/foodtech/interim/foodtech_heatmap.csv",
             google_sheet_id="1SX_5jBSNtegyxVFo4CGvBoV0pPykZ0EKz8hui0kpLSo",
-            wks_name="heatmap",
+            wks_name=wks_name,
             from_local=from_local,
             save_locally=save_locally,
         )
