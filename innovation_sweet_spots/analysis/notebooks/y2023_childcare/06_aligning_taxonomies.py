@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: Python 3
 #     language: python
@@ -22,16 +22,17 @@ from innovation_sweet_spots.utils import google_sheets as gs
 import utils
 
 import importlib
-importlib.reload(utils);
+
+importlib.reload(utils)
 import json
 
 # %%
 # Load taxonomy
-taxonomy_df = gs.download_google_sheet(utils.AFS_GOOGLE_SHEET_ID, 'taxonomy')
+taxonomy_df = gs.download_google_sheet(utils.AFS_GOOGLE_SHEET_ID, "taxonomy")
 
 # %%
 # Load existing data
-initial_list_df = gs.download_google_sheet(utils.AFS_GOOGLE_SHEET_ID, 'initial_list')
+initial_list_df = gs.download_google_sheet(utils.AFS_GOOGLE_SHEET_ID, "initial_list")
 
 # %% [markdown]
 # ## Our taxonomy
@@ -40,22 +41,22 @@ initial_list_df = gs.download_google_sheet(utils.AFS_GOOGLE_SHEET_ID, 'initial_l
 taxonomy_df.head(2)
 
 # %%
-utils.get_taxonomy_dict(taxonomy_df, 'theme', 'subtheme')
+utils.get_taxonomy_dict(taxonomy_df, "theme", "subtheme")
 
 # %% [markdown]
 # ## Existing labels
 
 # %%
-initial_categories = utils.get_taxonomy_dict(initial_list_df, 'source', 'category')
+initial_categories = utils.get_taxonomy_dict(initial_list_df, "source", "category")
 
 # Print pretty json
 print(json.dumps(initial_categories, indent=4))
 
 # %%
 initial_categories_df = (
-    initial_list_df[['source', 'category']]
+    initial_list_df[["source", "category"]]
     .drop_duplicates()
-    .sort_values(['source', 'category'])
+    .sort_values(["source", "category"])
 )
 initial_categories_df.head(2)
 # gs.upload_to_google_sheet(initial_categories_df, utils.AFS_GOOGLE_SHEET_ID, 'taxonomy_alignment')
@@ -82,17 +83,21 @@ q_industries = QueryEmbeddings(industry_vectors, CB.industries, embedding_model)
 q_groups = QueryEmbeddings(group_vectors, CB.industry_groups, embedding_model)
 
 
-
 # %%
 ## Iterate through taxonomy keywords, fetch top 25 most similar industries and count them up
 import pandas as pd
+
 # import defaultdict
 from collections import defaultdict
 
 # Take each column of theme, subtheme and keywords, and combine into one list
-taxonomy_keywords = taxonomy_df.theme.to_list() + taxonomy_df.subtheme.to_list() + taxonomy_df.keywords.to_list()
 taxonomy_keywords = (
-    pd.DataFrame(data={'keywords': taxonomy_keywords})
+    taxonomy_df.theme.to_list()
+    + taxonomy_df.subtheme.to_list()
+    + taxonomy_df.keywords.to_list()
+)
+taxonomy_keywords = (
+    pd.DataFrame(data={"keywords": taxonomy_keywords})
     .keywords.str.lower()
     .drop_duplicates()
     .sort_values()
@@ -109,8 +114,9 @@ for keyword in taxonomy_keywords:
 
 # %%
 (
-    pd.DataFrame(data={'industry': industry_counts.keys(), 'counts': industry_counts.values()})
-    .sort_values('counts', ascending=False)
+    pd.DataFrame(
+        data={"industry": industry_counts.keys(), "counts": industry_counts.values()}
+    ).sort_values("counts", ascending=False)
 ).iloc[51:100]
 
 # %%
@@ -127,6 +133,7 @@ query = eu.QueryEmbeddings(
     model=concept_embeddings.model,
 )
 
+
 def find_most_similar_concepts(
     query: eu.QueryEmbeddings, search_term: str
 ) -> pd.DataFrame:
@@ -136,8 +143,3 @@ def find_most_similar_concepts(
         .rename(columns={"text": "openalex_id"})
         .merge(concepts, how="left")
     )
-
-
-
-# %%
-CB = wu.

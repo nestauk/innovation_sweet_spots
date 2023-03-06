@@ -26,6 +26,7 @@ CB = CrunchbaseWrangler()
 # Data parameters
 COLUMNS = ["short_description", "long_description", "_industries"]
 
+
 # %%
 def create_industries_string(industries: List, suffix: str = "Industries: ") -> str:
     """Creates a string of industries for a given organisation"""
@@ -89,15 +90,15 @@ def process_company_description(text: str, company_name: str, nlp) -> str:
     """Processes a company description"""
     if type(text) is str:
         return pipe(
-                text,
-                lambda x: replace_company_names(x, company_name),
-                lambda x: remove_websites(x),
-                lambda x: remove_locations_orgs_and_people_names(x, nlp),
-                lambda x: tcu.unpad_punctuation(x),
-                lambda x: remove_parenthesis(x),
-                lambda x: remove_multiple_puncts(x),
-                lambda x: fix_multiple_spaces(x),
-            )
+            text,
+            lambda x: replace_company_names(x, company_name),
+            lambda x: remove_websites(x),
+            lambda x: remove_locations_orgs_and_people_names(x, nlp),
+            lambda x: tcu.unpad_punctuation(x),
+            lambda x: remove_parenthesis(x),
+            lambda x: remove_multiple_puncts(x),
+            lambda x: fix_multiple_spaces(x),
+        )
     else:
         return ""
 
@@ -107,7 +108,6 @@ def process_descriptions(
     nrows: int = None,
     last_index: str = None,
 ) -> None:
-
     # Check the last index
     try:
         last_index = (

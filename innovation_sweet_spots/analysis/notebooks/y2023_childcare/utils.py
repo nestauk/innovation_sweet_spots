@@ -1,19 +1,35 @@
+# %%
 """
 This file contains the utils and constants used in the notebooks
 """
 from innovation_sweet_spots import PROJECT_DIR
 import pandas as pd
 from typing import Iterable
+import innovation_sweet_spots.getters.google_sheets as gs
+from innovation_sweet_spots.utils.io import save_pickle, load_pickle
+from innovation_sweet_spots.analysis.notebooks.review_labelling.utils import df_to_hf_ds
+from innovation_sweet_spots.getters.preprocessed import (
+    get_preprocessed_crunchbase_descriptions,
+)
+from sklearn.model_selection import train_test_split
 
+# %%
 PROJECT_INPUTS_DIR = PROJECT_DIR / "inputs/data/misc/2023_childcare"
 PARENT_TECH_DIR = PROJECT_INPUTS_DIR / "parenting_tech_proj"
 
+# %%
+# Training dataset path
+SAVE_DS_PATH = PROJECT_DIR / "outputs/2023_childcare/model/dataset_v2023_03_03"
+
+# %%
 # Working document
 AFS_GOOGLE_SHEET_ID = "14LOSu8QurLH9kwEmWM-_TDCAbew4_nncR7BQn04CP38"
 
+# %%
 # Worksheet for the HolonIQ data
 GOOGLE_SHEET_TAB = "HolonIQ_taxonomy"
 
+# %%
 # Parenting tech project data, including rejected companies
 CHILDREN_COMPANIES_CSV = (
     "cb_companies_child_ed_v2022_04_27 - cb_companies_child_ed_v2022_04_27.csv"
@@ -25,20 +41,24 @@ PARENTING_COMPANIES_CSV = (
 GOOGLE_SHEET_ID = "1bZjEL13FerZU9GUD0bHCnsYjOUgIYaPMWx7Qb2WLZCU"
 GOOGLE_WORKSHEET_NAME = "startups"
 
+# %%
 # Another custom list with FamTech companies
 FAMTECH = "fam-tech-startups-18-01-2023.csv"
 
+# %%
 # Text path
 COMPANY_DESCRIPTIONS_PATH = (
     PROJECT_DIR / "outputs/preprocessed/texts/cb_descriptions_formatted.csv"
 )
 
+# %%
 ## Keyword search parameters
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 from innovation_sweet_spots.analysis.query_categories import query_cb_categories
 from typing import Iterator
 
 
+# %%
 def query_categories(keywords: Iterator[str], CbWrangler: CrunchbaseWrangler) -> set:
     """Helper wrapper function for querying companies by keywords"""
     return set(
@@ -48,6 +68,7 @@ def query_categories(keywords: Iterator[str], CbWrangler: CrunchbaseWrangler) ->
     )
 
 
+# %%
 def get_taxonomy_dict(taxonomy_df: pd.DataFrame, level_1: str, level_2: str) -> dict:
     """
     Extracts a dictionary of taxonomy categories and subcategories from a dataframe
@@ -69,12 +90,15 @@ def get_taxonomy_dict(taxonomy_df: pd.DataFrame, level_1: str, level_2: str) -> 
     return taxonomy_dict
 
 
+# %%
 import innovation_sweet_spots.utils.text_processing_utils as tpu
 from typing import Iterable
 
+# %% [markdown]
 # nlp = tpu.setup_spacy_model()
 
 
+# %%
 def process_keyword_string(keyword_string: str) -> str:
     """
     Process a keyword string to remove punctuation and make it lowercase
@@ -82,16 +106,19 @@ def process_keyword_string(keyword_string: str) -> str:
     return keyword_string.lower().replace("[^\w\s]", " ").replace("\s+", " ").strip()
 
 
+# %%
 def add_spaces(keyword_string: str) -> str:
     """Add spaces to the beginning and end of a keyword string"""
     return " " + keyword_string + " "
 
 
+# %%
 def create_fake_plural(keyword_string: str) -> str:
     """Add an 's' to the end of a keyword string to create a fake plural"""
     return keyword_string + "s"
 
 
+# %%
 def process_keywords(
     terms_df: pd.DataFrame, keywords_column: str, add_plurals: bool = False
 ) -> pd.DataFrame:
@@ -130,6 +157,7 @@ def process_keywords(
     return terms_df
 
 
+# %%
 # Function that outputs a list of European countries
 def list_of_countries_in_europe() -> Iterable[str]:
     return [
@@ -165,6 +193,7 @@ def list_of_countries_in_europe() -> Iterable[str]:
     ]
 
 
+# %%
 def list_of_countries_in_north_america() -> Iterable[str]:
     return [
         "United States",
@@ -172,6 +201,7 @@ def list_of_countries_in_north_america() -> Iterable[str]:
     ]
 
 
+# %%
 list_of_select_countries = (
     list_of_countries_in_europe()
     + list_of_countries_in_north_america()
@@ -179,6 +209,7 @@ list_of_select_countries = (
 )
 
 
+# %%
 def investibility_indicator(
     df: pd.DataFrame, funding_threshold_gbp: float = 1
 ) -> pd.DataFrame:
@@ -187,6 +218,7 @@ def investibility_indicator(
     return df
 
 
+# %%
 # Get last rounds for each org_id
 def get_last_rounds(funding_rounds: pd.DataFrame) -> pd.DataFrame:
     """
@@ -232,6 +264,7 @@ def get_last_rounds(funding_rounds: pd.DataFrame) -> pd.DataFrame:
     ]
 
 
+# %%
 # Get rounds since 2020
 def get_last_rounds_since_2020(funding_rounds: pd.DataFrame) -> pd.DataFrame:
     """
@@ -261,6 +294,7 @@ def get_last_rounds_since_2020(funding_rounds: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+# %%
 # Total funding
 def get_total_funding(funding_rounds: pd.DataFrame) -> pd.DataFrame:
     """
@@ -281,3 +315,73 @@ def get_total_funding(funding_rounds: pd.DataFrame) -> pd.DataFrame:
         # convert funding to millions
         .assign(total_funding_gbp=lambda x: x.total_funding_gbp / 1e3)
     )
+
+
+# %%
+# Supervised ML utils
+def prepare_training_data():
+    # Get longlist of companies
+    longlist_df = gs.download_google_sheet(
+        google_sheet_id=AFS_GOOGLE_SHEET_ID,
+        wks_name="list_v2",
+    )
+    # Load a table with processed company descriptions
+    processed_texts = get_preprocessed_crunchbase_descriptions()
+
+    # Process data for supervised ML
+    data = longlist_df[["cb_id", "relevant", "cluster_relevance"]].copy()
+
+    # Select a random 50% sample of 'noise' clusters and set their relevance to 0
+    # This is somewhat ad-hoc, and we could also not use the noise clusters at all here
+    companies_in_noise_clusters = (
+        data.query('cluster_relevance == "noise"')
+        .query('relevant != "1"')
+        .sample(frac=0.5, random_state=42)
+    )
+    data.loc[companies_in_noise_clusters.index, "relevant"] = "0"
+
+    # Add processed company descriptions
+    data = (
+        data.rename({"cb_id": "id"}, axis=1)
+        .merge(processed_texts, on="id")
+        .drop(["name", "cluster_relevance"], axis=1)
+        .rename({"description": "text"}, axis=1)
+    )[["id", "text", "relevant"]]
+
+    # Create a training set and a test set out from the labelled data,
+    # with 80% of the relevant and not-relevant labels in the training set
+    data_labelled = data.query('relevant != "not evaluated"').astype(
+        {"relevant": "int"}
+    )
+
+    # Unlabelled data, to be labelled by the model
+    data_unlabelled = (
+        data.query('relevant == "not evaluated"')
+        # make all values in relevant null
+        .assign(relevant=0)
+    )
+
+    train_df, test_df = train_test_split(
+        data_labelled,
+        test_size=0.2,
+        stratify=data_labelled["relevant"],
+        random_state=42,
+    )
+
+    # Split column relevant into relevant and not_relevant
+    train_df = train_df.assign(not_relevant=lambda x: 1 - x["relevant"])
+    test_df = test_df.assign(not_relevant=lambda x: 1 - x["relevant"])
+    data_unlabelled = data_unlabelled.assign(not_relevant=0)
+
+    # Make datasets
+    train_ds = df_to_hf_ds(train_df)
+    test_ds = df_to_hf_ds(test_df)
+    to_review_ds = df_to_hf_ds(data_unlabelled)
+
+    # Save datasets
+    save_pickle(train_ds, SAVE_DS_PATH / "train_ds.pickle")
+    save_pickle(test_ds, SAVE_DS_PATH / "test_ds.pickle")
+    save_pickle(to_review_ds, SAVE_DS_PATH / "to_review_ds.pickle")
+
+
+# %%

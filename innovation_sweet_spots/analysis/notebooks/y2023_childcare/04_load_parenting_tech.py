@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: innovation_sweet_spots
 #     language: python
@@ -37,6 +37,7 @@ CB = CrunchbaseWrangler()
 
 # %% [markdown]
 # ## Import parenting tech project results
+
 
 # %%
 def get_parent_tech_df():
@@ -233,6 +234,7 @@ funding_rounds = CB.get_funding_rounds(
 # - Raised funding since 2020
 # - Number of rounds since 2020
 # - Total raised funding
+
 
 # %%
 def investibility_indicator(

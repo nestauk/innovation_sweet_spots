@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: innovation_sweet_spots
 #     language: python
@@ -38,7 +38,10 @@ COLUMNS_TO_EXPORT = [
 
 # %%
 import pandas as pd
-company_list_funding = pd.read_csv(utils.PROJECT_INPUTS_DIR / 'init_company_list_funding.csv')
+
+company_list_funding = pd.read_csv(
+    utils.PROJECT_INPUTS_DIR / "init_company_list_funding.csv"
+)
 
 # %%
 already_known_ids = set(company_list_funding.cb_id.to_list())
@@ -46,12 +49,13 @@ len(already_known_ids)
 
 # %%
 import importlib
+
 importlib.reload(utils)
 
 # %%
 # Fetch companies (identifiers) in categories related to children
 # childcare_industry_ids = utils.query_categories(utils.CHILDCARE_INDUSTRIES, CB)
-childcare_industry_ids = utils.query_categories(['child care'], CB)
+childcare_industry_ids = utils.query_categories(["child care"], CB)
 
 # %%
 new_ids = childcare_industry_ids.difference(already_known_ids)

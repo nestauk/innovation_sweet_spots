@@ -7,7 +7,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.14.1
+#       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: innovation_sweet_spots
 #     language: python
@@ -26,6 +26,7 @@ from typing import List
 import numpy.typing as npt
 
 MODEL_NAME = "sentence-transformers/multi-qa-mpnet-base-dot-v1"
+
 
 class EmbeddingFlow(FlowSpec):
     """
@@ -65,11 +66,12 @@ class EmbeddingFlow(FlowSpec):
         ].to_list()
 
         self.next(self.embed_descriptions)
-    
+
     @step
     def embed_descriptions(self):
         """Apply transformer to Crunchbase descriptions"""
         from sentence_transformers import SentenceTransformer
+
         # from torch import cuda
 
         # if not cuda.is_available():
@@ -80,7 +82,6 @@ class EmbeddingFlow(FlowSpec):
         self.embeddings = encoder.encode(self.org_descriptions)
 
         self.next(self.end)
-        
 
     @step
     def end(self):
@@ -88,12 +89,6 @@ class EmbeddingFlow(FlowSpec):
         End the flow
         """
         pass
-
-
-
-
-
-
 
 
 @project(name="industrial_taxonomy")
@@ -185,15 +180,10 @@ if __name__ == "__main__":
     GlassEmbed()
 
 
-
-
-
-
 from metaflow import FlowSpec, Parameter, step
 
 
 class Tokeniser(FlowSpec):
-
     test_mode = Parameter(
         "test-mode",
         help="Whether to run in test mode (on a small subset of data)",
@@ -276,5 +266,3 @@ class Tokeniser(FlowSpec):
 # %%
 if __name__ == "__main__":
     Tokeniser()
-
-
