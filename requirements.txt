@@ -35,3 +35,6 @@ chromedriver-autoinstaller
 #selenium
 df2gspread
 openpyxl
+seaborn
+datasets
+umap-learn

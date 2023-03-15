@@ -4,6 +4,7 @@ This file contains the utils and constants used in the notebooks
 """
 from innovation_sweet_spots import PROJECT_DIR
 import pandas as pd
+import numpy as np
 from typing import Iterable
 import innovation_sweet_spots.getters.google_sheets as gs
 from innovation_sweet_spots.utils.io import save_pickle, load_pickle
@@ -357,8 +358,8 @@ def prepare_training_data():
     # Unlabelled data, to be labelled by the model
     data_unlabelled = (
         data.query('relevant == "not evaluated"')
-        # make all values in relevant null
-        .assign(relevant=0)
+        # make values relevant or not randomly
+        .assign(relevant=lambda x: np.random.randint(2, size=len(x)))
     )
 
     train_df, test_df = train_test_split(
@@ -377,6 +378,11 @@ def prepare_training_data():
     train_ds = df_to_hf_ds(train_df)
     test_ds = df_to_hf_ds(test_df)
     to_review_ds = df_to_hf_ds(data_unlabelled)
+
+    # Save dataset tables
+    save_pickle(train_df, SAVE_DS_PATH / "train_df.pickle")
+    save_pickle(test_df, SAVE_DS_PATH / "test_df.pickle")
+    save_pickle(data_unlabelled, SAVE_DS_PATH / "to_review_df.pickle")
 
     # Save datasets
     save_pickle(train_ds, SAVE_DS_PATH / "train_ds.pickle")
