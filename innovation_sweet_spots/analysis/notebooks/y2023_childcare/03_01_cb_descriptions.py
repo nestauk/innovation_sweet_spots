@@ -1,4 +1,17 @@
-# %%
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     comment_magics: true
+#     formats: ipynb,py
+#     text_representation:
+#       extension: .py
+#       format_name: light
+#       format_version: '1.5'
+#       jupytext_version: 1.14.5
+# ---
+
+# +
 import typer
 from innovation_sweet_spots import PROJECT_DIR, logging
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
@@ -15,11 +28,12 @@ import spacy
 import csv
 import pandas as pd
 
+# -
 
-# %%
+
 OUTPUT_FILE = PROJECT_DIR / "outputs/preprocessed/texts/cb_descriptions_formatted.csv"
 
-# %%
+# +
 NLP = spacy.load("en_core_web_sm")
 CB = CrunchbaseWrangler()
 
@@ -27,7 +41,7 @@ CB = CrunchbaseWrangler()
 COLUMNS = ["short_description", "long_description", "_industries"]
 
 
-# %%
+# +
 def create_industries_string(industries: List, suffix: str = "Industries: ") -> str:
     """Creates a string of industries for a given organisation"""
     # Keep only strings from the input list
@@ -103,7 +117,9 @@ def process_company_description(text: str, company_name: str, nlp) -> str:
         return ""
 
 
-# %%
+# -
+
+
 def process_descriptions(
     nrows: int = None,
     last_index: str = None,
@@ -164,6 +180,5 @@ def process_descriptions(
                     logging.info(f"Processed {i} rows")
 
 
-# %%
 if __name__ == "__main__":
     typer.run(process_descriptions)

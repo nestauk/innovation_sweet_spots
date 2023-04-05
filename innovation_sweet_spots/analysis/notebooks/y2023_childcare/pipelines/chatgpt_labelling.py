@@ -10,13 +10,13 @@ import innovation_sweet_spots.getters.google_sheets as gs
 from innovation_sweet_spots.getters.preprocessed import (
     get_preprocessed_crunchbase_descriptions,
 )
-from innovation_sweet_spots.utils.io import read_json
 import openai
 import innovation_sweet_spots.utils.openai as openai_utils
 
 openai.api_key = openai_utils.get_api_key()
 import pandas as pd
 import typer
+import csv
 
 # Name of the session
 SESSION = "v2023_03_14"
@@ -28,6 +28,16 @@ CB_IDS_PATH = (
 OUTPUT_FILE = (
     PROJECT_DIR / f"outputs/2023_childcare/interim/openai/chatgpt_labels_{SESSION}.csv"
 )
+# Fields/columns of the outputs
+FIELDS = [
+    "id",
+    "object",
+    "created",
+    "model",
+    "usage",
+    "choices",
+    "cb_id",
+]
 
 PROMPT = [
     {
@@ -66,7 +76,7 @@ def run_chatgpt_labelling(
     # Fetch list of companies we will label in this session
     if test:
         cb_ids_to_check = (
-            pd.read_csv(CB_IDS_PATH).cb_id.to_list().sample(n_test, random_state=42)
+            pd.read_csv(CB_IDS_PATH).cb_id.sample(n_test, random_state=42).to_list()
         )
         logging.info(f"TEST SESSION: Labelling {n_test} companies")
     else:
@@ -78,9 +88,7 @@ def run_chatgpt_labelling(
     # Fetch table with labelled companies and cross-check with the cb_id list
     if OUTPUT_FILE.exists():
         # Load table with labelled companies
-        outputs_df = pd.read_csv(
-            OUTPUT_FILE, names=["cb_id", "chatgpt_output"], header=None
-        )
+        outputs_df = pd.read_csv(OUTPUT_FILE, names=FIELDS, header=None)
         # Remove companies that are already labelled
         cb_ids_to_check = list(set(cb_ids_to_check) - set(outputs_df.cb_id.to_list()))
         logging.info(f"{n_ids_total-len(cb_ids_to_check)} companies already labelled")
@@ -114,20 +122,22 @@ def run_chatgpt_labelling(
 
     # Stream outputs to the output csv table
     with open(OUTPUT_FILE, "a") as output_file:
+        writer = csv.DictWriter(output_file, FIELDS)
         for query in queries:
             chatgpt_output = openai.ChatCompletion.create(
                 model="gpt-3.5-turbo",
-                messages=query,
+                messages=queries[query],
                 temperature=0.5,
                 max_tokens=1000,
             ).to_dict()
-            output_file.write(f"{query},{str(chatgpt_output)}\n")
+            chatgpt_output.update({"cb_id": query})
+            writer.writerow(chatgpt_output)
             # Print output
             try:
                 print(
                     f"company_name: {company_texts.query('cb_id == @query')['company_name'].values[0]}"
                 )
-                print(f"user: {query[-1]['content']}")
+                print(f"user: {queries[query][-1]['content']}")
                 print(
                     f"assistant: {chatgpt_output['choices'][0]['message']['content']}"
                 )

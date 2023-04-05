@@ -1,4 +1,16 @@
-# %%
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     comment_magics: true
+#     formats: ipynb,py
+#     text_representation:
+#       extension: .py
+#       format_name: light
+#       format_version: '1.5'
+#       jupytext_version: 1.14.5
+# ---
+
 """
 This file contains the utils and constants used in the notebooks
 """
@@ -14,23 +26,18 @@ from innovation_sweet_spots.getters.preprocessed import (
 )
 from sklearn.model_selection import train_test_split
 
-# %%
 PROJECT_INPUTS_DIR = PROJECT_DIR / "inputs/data/misc/2023_childcare"
 PARENT_TECH_DIR = PROJECT_INPUTS_DIR / "parenting_tech_proj"
 
-# %%
 # Training dataset path
 SAVE_DS_PATH = PROJECT_DIR / "outputs/2023_childcare/model/dataset_v2023_03_03"
 
-# %%
 # Working document
 AFS_GOOGLE_SHEET_ID = "14LOSu8QurLH9kwEmWM-_TDCAbew4_nncR7BQn04CP38"
 
-# %%
 # Worksheet for the HolonIQ data
 GOOGLE_SHEET_TAB = "HolonIQ_taxonomy"
 
-# %%
 # Parenting tech project data, including rejected companies
 CHILDREN_COMPANIES_CSV = (
     "cb_companies_child_ed_v2022_04_27 - cb_companies_child_ed_v2022_04_27.csv"
@@ -42,24 +49,20 @@ PARENTING_COMPANIES_CSV = (
 GOOGLE_SHEET_ID = "1bZjEL13FerZU9GUD0bHCnsYjOUgIYaPMWx7Qb2WLZCU"
 GOOGLE_WORKSHEET_NAME = "startups"
 
-# %%
 # Another custom list with FamTech companies
 FAMTECH = "fam-tech-startups-18-01-2023.csv"
 
-# %%
 # Text path
 COMPANY_DESCRIPTIONS_PATH = (
     PROJECT_DIR / "outputs/preprocessed/texts/cb_descriptions_formatted.csv"
 )
 
-# %%
 ## Keyword search parameters
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 from innovation_sweet_spots.analysis.query_categories import query_cb_categories
 from typing import Iterator
 
 
-# %%
 def query_categories(keywords: Iterator[str], CbWrangler: CrunchbaseWrangler) -> set:
     """Helper wrapper function for querying companies by keywords"""
     return set(
@@ -69,7 +72,6 @@ def query_categories(keywords: Iterator[str], CbWrangler: CrunchbaseWrangler) ->
     )
 
 
-# %%
 def get_taxonomy_dict(taxonomy_df: pd.DataFrame, level_1: str, level_2: str) -> dict:
     """
     Extracts a dictionary of taxonomy categories and subcategories from a dataframe
@@ -91,15 +93,12 @@ def get_taxonomy_dict(taxonomy_df: pd.DataFrame, level_1: str, level_2: str) -> 
     return taxonomy_dict
 
 
-# %%
 import innovation_sweet_spots.utils.text_processing_utils as tpu
 from typing import Iterable
 
-# %% [markdown]
 # nlp = tpu.setup_spacy_model()
 
 
-# %%
 def process_keyword_string(keyword_string: str) -> str:
     """
     Process a keyword string to remove punctuation and make it lowercase
@@ -107,19 +106,16 @@ def process_keyword_string(keyword_string: str) -> str:
     return keyword_string.lower().replace("[^\w\s]", " ").replace("\s+", " ").strip()
 
 
-# %%
 def add_spaces(keyword_string: str) -> str:
     """Add spaces to the beginning and end of a keyword string"""
     return " " + keyword_string + " "
 
 
-# %%
 def create_fake_plural(keyword_string: str) -> str:
     """Add an 's' to the end of a keyword string to create a fake plural"""
     return keyword_string + "s"
 
 
-# %%
 def process_keywords(
     terms_df: pd.DataFrame, keywords_column: str, add_plurals: bool = False
 ) -> pd.DataFrame:
@@ -158,7 +154,6 @@ def process_keywords(
     return terms_df
 
 
-# %%
 # Function that outputs a list of European countries
 def list_of_countries_in_europe() -> Iterable[str]:
     return [
@@ -194,7 +189,6 @@ def list_of_countries_in_europe() -> Iterable[str]:
     ]
 
 
-# %%
 def list_of_countries_in_north_america() -> Iterable[str]:
     return [
         "United States",
@@ -202,7 +196,6 @@ def list_of_countries_in_north_america() -> Iterable[str]:
     ]
 
 
-# %%
 list_of_select_countries = (
     list_of_countries_in_europe()
     + list_of_countries_in_north_america()
@@ -210,7 +203,6 @@ list_of_select_countries = (
 )
 
 
-# %%
 def investibility_indicator(
     df: pd.DataFrame, funding_threshold_gbp: float = 1
 ) -> pd.DataFrame:
@@ -219,7 +211,6 @@ def investibility_indicator(
     return df
 
 
-# %%
 # Get last rounds for each org_id
 def get_last_rounds(funding_rounds: pd.DataFrame) -> pd.DataFrame:
     """
@@ -265,7 +256,6 @@ def get_last_rounds(funding_rounds: pd.DataFrame) -> pd.DataFrame:
     ]
 
 
-# %%
 # Get rounds since 2020
 def get_last_rounds_since_2020(funding_rounds: pd.DataFrame) -> pd.DataFrame:
     """
@@ -295,7 +285,6 @@ def get_last_rounds_since_2020(funding_rounds: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-# %%
 # Total funding
 def get_total_funding(funding_rounds: pd.DataFrame) -> pd.DataFrame:
     """
@@ -318,7 +307,6 @@ def get_total_funding(funding_rounds: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-# %%
 # Supervised ML utils
 def prepare_training_data():
     # Get longlist of companies
@@ -388,6 +376,3 @@ def prepare_training_data():
     save_pickle(train_ds, SAVE_DS_PATH / "train_ds.pickle")
     save_pickle(test_ds, SAVE_DS_PATH / "test_ds.pickle")
     save_pickle(to_review_ds, SAVE_DS_PATH / "to_review_ds.pickle")
-
-
-# %%
