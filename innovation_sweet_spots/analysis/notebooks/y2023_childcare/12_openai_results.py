@@ -160,8 +160,17 @@ def fix_categories(text: str) -> str:
 
 
 # +
+relevant_labels = ["1", "0"]
 id_to_subtheme_df = (
-    longlist_df.query("relevant == '1'")
+    longlist_df
+    # For all rows where relevant=0, make columnn chatgpt_subthemes equal to "<Not relevant>"
+    .assign(
+        chatgpt_subthemes=lambda df: df.apply(
+            lambda x: "<Not relevant>" if x.relevant == "0" else x.chatgpt_subthemes,
+            axis=1,
+        )
+    )
+    .query("relevant in @relevant_labels")
     .assign(
         subthemes_list=lambda df: df.chatgpt_subthemes.apply(
             lambda x: split_category_string(x)
@@ -180,4 +189,8 @@ id_to_subtheme_df = (
 id_to_subtheme_df.subthemes_list.value_counts()
 # -
 
-openai_df["chatgpt_subthemes"]
+id_to_subtheme_df.to_csv(
+    PROJECT_DIR
+    / "outputs/2023_childcare/interim/openai/subtheme_labels_v2023_04_06.csv",
+    index=False,
+)

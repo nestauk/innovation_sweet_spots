@@ -21,7 +21,7 @@ class Aws_test(FlowSpec):
 
     @batch(
         queue="job-queue-GPU-nesta-metaflow",
-        image="metaflow-pytorch",
+        # image="metaflow-pytorch",
         # Queue gives p3.2xlarge, with:
         gpu=1,
         memory=60000,
