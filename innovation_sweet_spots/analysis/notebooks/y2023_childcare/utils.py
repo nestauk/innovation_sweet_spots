@@ -34,6 +34,7 @@ SAVE_DS_PATH = PROJECT_DIR / "outputs/2023_childcare/model/dataset_v2023_03_03"
 
 # Working document
 AFS_GOOGLE_SHEET_ID = "14LOSu8QurLH9kwEmWM-_TDCAbew4_nncR7BQn04CP38"
+AFS_GOOGLE_SHEET_ID_APRIL = "141iLNJ5e4NHlsxf73L0GX3LMxmZk-VxIDxoYug5Aglg"
 
 # Worksheet for the HolonIQ data
 GOOGLE_SHEET_TAB = "HolonIQ_taxonomy"
@@ -376,3 +377,32 @@ def prepare_training_data():
     save_pickle(train_ds, SAVE_DS_PATH / "train_ds.pickle")
     save_pickle(test_ds, SAVE_DS_PATH / "test_ds.pickle")
     save_pickle(to_review_ds, SAVE_DS_PATH / "to_review_ds.pickle")
+
+
+# INVESTMENT TYPES
+
+EARLY_STAGE_DEALS = [
+    "angel",
+    "convertible_note",
+    "equity_crowdfunding",
+    "non_equity_assistance",
+    "pre_seed",
+    "product_crowdfunding",
+    "secondary_market",
+    "seed",
+    "series_a",
+    "series_b",
+    "series_c",
+    "series_d",
+    "series_e",
+    "series_unknown",
+]
+
+LATE_STAGE_DEALS = [
+    "corporate_round",
+    "debt_financing",
+    "post_ipo_debt",
+    "post_ipo_equity",
+    "post_ipo_secondary",
+    "private_equity",
+]

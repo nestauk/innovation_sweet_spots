@@ -120,6 +120,7 @@ outputs/figures/*
 !/innovation_sweet_spots/tests/data_update_checks/gtr/gtr_utils.py
 /innovation_sweet_spots/tests/data_update_checks/nihr/*
 !/innovation_sweet_spots/tests/data_update_checks/nihr/nihr_utils.py
+/innovation_sweet_spots/pipeline/private/*
 
 # Mac OS-specific storage files
 .DS_Store
