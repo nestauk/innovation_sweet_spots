@@ -25,6 +25,7 @@ from innovation_sweet_spots.getters.preprocessed import (
     get_preprocessed_crunchbase_descriptions,
 )
 from sklearn.model_selection import train_test_split
+from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 
 PROJECT_INPUTS_DIR = PROJECT_DIR / "inputs/data/misc/2023_childcare"
 PARENT_TECH_DIR = PROJECT_INPUTS_DIR / "parenting_tech_proj"
@@ -57,6 +58,8 @@ FAMTECH = "fam-tech-startups-18-01-2023.csv"
 COMPANY_DESCRIPTIONS_PATH = (
     PROJECT_DIR / "outputs/preprocessed/texts/cb_descriptions_formatted.csv"
 )
+
+CB = CrunchbaseWrangler()
 
 ## Keyword search parameters
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
@@ -419,19 +422,88 @@ def deal_amount_to_range(
         currency: Currency symbol
     """
     amount /= 1e3
-    if (amount >= 0.001) and (amount < 1):
+    if (amount >= 0.001) and (amount <= 1):
         return f"{currency}0-1M" if not categories else f"{currency}0-1M"
-    elif (amount >= 1) and (amount < 4):
+    elif (amount > 1) and (amount <= 4):
         return f"{currency}1-4M" if not categories else f"{currency}1-4M"
-    elif (amount >= 4) and (amount < 15):
+    elif (amount > 4) and (amount <= 15):
         return f"{currency}4-15M" if not categories else f"{currency}4-15M"
-    elif (amount >= 15) and (amount < 40):
+    elif (amount > 15) and (amount <= 40):
         return f"{currency}15-40M" if not categories else f"{currency}15-40M"
-    elif (amount >= 40) and (amount < 100):
+    elif (amount > 40) and (amount <= 100):
         return f"{currency}40-100M" if not categories else f"{currency}40-100M"
-    elif (amount >= 100) and (amount < 250):
+    elif (amount > 100) and (amount <= 250):
         return f"{currency}100-250M"
-    elif amount >= 250:
+    elif amount > 250:
         return f"{currency}250+"
     else:
         return "n/a"
+
+
+def deal_amount_to_range_coarse(
+    amount: float, currency: str = "£", categories: bool = True
+) -> str:
+    """
+    Convert amounts to range in millions
+    Args:
+        amount: Investment amount (in GBP thousands)
+        categories: If True, adding indicative deal categories
+        currency: Currency symbol
+    """
+    amount /= 1e3
+    if (amount >= 0.001) and (amount <= 5):
+        return f"{currency}0-5M" if not categories else f"{currency}0-5M"
+    elif (amount > 5) and (amount <= 20):
+        return f"{currency}5-20M" if not categories else f"{currency}5-20M"
+    elif (amount > 20) and (amount <= 100):
+        return f"{currency}20-100M" if not categories else f"{currency}20-100M"
+    elif amount > 100:
+        return f"{currency}100M+"
+    else:
+        return "n/a"
+
+
+# Digital industry groups
+DIGITAL_INDUSTRY_GROUPS = [
+    "information technology",
+    "hardware",
+    "software",
+    "mobile",
+    "consumer electronics",
+    "music and audio",
+    "gaming",
+    "design",
+    "privacy and security",
+    "messaging and telecommunications",
+    "internet services",
+    "artificial intelligence",
+    "media and entertainment",
+    "platforms",
+    "data and analytics",
+    "apps",
+    "video",
+    "content and publishing",
+    "advertising",
+]
+
+EXCLUDE_FROM_DIGITAL = [
+    "consumer research",
+    "fashion",
+    "industrial design",
+    "interior design",
+    "mechanical design",
+    "product design",
+    "product research",
+    "usability testing",
+]
+
+# Digital industries
+DIGITAL_INDUSTRIES = [
+    i
+    for i in sorted(CB.get_all_industries_from_groups(DIGITAL_INDUSTRY_GROUPS))
+    if i not in EXCLUDE_FROM_DIGITAL
+]
+
+
+def get_digital_companies(cb_orgs: pd.DataFrame, cb_wrangler: CrunchbaseWrangler):
+    return cb_wrangler.select_companies_by_industries(cb_orgs, DIGITAL_INDUSTRIES)
