@@ -56,7 +56,7 @@ subthemes_df = gs.download_google_sheet(
 # )
 # -
 
-subthemes_df[subthemes_df.company_name.str.contains("Abound")]
+subthemes_df[subthemes_df.company_name.str.contains("Age of Learning")]
 
 # Download data with partially corrected subthemes
 taxonomy_df = gs.download_google_sheet(
@@ -84,7 +84,7 @@ childcare_df = (
 # -
 
 childcare_categories_df = (
-    childcare_df[["cb_id", "model_subthemes"]]
+    childcare_df[["cb_id", "company_name", "model_subthemes"]]
     .rename(columns={"model_subthemes": "subtheme_tag"})
     .merge(taxonomy_df, on="subtheme_tag", how="left")
     .query("subtheme_tag != '<other>'")
@@ -93,9 +93,16 @@ childcare_categories_df = (
 
 len(childcare_categories_df)
 
+childcare_categories_df
+
 childcare_categories_df[
-    childcare_categories_df.cb_id.str.contains("3c9f0800-4ae9-85c9-451e-6979ae5fe5ba")
+    childcare_categories_df.cb_id.str.contains("79e378a1-2e03-b378-3e33-70f8e123944e")
 ]
+
+childcare_categories_df.to_csv(
+    PROJECT_DIR / "outputs/2023_childcare/finals/company_to_subtheme_v2023_06_06.csv",
+    index=False,
+)
 
 # +
 # childcare_categories_df.to_csv(

@@ -91,8 +91,13 @@ def percentage_change(
 
 CB = wu.CrunchbaseWrangler()
 
+# +
+# childcare_categories_df = pd.read_csv(
+#     PROJECT_DIR / "outputs/2023_childcare/finals/company_to_subtheme_v2023_05_16.csv"
+# ).drop_duplicates(["cb_id", "subtheme_tag"])
+
 childcare_categories_df = pd.read_csv(
-    PROJECT_DIR / "outputs/2023_childcare/finals/company_to_subtheme_v2023_05_16.csv"
+    PROJECT_DIR / "outputs/2023_childcare/finals/company_to_subtheme_v2023_06_06.csv"
 ).drop_duplicates(["cb_id", "subtheme_tag"])
 
 # +
@@ -117,7 +122,11 @@ funding_only_early_df = CB.get_funding_rounds(companies_df).query(
 )
 # -
 
-companies_df[companies_df.name.str.contains("GrandNanny")]
+# check double counting
+print(funding_df.duplicated(["org_id", "funding_round_id"], keep=False).sum())
+print(
+    funding_only_early_df.duplicated(["org_id", "funding_round_id"], keep=False).sum()
+)
 
 # # Analysis
 
@@ -126,8 +135,11 @@ companies_df[companies_df.name.str.contains("GrandNanny")]
 # Total number of companies
 len(companies_df.id.to_list())
 
+companies_df.id.duplicated().sum()
+
 theme_counts_df = (
     childcare_categories_df.query("cb_id in @companies_df.id.to_list()")
+    .drop_duplicates(["cb_id", "theme"])
     .groupby(["theme"])
     .size()
     .reset_index()
@@ -145,7 +157,8 @@ gs.upload_to_google_sheet(theme_counts_df, OUTPUTS_TABLE, name, overwrite=True)
 
 sort_order = theme_counts_df.theme.to_list()
 subtheme_counts_df = (
-    childcare_categories_df.groupby(["theme", "subtheme_full"])
+    childcare_categories_df.drop_duplicates(["cb_id", "subtheme_full"])
+    .groupby(["theme", "subtheme_full"])
     .size()
     .reset_index()
     .rename(columns={0: "count"})
@@ -182,6 +195,15 @@ baseline_funding_df = CB.get_funding_rounds(baseline_companies_df).query(
 baseline_funding_only_early_df = CB.get_funding_rounds(baseline_companies_df).query(
     "investment_type in @utils.EARLY_STAGE_DEALS"
 )
+# -
+
+# check double counting
+print(baseline_funding_df.duplicated(["org_id", "funding_round_id"], keep=False).sum())
+print(
+    baseline_funding_only_early_df.duplicated(
+        ["org_id", "funding_round_id"], keep=False
+    ).sum()
+)
 
 # +
 # Funding time series
@@ -209,22 +231,72 @@ percentage_change(baseline_funding_only_early_ts, 2021, 2022, v=True)
 
 au.ts_magnitude_growth_(baseline_funding_only_early_ts, 2018, 2022)
 
+# ### Edtech baseline
+
+"e-learning" in CB.industries
+
+# +
+edtech_companies_df = (
+    CB.get_companies_in_industries(["edtech", "education", "e-learning"])
+    .query("founded_on > '1900-01-01'")
+    .query("country in @utils.list_of_select_countries")
+    .pipe(select_by_role, "company")
+)
+
+# Funding data
+edtech_funding_df = CB.get_funding_rounds(edtech_companies_df).query(
+    "investment_type in @utils.EARLY_STAGE_DEALS"
+)
+
+# Funding time series
+edtech_funding_ts = (
+    au.cb_get_all_timeseries(edtech_companies_df, edtech_funding_df, "year", 2012, 2023)
+    .assign(year=lambda df: df.time_period.dt.year)
+    .assign(raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1e3)
+)
+# -
+
+len(edtech_companies_df)
+
+edtech_funding_ts
+
+3426.632853 / 689.952021
+
+1647.744888 / 338.137485
+
+percentage_change(edtech_funding_ts, 2012, 2021, v=True)
+percentage_change(edtech_funding_ts, 2020, 2021, v=True)
+percentage_change(edtech_funding_ts, 2021, 2022, v=True)
+
+percentage_change(edtech_funding_ts, 2012, 2022, v=True)
+
 # ### UK baseline
 
 # +
-# Baseline
-baseline_funding_df_uk = (
-    baseline_funding_only_early_df.merge(
-        companies_df[["id", "country"]], left_on="org_id", right_on="id"
-    )
-    .query("year >= 2012 and year <= 2023")
-    .copy()
-)
+# # Baseline
+# baseline_funding_df_uk = (
+#     baseline_funding_only_early_df
+#     .merge(companies_df[["id", "country"]], left_on="org_id", right_on="id")
+#     .query("year >= 2012 and year <= 2023")
+#     .copy()
+# )
+
 all_companies_df_uk = (
     CB.cb_organisations.query("country == 'United Kingdom'")
     .query("founded_on > '1900-01-01'")
     .copy()
 )
+
+# Funding data
+baseline_funding_df_uk = CB.get_funding_rounds(all_companies_df_uk).query(
+    "investment_type in @utils.EARLY_STAGE_DEALS"
+)
+
+
+# baseline_funding_df_uk = (
+#     baseline_funding_df_uk
+#     .query("org_id in @all_companies_df_uk.id.to_list()")
+# )
 
 # Funding time series
 baseline_funding_ts_uk = (
@@ -234,7 +306,27 @@ baseline_funding_ts_uk = (
     .assign(year=lambda df: df.time_period.dt.year)
     .assign(raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1e3)
 )
+
+# +
+# Funding data
+baseline_funding_late_df_uk = CB.get_funding_rounds(all_companies_df_uk).query(
+    "investment_type in @utils.EARLY_STAGE_DEALS or investment_type in @utils.LATE_STAGE_DEALS"
+)
+
+# Funding time series
+baseline_funding_late_ts_uk = (
+    au.cb_get_all_timeseries(
+        all_companies_df_uk, baseline_funding_late_df_uk, "year", 2012, 2023
+    )
+    .assign(year=lambda df: df.time_period.dt.year)
+    .assign(raised_amount_gbp_total=lambda df: df.raised_amount_gbp_total / 1e3)
+)
 # -
+
+# check double counting
+print(
+    baseline_funding_df_uk.duplicated(["org_id", "funding_round_id"], keep=False).sum()
+)
 
 baseline_funding_ts_uk
 
@@ -419,8 +511,13 @@ for theme in themes_list:
     theme_ids = themes_to_ids[theme]
     # Get companies in a theme
     companies_theme_df = companies_df.query("id in @theme_ids").copy()
+    assert companies_theme_df.duplicated("id").sum() == 0
     # Get funding for companies in a theme
     funding_theme_df = funding_only_early_df.query("org_id in @theme_ids").copy()
+    test_df = CB.get_funding_rounds(companies_theme_df).query(
+        "investment_type in @utils.EARLY_STAGE_DEALS"
+    )
+    assert len(funding_theme_df) == len(test_df)
     # Funding time series
     funding_ts = au.cb_get_all_timeseries(
         companies_theme_df, funding_theme_df, "year", 2012, 2023
@@ -451,8 +548,13 @@ for subtheme in subthemes_list:
     subtheme_ids = subthemes_to_ids[subtheme]
     # Get companies in a theme
     companies_subtheme_df = companies_df.query("id in @subtheme_ids").copy()
+    assert companies_theme_df.duplicated("id").sum() == 0
     # Get funding for companies in a theme
     funding_subtheme_df = funding_only_early_df.query("org_id in @subtheme_ids").copy()
+    test_df = CB.get_funding_rounds(companies_subtheme_df).query(
+        "investment_type in @utils.EARLY_STAGE_DEALS"
+    )
+    assert len(funding_subtheme_df) == len(test_df)
     # Funding time series
     funding_ts = au.cb_get_all_timeseries(
         companies_subtheme_df, funding_subtheme_df, "year", 2010, 2022
@@ -669,7 +771,12 @@ baseline_companies_funding_period_df = (
 baseline_companies_funding_country_period_df = (
     CB.cb_organisations[["id", "country"]]
     .query("country in @utils.list_of_select_countries")
-    .merge(baseline_companies_funding_period_df, left_on="id", right_on="org_id")
+    .merge(
+        baseline_companies_funding_period_df,
+        left_on="id",
+        right_on="org_id",
+        how="left",
+    )
     .drop(["org_id"], axis=1)
 )
 
@@ -758,6 +865,45 @@ print(f"Proportion of Europe vs US funding: {eu/us:.2f}")
 name = "funding_countries"
 save_data_table(country_funding_wide_df, name, TABLES_DIR)
 gs.upload_to_google_sheet(country_funding_wide_df, OUTPUTS_TABLE, name, overwrite=True)
+
+# ### Baseline edtech funding by country
+
+# +
+# Total funding per company
+edtech_companies_funding_period_df = (
+    edtech_funding_df.query("year >= 2018 and year <= 2022")
+    .groupby(["org_id"], as_index=True)
+    .agg(
+        total_funding_gbp=("raised_amount_gbp", "sum"),
+        deal_count=("funding_round_id", "count"),
+    )
+    .reset_index(drop=False)
+)
+
+edtech_companies_funding_country_period_df = (
+    edtech_companies_df[["id", "country"]]
+    .merge(edtech_companies_funding_period_df, left_on="id", right_on="org_id")
+    .drop(["org_id"], axis=1)
+)
+
+edtech_country_funding_df = (
+    edtech_companies_funding_country_period_df.drop_duplicates(subset=["country", "id"])
+    .groupby(["country"], as_index=False)
+    .agg(total_funding_gbp=("total_funding_gbp", "sum"))
+    .sort_values("total_funding_gbp", ascending=False)
+    .assign(total_funding_gbp=lambda x: round(x.total_funding_gbp / 1e3, 3))
+    .reset_index(drop=True)
+)
+
+# edtech_total_funding_df = (
+#     edtech_country_funding_df
+#     .groupby('country')
+#     .agg(total_funding_gbp=('total_funding_gbp', 'sum'))
+#     .sort_values('total_funding_gbp', ascending=False)
+# )
+
+edtech_country_funding_df
+# -
 
 # ### UK investment
 
@@ -849,11 +995,10 @@ uk_theme_total_funding_df = (
 )
 
 uk_theme_total_funding_df
-# -
 
-uk_companies_funding_theme_period_df.sort_values(
-    "total_funding_gbp", ascending=False
-).head(10)
+# +
+# uk_companies_funding_theme_period_df.sort_values('total_funding_gbp', ascending=False).head(10)
+# -
 
 name = "uk_funding_themes"
 save_data_table(uk_theme_total_funding_df, name, TABLES_DIR)
@@ -1337,6 +1482,46 @@ import pandas as pd
 from innovation_sweet_spots.utils.embeddings_utils import Vectors
 import altair as alt
 from innovation_sweet_spots.utils import plotting_utils as pu
+from innovation_sweet_spots.getters.preprocessed import (
+    get_preprocessed_crunchbase_descriptions,
+)
+
+companies_df.id.nunique()
+
+# Load a table with processed company descriptions
+processed_texts = get_preprocessed_crunchbase_descriptions()
+
+# +
+descriptions_df = (
+    processed_texts.query("id in @companies_df.id").drop_duplicates(subset=["id"])
+).reset_index()
+
+industries_df = CB.get_company_industries(
+    descriptions_df[["id", "name"]], return_lists=True
+)
+
+row = descriptions_df.sample().iloc[0]
+text = row.description
+
+
+def fix_industries(text, industries_df, cb_id):
+    text_sentences = text.split(".")
+    if "Industries" in text_sentences[-1]:
+        industries = industries_df[industries_df.id == cb_id].industry.iloc[0]
+        try:
+            text_sentences[-1] = " Industries: {}".format(", ".join(industries))
+        except:
+            return text
+        return ".".join(text_sentences)
+    else:
+        return text
+
+
+for i, row in descriptions_df.iterrows():
+    descriptions_df.loc[i, "description"] = fix_industries(
+        row.description, industries_df, row.id
+    )
+
 
 # +
 # Define constants
@@ -1351,6 +1536,14 @@ childcare_vectors = Vectors(
     folder=EMBEDDINGS_DIR,
 )
 # -
+
+# Make vectors
+childcare_vectors.generate_new_vectors(
+    new_document_ids=descriptions_df.id.values,
+    texts=descriptions_df.description.values,
+)
+
+childcare_vectors.save_vectors()
 
 # Download data with partially corrected subthemes
 taxonomy_df = gs.download_google_sheet(
@@ -1423,6 +1616,10 @@ gs.upload_to_google_sheet(childcare_embeddings_df, OUTPUTS_TABLE, name, overwrit
 
 companies_df[companies_df.name.str.contains("Greenlight")]
 
+
+# +
+# childcare_embeddings_df[childcare_embeddings_df.company_name.str.contains('Noala')]
+# -
 
 # # Export table for checking
 
