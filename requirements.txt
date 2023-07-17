@@ -15,4 +15,4 @@ textacy
 gensim
 sentence-transformers
 bertopic
-python-dev
+python-dev-tools
