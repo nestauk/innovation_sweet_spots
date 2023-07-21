@@ -7,6 +7,7 @@ Module for easy access to preprocessed data
 from innovation_sweet_spots.getters.path_utils import PILOT_OUTPUTS, OUTPUT_PATH
 from innovation_sweet_spots.utils.io import load_pickle
 from typing import Dict, Iterator
+import pandas as pd
 
 PILOT_GTR_CORPUS_PATH = PILOT_OUTPUTS / "preprocessed/gtr_abstracts_tokenised.p"
 PILOT_CB_CORPUS_PATH = PILOT_OUTPUTS / "preprocessed/cb_descriptions_uk_tokenised.p"
@@ -15,6 +16,10 @@ CRUNCHBASE_FULL_PATH = OUTPUT_PATH / "preprocessed/tokens_cb_descriptions_v2022.
 GTR_CORPUS_PATH = OUTPUT_PATH / "preprocessed/tokens_gtr_abstracts_v2022_08_16.p"
 NIHR_CORPUS_PATH = OUTPUT_PATH / "preprocessed/tokens_nihr_abstracts_v2022_08_17.p"
 HANSARD_CORPUS_PATH = OUTPUT_PATH / "preprocessed/tokens_hansard_speeches_v2022_09_12.p"
+
+CB_COMPANY_DESCRIPTIONS_PATH = (
+    OUTPUT_PATH / "preprocessed/texts/cb_descriptions_formatted.csv"
+)
 
 
 def get_hansard_corpus(
@@ -76,3 +81,18 @@ def get_full_crunchbase_corpus(
     descriptions, following the format {id: list of tokens};
     """
     return load_pickle(filepath)
+
+
+def get_preprocessed_crunchbase_descriptions() -> pd.DataFrame:
+    """
+    Table with processed company descriptions
+
+    Returns:
+        Dataframe of processed company descriptions. Columns are:
+            - id: Crunchbase organisation id
+            - name: Organisation name
+            - description: Processed company description
+    """
+    return pd.read_csv(
+        CB_COMPANY_DESCRIPTIONS_PATH, names=["id", "name", "description"]
+    )

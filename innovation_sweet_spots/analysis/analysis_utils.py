@@ -11,6 +11,7 @@ from typing import Iterator
 from innovation_sweet_spots.analysis.wrangling_utils import CrunchbaseWrangler
 import datetime
 
+
 def impute_empty_periods(
     df_time_period: pd.DataFrame,
     time_period_col: str,
@@ -35,8 +36,8 @@ def impute_empty_periods(
     max_year = max(max_year_data, max_year)
     full_period_range = (
         pd.period_range(
-            datetime.datetime.strptime(f"01/01/{min_year}", '%d/%m/%Y'),
-            datetime.datetime.strptime(f"31/12/{max_year}", '%d/%m/%Y'),
+            datetime.datetime.strptime(f"01/01/{min_year}", "%d/%m/%Y"),
+            datetime.datetime.strptime(f"31/12/{max_year}", "%d/%m/%Y"),
             freq=period,
         )
         .to_timestamp()
@@ -554,15 +555,19 @@ def investments_by_industry_ts(
     max_year: int,
     use_industry_groups: bool = False,
     funding_round_types: list = None,
+    check_industries: bool = True,
 ):
     """"""
     # Get companies within specified industries
-    industries_orgs = (
-        cb_wrangler.get_company_industries(cb_orgs)
-        .query("industry in @industries")
-        .merge(cb_orgs, on=["id", "name"], how="left")
-        .drop_duplicates(["id", "name", "industry"])
-    )
+    if check_industries:
+        industries_orgs = (
+            cb_wrangler.get_company_industries(cb_orgs)
+            .query("industry in @industries")
+            .merge(cb_orgs, on=["id", "name"], how="left")
+            .drop_duplicates(["id", "name", "industry"])
+        )
+    else:
+        industries_orgs = cb_orgs
     if use_industry_groups:
         industries_orgs = (
             industries_orgs.assign(
@@ -627,16 +632,19 @@ def ts_moving_average(ts_df: pd.DataFrame):
 
 
 def ts_magnitude_growth(ts_df: pd.DataFrame, year_start: int, year_end: int):
+    ts_df_ = (
+        ts_df.reset_index()
+        .assign(year=lambda x: x.time_period.dt.year)
+        .drop("time_period", axis=1)
+    )
     return (
         magnitude(
-            ts_df.reset_index()
-            .assign(year=lambda x: x.time_period.dt.year)
-            .drop("time_period", axis=1),
+            ts_df_,
             year_start,
             year_end,
         )
         .to_frame("magnitude")
-        .assign(growth=smoothed_growth(ts_df, year_start, year_end))
+        .assign(growth=smoothed_growth(ts_df_, year_start, year_end))
     )
 
 
