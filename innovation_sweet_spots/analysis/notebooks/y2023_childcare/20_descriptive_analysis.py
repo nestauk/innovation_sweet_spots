@@ -1694,8 +1694,8 @@ total_funding = (
     # convert funding to millions
     .assign(total_funding_gbp=lambda x: x.total_funding_gbp / 1e3)
 )
+# -
 
-# +
 # merge all the funding dataframes to company_list
 company_list_funding = (
     companies_df.rename(columns={"id": "cb_id"})
@@ -1755,7 +1755,6 @@ company_list_funding = company_list_funding.fillna(
         "cb_url": "n/a",
     }
 )
-# -
 
 name = "companies_2023_06_06"
 save_data_table(company_list_funding, name, TABLES_DIR)
