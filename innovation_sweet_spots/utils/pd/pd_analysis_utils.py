@@ -18,7 +18,7 @@ import pandas as pd
 import itertools
 import spacy
 from collections import defaultdict
-from typing import Iterator, List
+from typing import Iterator, List, Tuple, Dict
 import altair as alt
 from tqdm import tqdm
 from innovation_sweet_spots import logger
@@ -61,14 +61,26 @@ def get_guardian_articles(
     save_outputs: bool = False,
     outputs_path=DEFAULT_OUTPUTS_DIR,
     api_key: str = guardian.API_KEY,
-):
+) -> Tuple[pd.DataFrame, List[Dict]]:
     """
-    Fetches articles from the Guardian API and filters them based on category
+    Fetches articles from the Guardian API, filters them based on category,
+    extracts metadata and text, and saves the results.
 
     Args:
-        search_terms: Query terms
-        use_cached: Whether to use pre-computed intermediate outputs
-        allowed_categories: Only articles from these Guardian article categories will be selected
+        search_terms (Iterator[str]): Query terms
+        use_cached (bool, optional): Whether to use pre-cached and processed results which are stored
+            locally and can be identified using the query identifier. Defaults to True.
+        allowed_categories (Iterator[str], optional):  Only articles from these Guardian article categories
+            will be selected. Defaults to [].
+        query_identifier (str, optional): Identifier for the query, used to name the output folders and files.
+            Defaults to "".
+        save_outputs (bool, optional): _description_.  Whether to save the outputs. Defaults to False.
+        outputs_path (_type_, optional): _description_. Defaults to DEFAULT_OUTPUTS_DIR.
+        api_key (str, optional): _description_. Defaults to guardian.API_KEY.
+
+    Returns:
+        List[Dict]: A dataframe of article text
+        List[Dict]: List of article metadata
     """
     # For each search term/phrase, download corresponding articles
     articles = [
