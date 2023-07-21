@@ -5,12 +5,13 @@ Module for easy access to downloaded CB data
 
 """
 import pandas as pd
+from innovation_sweet_spots import logger
 from innovation_sweet_spots.getters.path_utils import (
+    PROJECT_DIR,
     CB_PATH,
     CB_GTR_LINK_PATH,
     PILOT_OUTPUTS,
 )
-from innovation_sweet_spots import logger
 
 
 def restore_column_names(df: pd.DataFrame) -> pd.DataFrame:

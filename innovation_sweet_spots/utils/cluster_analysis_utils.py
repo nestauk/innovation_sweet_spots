@@ -13,6 +13,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.model_selection import ParameterGrid
+from sklearn.feature_extraction import text
 from typing import Iterator, Dict
 from collections import defaultdict
 from tqdm import tqdm
@@ -49,7 +50,7 @@ def umap_reducer(
     umap_params: dict = umap_def_params,
     random_umap_state: int = 1,
 ) -> np.typing.ArrayLike:
-    """"Reduce dimensions of the input array using UMAP"""
+    """ "Reduce dimensions of the input array using UMAP"""
     logging.info(
         f"Generating {umap_def_params['n_components']}-d UMAP embbedings for {len(vectors)} vectors"
     )
@@ -273,6 +274,7 @@ def cluster_keywords(
     Returns:
         Dictionary that maps cluster integer labels to a list of keywords
     """
+    my_stop_words = text.ENGLISH_STOP_WORDS
 
     # Define vectorizer
     vectorizer = Vectorizer(
@@ -283,6 +285,7 @@ def cluster_keywords(
         max_df=max_df,
         min_df=min_df,
         max_features=10000,
+        stop_words=my_stop_words,
     )
 
     # Create cluster text documents
@@ -326,7 +329,7 @@ def cluster_visualisation(
     random_state=1,
     extra_data: pd.DataFrame = None,
 ):
-    """ Reduces the vectors to 2D and plots them with altair """
+    """Reduces the vectors to 2D and plots them with altair"""
     if vectors.shape[1] != 2:
         vectors_2d = eu.reduce_to_2D(vectors, random_state)
     else:

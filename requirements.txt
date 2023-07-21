@@ -1,7 +1,7 @@
 numpy
 scipy
 pandas
-matplotlib==3.5.1
+matplotlib
 altair
 metaflow
 python-dotenv
@@ -10,7 +10,7 @@ filelock
 typer
 sh
 CurrencyConverter
-pyldavis
+#pyldavis
 #tomotopy
 altair-saver
 selenium
@@ -20,17 +20,21 @@ scikit-learn
 beautifulsoup4
 textacy
 gensim
-sentence-transformers
-pyairtable
+#sentence-transformers
+transformers
+#pyairtable
 #git+https://github.com/nestauk/jacc-hammer.git@legacy
 #tables
-pandas-profiling
-missingno
-bertopic
+#pandas-profiling
+#missingno
+#bertopic
 #data_getters @ git+https://github.com/nestauk/data_getters.git
 google-auth-oauthlib
 google-api-python-client
 chromedriver-autoinstaller
-selenium==4.2.0
+#selenium
 df2gspread
 openpyxl
+seaborn
+datasets
+umap-learn
