@@ -23,11 +23,13 @@ import altair as alt
 from tqdm import tqdm
 from innovation_sweet_spots import logger
 from bertopic._bertopic import BERTopic
+from pathlib import Path
 
 
 ### Dependecies for calculating simpler co-located unigram frequencies
 import re
 import nltk
+from urllib.parse import urlencode, quote
 
 nltk.download("wordnet")
 nltk.download("omw-1.4")
@@ -122,6 +124,67 @@ def get_guardian_articles(
     return document_text, metadata
 
 
+def get_total_article_counts(
+    search_query: str = "",
+    sections: Iterator[str] = [],
+    start_year: int = 2000,
+    end_year: int = 2023,
+    api_key: str = guardian.API_KEY,
+) -> Dict[int, int]:
+    """
+    Get total article counts per year.
+
+    Args:
+        search_query (str, optional): Query terms. Defaults to "".
+        sections (Iterator[str], optional): Only articles from these Guardian article categories
+            will be selected. Defaults to [].
+        start_year (int, optional): Start year. Defaults to 2000.
+        end_year (int, optional): End year. Defaults to 2023.
+        api_key (str, optional): Guardian API key. Defaults to guardian.API_KEY.
+
+    Returns:
+        Dict[int, int]: A dictionary with years as keys and total article counts as values.
+    """
+    # Get all section ids
+    if len(sections) != 0:
+        r = guardian.get_request(
+            f"https://content.guardianapis.com/sections?api-key={api_key}"
+        )
+        section_ids = {
+            section["webTitle"]: section["id"]
+            for section in r.json()["response"]["results"]
+        }
+    # Set up base parameters
+    parameters = {
+        "data-format": "json",
+        "page-size": 2,
+        "order-by": "newest",
+        "lang": "en",
+        "api-key": api_key,
+    }
+    # Get articles per year
+    articles_per_year = {}
+    for year in range(start_year, end_year + 1):
+        parameters["from-date"] = f"{year}-01-01"
+        parameters["to-date"] = f"{year}-12-31"
+        # Case when no sections are specified
+        if len(sections) == 0:
+            query = f"{guardian.BASE_URL}search?" + search_query + urlencode(parameters)
+            r = guardian.get_request(query).json()
+            articles_per_year[year] = r["response"]["total"]
+        else:
+            # Case when sections are specified
+            articles_per_year[year] = 0
+            for section in sections:
+                parameters["section"] = section_ids[section]
+                query = (
+                    f"{guardian.BASE_URL}search?" + search_query + urlencode(parameters)
+                )
+                r = guardian.get_request(query).json()
+                articles_per_year[year] += r["response"]["total"]
+    return articles_per_year
+
+
 class DiscourseAnalysis:
     """
     A class that helps querying Guardian news API
@@ -134,18 +197,18 @@ class DiscourseAnalysis:
         banned_terms: Iterator[str] = [],
         use_cached: bool = True,
         query_identifier: str = "",
-        outputs_path=DEFAULT_OUTPUTS_DIR,
+        outputs_path: Path = DEFAULT_OUTPUTS_DIR,
         verbose=False,
     ):
         """
         Args:
-            search_terms: Query terms
-            required_terms: Only documents with these terms will be allowed
-            banned_terms: Documents with these terms will be removed
-            use_cached: Whether to use pre-computed intermediate outputs
-            query_identifier: Name of the query (used to create/lookup folders and filenames)
-            outputs_path: Location to serve intermediate, processed outputs
-            verbose: If True, it will output logging messages
+            search_terms (Iterator[str]): Query terms
+            required_terms (Iterator[Iterator[str]], optional): : Only documents with these terms will be allowed
+            banned_terms (Iterator[str], optional): Documents with these terms will be removed
+            use_cached (bool, optional): Whether to use pre-computed intermediate outputs
+            query_identifier (str, optional): Identifier for the query, used to name the output folders and files.
+            outputs_path (Path, optional): Path to the output folder. Defaults to DEFAULT_OUTPUTS_DIR.
+            verbose (bool, optional): Whether to print logging messages. Defaults to False.
 
         """
         self.search_terms = search_terms
