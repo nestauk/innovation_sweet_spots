@@ -21,7 +21,9 @@
 #
 # This notebook follows the Medium tutorial article, and uses Innovation Sweet Spots' public discourse analysis modules.
 #
-# We will fetch and analyse *The Guardian* news articles, but the analysis can also be applied to any other text data. We will provide exampels for:
+# We will fetch and analyse *The Guardian* news articles, but the analysis can also be applied to any other text data.
+#
+# We will provide examples for:
 #
 # *   Checking mentions of search terms over time
 # *   Exploring the news topics using BERTopic
@@ -32,7 +34,7 @@
 #
 # Running the following cells will install the Innovation Sweet Spots code and other necessary python packages.
 #
-# Skip this step if running locally instead not on Colab.
+# Skip this step if running locally instead of Colab.
 
 # !git clone https://github.com/nestauk/innovation_sweet_spots.git
 
@@ -67,7 +69,7 @@ OUTPUTS_DIR = PROJECT_DIR / "outputs/data/discourse_analysis_outputs"
 
 API_KEY = "test"
 
-# You can take a peek at the results by setting `using only_first_page=True`
+# You can take a peek at the results by setting `only_first_page=True`
 
 test_articles = au.guardian.search_content(
     "heat pumps",
@@ -195,7 +197,24 @@ pda.plot_mentions(use_documents=False)
 pd.set_option("max_colwidth", 500)
 pda.combined_term_sentences["2022"].head(5)
 
-# ### Characterising discourse topics using BERTopic
+# Finally, when considering the growth trends of news mentions, another important element is a baseline growth trend that we can use as a reference.
+
+# Get the total article counts across relevant article categories
+total_counts = au.get_total_article_counts(sections=CATEGORIES, api_key=API_KEY)
+
+# After dividing the number of articles mentioning heat pumps with the total number of reference articles, we find that the shape of the trend is preserved.
+
+# +
+document_mentions_norm = (
+    pda.document_mentions.copy()
+    .assign(baseline_documents=total_counts.values())
+    .assign(normalised=lambda df: df.documents / df.baseline_documents)
+)
+
+alt.Chart(document_mentions_norm).mark_line().encode(x="year:O", y="normalised")
+# -
+
+# ## Characterising discourse topics using BERTopic
 #
 # We can use BERTopic to find topics within our documents. More info on BERTopic can be found [here](https://maartengr.github.io/BERTopic/faq.html).
 #
@@ -215,15 +234,15 @@ topic_model.visualize_documents(docs, width=1400, height=750)
 #
 # The `view_collocations` function can be used to find sentences where the search term appears with another specified term.
 
-pda.view_collocations("source")
+pda.view_collocations("air source")
 
-# #### Deeper dive in co-locations
-
-# You can also check `term_rank` table for all co-located terms for each year (using pointwise mutual information, PMI)
+# You can check `term_rank` table for all co-located terms for each year
 #
-# Frequency and rank indicates how often the terms have been used together with the search terms.
+# The importance of collocations is measured by pointwise mutual information (pmi), which indicates the strength of association of the collocated term and search term.
 #
-# Note that this might take a minute, and sometimes on Colab it surprisingly runs out of memory on this. As an alternative, you can also ran a simpler query `analyse_colocated_unigrams`, which does not use the PMI measure, to find frequently mentioned single-word terms.
+# Frequency (freq) and rank indicate how often the terms have been used together with the search terms. Frequency is the number of co-occurrences.
+#
+# Note that this might take a minute, and sometimes on Colab it surprisingly runs out of memory on this. As an alternative, you can also ran a simpler query `analyse_colocated_unigrams` to find frequently mentioned single-word terms.
 
 pda.term_rank
 
@@ -234,6 +253,8 @@ pda.term_rank
     .sort_values("freq", ascending=False)
     .head(20)
 )
+
+(pda.term_rank.query("year == 2021").sort_values("pmi", ascending=False)).head(20)
 
 # Run this example if analysing Guardian data on heat pumps
 check_terms = ["air source", "ground source"]
@@ -249,28 +270,9 @@ fig = (
 fig
 
 
-# +
-# Run this example if analysing Guardian data on heat pumps
-check_terms = ["install", "installation"]
-
-fig = (
-    alt.Chart(pda.term_rank.query("term in @check_terms"))
-    .mark_line()
-    .encode(
-        x=alt.X("year:O", title=""),
-        y=alt.Y("freq:Q", title="Frequency"),
-        color=alt.Color("term:N", title="Term"),
-    )
-)
-fig
-
-# -
-
-pda.term_rank.query("term in @check_terms")
-
 # The `term_temporal_rank` can be used to potentially highlight interesting terms whose rank has changed significantly (ie, has a high variation across years)
 
-pda.term_temporal_rank.sort_values("st_dev_rank", ascending=False).head(15)
+pda.term_temporal_rank.sort_values("st_dev_rank", ascending=False).head(25)
 
 # Try out also this simpler approach using only unigrams
 
@@ -299,8 +301,10 @@ pda.pos_phrases
 
 sorted(pda.pos_phrases.pattern.unique())
 
+pda.pos_phrases.query()
+
 # query the dataframe for rows where pattern column has the word 'verb' in it
-pos = "is"
+pos = "adj_phrase"
 (
     pda.pos_phrases.groupby(["phrase", "pattern"], as_index=False)
     .agg(number_of_mentions=("number_of_mentions", "sum"))
@@ -309,39 +313,8 @@ pos = "is"
     # .head(10)
 )
 
-# Creating a topic model.
-
-# Visualising the topics.
-
-#
-
-topic_model.visualize_documents(docs, width=1400, height=750)
-
 # ## Save the analysis outputs
 #
 # Speeds up the analysis. Next time, if you specify the same query id, it should load the results and you won't have to compute the phrases and patterns again.
 
 pda.save_analysis_results()
-
-PROMPT = [
-    {
-        "role": "system",
-        "content": "You are a helpful assistant who is labelling companies by using predefined categories.",
-    },
-    {
-        "role": "user",
-        "content": "'You are a helpful assistant who is labelling companies by using predefined categories. This is for a project to map companies working on improving childcare, parental support and early years education solutions, focussed on children between 0-5 years old. Your are given keywords for each category, and the company description. You will output one or maximum two categories that best match the company description. You can also label the company as “Not relevant”. For example, we are not interested in solutions for middle or high schoolers; universities; healthcare; or companies not related to families or education.\n\nHere are the categories and their keywords provided in the format Category name - keywords.\nContent: General - curriculum, education content, resource\nContent: Numeracy - numeracy, mathematics, coding\nContent: Literacy - phonics, literacy, reading, ebook\nContent: Play - games, play, toys\nContent: Creative - singing, song, songs, art, arts, drawing, painting\nTraditional models: Preschool - pre school, kindergarten, montessori\nTraditional models: Child care - child care, nursery, child minder, babysitting\nTraditional models: Special needs - special needs, autism, mental health\nManagement - management, classroom technology, monitoring technology, analytics, waitlists\nTech - robotics, artificial intelligence, machine learning, simulation\nWorkforce: Recruitment - recruitment, talent acquisition, hiring\nWorkforce: Training - teacher training, skills\nWorkforce: Optimisation - retention, wellness, shift work\nFamily support: General - parents, parenting advice, nutrition, feeding, sleep, travel, transport\nFamily support: Peers - social network, peer to peer\nFamily support: Finances - finances, cash, budgeting.\n\nHere are examples of company descriptions and categories.\n\nExample 1: Description: privacy- first speech recognition software delivers voice- enabled experiences for kids of all ages, accents, and dialects. has developed child- specific speech technology that creates highly accurate, age- appropriate and safe voice- enabled experiences for children. technology is integrated across a range of application areas including toys, gaming, robotics, as well as reading and English Language Learning . Technology is fully and GDPR compliant- offering deep learning speech recognition based online and offline embedded solutions in multiple languages. Industries: audio, digital media, events\nCategory: <Tech>\n\nExample 2: Description: is a personalized learning application to improve math skills. is a personalized learning application to improve math skills. It works by identifying a child’s level, strengths and weaknesses, and gradually progressing them at the rate that’s right for them. The application is available for download on the App Store and Google Play. Industries: accounting, finance, financial services.\nCategory: <Content: Numeracy>\n\nNow categorise this company: Description: The company helps over 1.8M middle-school, high-school and college students worldwide, to understand and solve their math problems step-by-step.",
-    },
-    {"role": "assistant", "content": "<Not relevant>"},
-    {
-        "role": "user",
-        "content": "Description: The company  is an EdTech startup company providing game-based math and reading courses to students in pre-kindergarten to grade five.",
-    },
-    {"role": "assistant", "content": "<Content: Numeracy> and <Content: Literacy>"},
-    {
-        "role": "user",
-        "content": "Description: The company is a global digital- first entertainment company for kids. The company is a global entertainment company that creates and distributes inspiring and engaging stories to expand kids’ worlds and minds. Founded in 2018, with offices in and, The company creates, produces and publishes thousands of minutes of video and audio content every month with the goal of teaching compassion, empathy and resilience to kids around the world.",
-    },
-    {"role": "assistant", "content": "<Content: General>"},
-]
-PROMPT
