@@ -36,7 +36,7 @@
 #
 # Skip this step if running locally instead of Colab.
 
-# !git clone https://github.com/nestauk/innovation_sweet_spots.git
+# !git clone --branch discourse_tutorial_blog https://github.com/nestauk/innovation_sweet_spots.git
 
 import sys
 
@@ -47,17 +47,10 @@ sys.path.insert(0, "/content/innovation_sweet_spots")
 
 # ## Importing requirements
 
-# +
 # Import packages
 import altair as alt
 import pandas as pd
 from innovation_sweet_spots.utils.pd import pd_analysis_utils as au
-
-# Specify the location for analysis outputs
-from innovation_sweet_spots import PROJECT_DIR
-
-OUTPUTS_DIR = PROJECT_DIR / "outputs/data/discourse_analysis_outputs"
-# -
 
 # ## Getting the data: Using the Guardian Open Platform
 #
@@ -132,15 +125,24 @@ articles_metadata[articles_df.iloc[0].id]
 
 # ## Initialising the `DiscourseAnalysis` class
 #
-# First, we can specify the name for this analysis session, which will allow us to save the results of this analysis in a folder of the same name and load them in a future session.
+# First, we can specify the path to the analysis outputs directory, which will come handy when revisiting the analysis in the future. Note that we are storing the analysis outputs separately from the cached search results (discussed above), in order to separate the analysis process, which is agnostic to the data sources, from the data fetching process
 
-QUERY_ID = "guardian_heat_pumps_tutorial"
+# Specify the location for analysis outputs
+from innovation_sweet_spots import PROJECT_DIR
 
-# We will be saving and loading our analysis results to and from `innovation_sweet_spots/outputs/data/discourse_analysis_outputs/{QUERY_ID}`.
+OUTPUTS_DIR = PROJECT_DIR / "outputs/data/discourse_analysis_outputs"
+
+# We can then specify the name `ANALYSIS_ID` for this specific analysis session - all the output tables will be stored in a subfolder of `OUTPUTS_DIR` with the same name.
+
+ANALYSIS_ID = "guardian_heat_pumps_tutorial"
+
+# We will be saving and loading our analysis results to and from `innovation_sweet_spots/outputs/data/discourse_analysis_outputs/{ANALYSIS_ID}`.
 #
 # We will then define a couple of additional filtering criteria to keep the most relevant results to our context, by specifying a (non-exhaustive) list of UK-related geographic terms and excluding any article that mentions Australia.
 
 # +
+# Terms required to appear in the articles,
+# for the articles to be considered in the analysis
 REQUIRED_TERMS = [
     "UK",
     "Britain",
@@ -152,15 +154,14 @@ REQUIRED_TERMS = [
     "London",
 ]
 
-BANNED_TERMS = [
-    "Australia",
-]
+# Articles with these terms will be removed from the analysis
+BANNED_TERMS = ["Australia"]
 
 # +
 pda = au.DiscourseAnalysis(
     search_terms=SEARCH_TERMS,
     outputs_path=OUTPUTS_DIR,
-    query_identifier=QUERY_ID,
+    query_identifier=ANALYSIS_ID,
     required_terms=REQUIRED_TERMS,
     banned_terms=BANNED_TERMS,
 )
@@ -170,7 +171,7 @@ pda.load_documents(document_text=articles_df)
 
 # The warning message above says we are missing document text and metadata. Metadata is optional and can be used when using *Guardian* articles.
 #
-# The `load_documents` step adds document text to the class. This function has an argument `document_text` which can take a dataframe variable or if left blank will search for a file `document_text_{query_id}.csv` in `outputs/data/discourse_analysis_outputs/{query_id}/`.
+# The `load_documents` step adds document text to the class. This function has an argument `document_text` which can take a dataframe variable or if left blank will search for a file `document_text_{ANALYSIS_ID}.csv` in `outputs/data/discourse_analysis_outputs/{ANALYSIS_ID}/`.
 #
 # Note that you can use `load_documents` to input any text data, as long as it has columns for `text`, `date`, `year` and `id`.
 
@@ -230,23 +231,25 @@ topic_model.visualize_barchart(top_n_topics=len(set(topic_model.topics_)))
 
 topic_model.visualize_documents(docs, width=1400, height=750)
 
-# ## What we talk about when we talk about X: Co-location analysis
+# ## What we talk about when we talk about X: Collocation analysis
 #
 # The `view_collocations` function can be used to find sentences where the search term appears with another specified term.
 
 pda.view_collocations("air source")
 
-# You can check `term_rank` table for all co-located terms for each year
+# You can check `term_rank` table for all collocated terms for each year
 #
 # The importance of collocations is measured by pointwise mutual information (pmi), which indicates the strength of association of the collocated term and search term.
 #
 # Frequency (freq) and rank indicate how often the terms have been used together with the search terms. Frequency is the number of co-occurrences.
 #
-# Note that this might take a minute, and sometimes on Colab it surprisingly runs out of memory on this. As an alternative, you can also ran a simpler query `analyse_colocated_unigrams` to find frequently mentioned single-word terms.
+# Note that this might take a minute, and sometimes on Colab it surprisingly runs out of memory on this. To run this section, I would advise cloning the repo and running it from your local machine.
+#
+# As an alternative, you can also ran a simpler query `analyse_colocated_unigrams` to find frequently mentioned single-word terms.
 
 pda.term_rank
 
-# Check most often co-located terms
+# Check most often collocated terms
 (
     pda.term_rank.groupby("term")
     .agg(freq=("freq", "sum"))
@@ -254,9 +257,21 @@ pda.term_rank
     .head(20)
 )
 
+# Check collocations with highest PMI in 2021
 (pda.term_rank.query("year == 2021").sort_values("pmi", ascending=False)).head(20)
 
-# Run this example if analysing Guardian data on heat pumps
+# Try out also this simpler approach using only unigrams (will work on Colab)
+
+# Simpler measure using only unigrams
+pda.analyse_colocated_unigrams().sort_values("counts", ascending=False).head(20)
+
+# ## Shifting narratives: Collocation importance over time
+#
+# It is also informative to analyse how the importance of collocated terms varies over time. This can point to shifts in language used to describe our search terms, which in our case might be caused by the emergence of new entities and applications associated with our technologies of interest.
+#
+# For example, a comparison of the two different types of heat pumps discussed above highlights an interesting trend, where ‘ground source’ was initially more frequently collocated, whereas now ‘air source’ - which is a more affordable type of heat pump - has overtaken the mentions of ‘ground source’.
+#
+
 check_terms = ["air source", "ground source"]
 fig = (
     alt.Chart(pda.term_rank.query("term in @check_terms"))
@@ -273,11 +288,6 @@ fig
 # The `term_temporal_rank` can be used to potentially highlight interesting terms whose rank has changed significantly (ie, has a high variation across years)
 
 pda.term_temporal_rank.sort_values("st_dev_rank", ascending=False).head(25)
-
-# Try out also this simpler approach using only unigrams
-
-# Simpler measure using only unigrams
-pda.analyse_colocated_unigrams().sort_values("counts", ascending=False).head(20)
 
 # ## Extracting patterns using spaCy
 #
@@ -299,11 +309,11 @@ pda.set_phrase_patterns(load_patterns=False, make_patterns=True).keys()
 
 pda.pos_phrases
 
+# All types of patterns generated
+# (note that we have separate patterns for singular and plural search terms)
 sorted(pda.pos_phrases.pattern.unique())
 
-pda.pos_phrases.query()
-
-# query the dataframe for rows where pattern column has the word 'verb' in it
+# Query the adjective phrase patterns
 pos = "adj_phrase"
 (
     pda.pos_phrases.groupby(["phrase", "pattern"], as_index=False)
