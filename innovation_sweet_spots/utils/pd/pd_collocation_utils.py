@@ -80,7 +80,7 @@ def get_ngrams(spacy_tokens, token_range, min_mentions):
     cooccurrence_m.setdiag(0)
 
     vocab = count_model.vocabulary_
-    names = count_model.get_feature_names()
+    names = count_model.get_feature_names_out()
     count_list = doc_term_m.toarray().sum(axis=0)
     count_dict = dict(zip(names, count_list))
 
