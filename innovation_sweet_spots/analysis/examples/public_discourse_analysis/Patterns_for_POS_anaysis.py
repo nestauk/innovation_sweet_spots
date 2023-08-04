@@ -5,11 +5,11 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
-#     formats: ipynb,py:percent
+#     formats: ipynb,py
 #     text_representation:
 #       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
+#       format_name: light
+#       format_version: '1.5'
 #       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
@@ -17,32 +17,25 @@
 #     name: python3
 # ---
 
-# %% [markdown]
 # # Define patterns for phrase matching with spacy
 #
 # - Search terms: heat pumps and hydrogen
 # - Types: noun phrases, adjective phrases, phrases with verbs 'is'/'have'/'can', verbs that precede and follow, SVOs
 
-# %% [markdown]
 # ## 1. Import dependencies
 
-# %%
 import os
 import json
 
-# %%
 from innovation_sweet_spots import PROJECT_DIR, config, logging
 from innovation_sweet_spots.getters.path_utils import OUTPUT_DATA_PATH
 
-# %%
 # OUTPUTS_CACHE = OUTPUT_DATA_PATH / ".cache"
 DISC_OUTPUTS_DIR = OUTPUT_DATA_PATH / "discourse_analysis_lookups"
 DISC_OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
 
-# %% [markdown]
 # ## 2. Generating patterns with provided search terms
 
-# %%
 search_terms = [
     "unhealthy food advertisements",
     "hfss",
@@ -116,7 +109,6 @@ pattern_terms = search_terms + [
     "illness",
 ]
 
-# %%
 generic_phrases = {
     "noun_phrase": [
         {"POS": "ADJ", "OP": "*"},
@@ -175,14 +167,11 @@ generic_phrases = {
     ],
 }
 
-# %%
 with open(os.path.join(DISC_OUTPUTS_DIR, "phrases_foods.json"), "w") as outfile:
     json.dump(generic_phrases, outfile, indent=4)
 
-# %% [markdown]
 # ## 3. Patterns used for hydrogen energy
 
-# %%
 hydrogen_phrases = {
     "noun_phrase_hydrogen": [
         {"POS": "ADJ", "OP": "*"},
@@ -250,14 +239,11 @@ hydrogen_phrases = {
 }
 
 
-# %%
 with open(os.path.join(DISC_OUTPUTS_DIR, "hydrogen_phrases.json"), "w") as outfile:
     json.dump(hydrogen_phrases, outfile, indent=4)
 
-# %% [markdown]
 # ## 4. Patterns used for heat pumps
 
-# %%
 heat_pump_phrases = {
     "noun_phrase": [
         {"POS": "ADJ", "OP": "*"},
@@ -325,8 +311,5 @@ heat_pump_phrases = {
 }
 
 
-# %%
 with open(os.path.join(DISC_OUTPUTS_DIR, "heat_pump_phrases.json"), "w") as outfile:
     json.dump(heat_pump_phrases, outfile, indent=4)
-
-# %%

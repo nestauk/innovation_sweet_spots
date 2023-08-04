@@ -3,11 +3,11 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
-#     formats: ipynb,py:percent
+#     formats: ipynb,py
 #     text_representation:
 #       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
+#       format_name: light
+#       format_version: '1.5'
 #       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
@@ -15,20 +15,17 @@
 #     name: python3
 # ---
 
-# %% [markdown]
 # # Collect Guardian articles, subset relevant documents and extract text
 #
 # - Fetch articles using Guardian API
 # - Extract metadata and text from html
 
-# %% [markdown]
 # ## 1. Import dependencies
 
-# %%
 from innovation_sweet_spots.utils.pd import pd_analysis_utils as au
 
 
-# %%
+# +
 CATEGORIES = [
     # "Environment",
     # "Guardian Sustainable Business",
@@ -55,17 +52,17 @@ REQUIRED_TERMS = [
     "Britons",
     "London",
 ]
+# -
 
 
-# %% [markdown]
 # # Trying out search terms
 
-# %%
+# +
 import importlib
 
 importlib.reload(au)
+# -
 
-# %%
 query_id = "foodtech_plants"
 search_terms = [
     "plant based meat",
@@ -76,7 +73,6 @@ search_terms = [
 banned_terms = []
 
 
-# %%
 articles, metadata = au.get_guardian_articles(
     search_terms=search_terms,
     use_cached=False,
@@ -85,7 +81,6 @@ articles, metadata = au.get_guardian_articles(
     save_outputs=True,
 )
 
-# %%
 importlib.reload(au)
 g = au.DiscourseAnalysis(
     search_terms=search_terms,
@@ -95,19 +90,12 @@ g = au.DiscourseAnalysis(
     query_identifier=query_id,
 )
 
-# %%
 len(g.document_text)
 
-# %%
 g.plot_document_mentions()
 
-# %%
 g.save_analysis_results()
 
-# %%
 g.sentence_mentions
 
-# %%
 g.view_mentions("plant based burger")
-
-# %%

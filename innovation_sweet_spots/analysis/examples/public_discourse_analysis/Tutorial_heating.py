@@ -3,11 +3,11 @@
 #   jupytext:
 #     cell_metadata_filter: -all
 #     comment_magics: true
-#     formats: ipynb,py:percent
+#     formats: ipynb,py
 #     text_representation:
 #       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
+#       format_name: light
+#       format_version: '1.5'
 #       jupytext_version: 1.14.5
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
@@ -15,23 +15,21 @@
 #     name: python3
 # ---
 
-# %% [markdown]
 # # Collect Guardian articles, subset relevant documents and extract text
 #
 # - Fetch articles using Guardian API
 # - Extract metadata and text from html
 
-# %% [markdown]
 # ## 1. Import dependencies
 
-# %%
+# +
 from innovation_sweet_spots.utils.pd import pd_analysis_utils as au
 
 # import innovation_sweet_spots.utils.plotting_utils as pu
 # import altair as alt
 
 
-# %%
+# +
 CATEGORIES = [
     "Environment",
     "Guardian Sustainable Business",
@@ -58,23 +56,22 @@ REQUIRED_TERMS = [
     "Britons",
     "London",
 ]
+# -
 
 
-# %% [markdown]
 # # Heat pumps
 
-# %%
+# +
 import importlib
 
 importlib.reload(au)
+# -
 
-# %%
 query_id = "hp"
 search_terms = ["heat pump", "heat pumps"]
 banned_terms = ["Australia"]
 
 
-# %%
 articles, metadata = au.get_guardian_articles(
     search_terms=search_terms,
     use_cached=True,
@@ -83,7 +80,6 @@ articles, metadata = au.get_guardian_articles(
     save_outputs=True,
 )
 
-# %%
 importlib.reload(au)
 g = au.DiscourseAnalysis(
     search_terms=search_terms,
@@ -93,36 +89,26 @@ g = au.DiscourseAnalysis(
     query_identifier=query_id,
 )
 
-# %%
 len(g.document_text)
 
-# %%
 g.plot_document_mentions()
 
-# %%
 # x = g.view_collocations('government')
 x
 
-# %%
 x = g.view_mentions(["government"])
 
 
-# %%
 len(x)
 
-# %%
 g.view_collocations("restaurant")
 
-# %%
 g.save_analysis_results()
 
-# %% [markdown]
 # # Hydrogen
 
-# %%
 importlib.reload(au)
 
-# %%
 disambiguation_terms = [
     "home",
     "homes",
@@ -167,14 +153,14 @@ disambiguation_terms = [
 ]
 
 
-# %%
+# +
 query_id = "hydrogen"
 search_terms = ["hydrogen"]
 
 filtering_terms = [REQUIRED_TERMS, disambiguation_terms]
 banned_terms = ["peroxide", "Australia"]
+# -
 
-# %%
 articles, metadata = au.get_guardian_articles(
     search_terms=search_terms,
     use_cached=True,
@@ -183,7 +169,6 @@ articles, metadata = au.get_guardian_articles(
     save_outputs=True,
 )
 
-# %%
 g = au.DiscourseAnalysis(
     search_terms=search_terms,
     required_terms=filtering_terms,
@@ -192,13 +177,10 @@ g = au.DiscourseAnalysis(
     query_identifier=query_id,
 )
 
-# %%
 g.plot_document_mentions()
 
-# %%
 importlib.reload(au.dpu)
 
-# %%
 heating_terms = [
     "heat",
     "heating",
@@ -206,16 +188,13 @@ heating_terms = [
     "boilers",
 ]
 
-# %%
 g.view_collocations_terms(heating_terms)
 
-# %% [markdown]
 # # Hydrogen heating
 
-# %%
 importlib.reload(au)
 
-# %%
+# +
 query_id = "hydrogen_heat"
 # search_terms = ["hydrogen", "hydrogen ready", "hydrogen-ready"]
 
@@ -236,9 +215,9 @@ search_terms = [
 
 filtering_terms = [REQUIRED_TERMS]
 banned_terms = ["peroxide", "Australia"]
+# -
 
 
-# %%
 articles, metadata = au.get_guardian_articles(
     search_terms=search_terms,
     use_cached=True,
@@ -247,7 +226,6 @@ articles, metadata = au.get_guardian_articles(
     save_outputs=True,
 )
 
-# %%
 g = au.DiscourseAnalysis(
     search_terms=search_terms,
     required_terms=filtering_terms,
@@ -256,8 +234,6 @@ g = au.DiscourseAnalysis(
     query_identifier=query_id,
 )
 
-# %%
 g.save_preprocessed_data()
 
-# %%
 g.plot_document_mentions()
