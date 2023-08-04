@@ -13,6 +13,7 @@ import itertools
 from sklearn.feature_extraction.text import CountVectorizer
 from innovation_sweet_spots.utils import text_processing_utils as tpu
 
+
 ###
 # The following functions relate to tokenising the corpus and producing
 # cooccurrence and document-term matrices.
@@ -80,7 +81,7 @@ def get_ngrams(spacy_tokens, token_range, min_mentions):
     cooccurrence_m.setdiag(0)
 
     vocab = count_model.vocabulary_
-    names = count_model.get_feature_names()
+    names = count_model.get_feature_names_out()
     count_list = doc_term_m.toarray().sum(axis=0)
     count_dict = dict(zip(names, count_list))
 
@@ -145,6 +146,7 @@ def calculate_positive_pmi(
         A dict mapping tokens to the value of their positive PMI with the search_term.
     """
     try:  # if a term is rare (e.g. 'waste heat'), it may not be in the cooccurrence matrix
+        token_names = list(token_names)
         search_index = token_names.index(search_term)
         pmis = {}
         for ix, name in enumerate(token_names):
@@ -162,8 +164,7 @@ def calculate_positive_pmi(
             pmis[name] = association
 
         pruned_pmis = {k: v for k, v in pmis.items() if v > 0}
-    except:
-        # print(f"Term {search_term} not in vocabulary")
+    except Exception as e:
         pruned_pmis = {}
     return pruned_pmis
 
@@ -230,6 +231,7 @@ def get_normalised_rank(
         A dict mapping term to its normalised rank in cooccurrences with a given search_term
     """
     count_rank = dict()
+    token_names = list(token_names)
     search_index = token_names.index(search_term)
     total_word_set = np.count_nonzero(cooccurrence_m[search_index, :].toarray())
     for ix, name in enumerate(token_names):
@@ -301,7 +303,6 @@ def identify_related_terms(
     )
 
     if len(pmis):
-
         key_related_terms = get_related_terms(
             pmis, token_names, token_counts, min_mentions=mentions_threshold
         )
