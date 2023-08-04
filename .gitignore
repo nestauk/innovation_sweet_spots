@@ -121,6 +121,7 @@ outputs/figures/*
 /innovation_sweet_spots/tests/data_update_checks/nihr/*
 !/innovation_sweet_spots/tests/data_update_checks/nihr/nihr_utils.py
 /innovation_sweet_spots/pipeline/private/*
+!/innovation_sweet_spots/analysis/examples/tutorials/Data_driven_discourse_analysis.ipynb
 
 # Mac OS-specific storage files
 .DS_Store
