@@ -33,3 +33,4 @@ openpyxl
 seaborn
 datasets
 umap-learn
+PyYAML==5.3.1

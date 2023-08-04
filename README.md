@@ -12,49 +12,21 @@ By combining insights across several large [datasets](#datasets) that are common
 
 _NB: This codebase and documentation is still under development, where some of the code is still living in Jupyter notebooks whereas some utilities have already been neatly factored out into modules. Please [contact us](mailto:karlis.kanders@nesta.org.uk) if you're interested in re-using parts of the codebase, and we'll be happy to help._
 
-## :hammer_and_wrench: Installation
+## :hammer_and_wrench: Installation (simple instructions for the tutorial)
 
-**Step 1.** Check that you meet the data science cookiecutter [requirements](http://nestauk.github.io/ds-cookiecutter). In brief, you should:
-
-- Install the following components:
-  - [gh](https://formulae.brew.sh/formula/gh), GitHub command line tool
-  - [direnv](https://formulae.brew.sh/formula/direnv#default), for using environment variables
-  - [git-crypt](https://github.com/AGWA/git-crypt/blob/master/INSTALL.md#installing-on-mac-os-x), tool for encryption of sensitive files
-- Have a Nesta AWS account, and install and configure your [AWS Command Line Interface](https://docs.aws.amazon.com/polly/latest/dg/setup-aws-cli.html)
-
-**Step 2.** Run the following command from the repo root folder:
-
+Set up a conda environment
 ```
-make install
+conda create --name tutorial python=3.9
+conda activate tutorial
 ```
 
-This will configure the development environment:
-
-- Setup the conda environment with the name `innovation_sweet_spots`
-- Configure pre-commit actions (for example, running a code formatter before each commit)
-- Configure metaflow
-
-The expected output:
-
+Install the required packages
 ```
-conda env create -q -n innovation_sweet_spots -f environment.yaml
-Collecting package metadata (repodata.json): ...working... done
-Solving environment: ...working... done
-Preparing transaction: ...working... done
-Verifying transaction: ...working... done
-Executing transaction: ...working... done
-/Library/Developer/CommandLineTools/usr/bin/make -s pip-install
-source bin/conda_activate.sh && conda_activate &&  pre-commit install --install-hooks
-pre-commit installed at .git/hooks/pre-commit
-source bin/conda_activate.sh && conda_activate &&  /bin/bash ./bin/install_metaflow_aws.sh
-INSTALL COMPLETE
+pip install -r requirements.txt
+pip install -e .
 ```
 
-**Step 3.** Activate the newly created conda environment and you're good to go!
-
-```shell
-$ conda activate innovation_sweet_spots
-```
+Open the notebook `innovation_sweet_spots/analysis/examples/tutorials/Data_driven_discourse_analysis.ipynb` in your favourite development environment.
 
 ## :floppy_disk: Datasets
 
