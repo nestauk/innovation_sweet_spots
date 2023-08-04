@@ -17,7 +17,7 @@
 
 # # Tutorial: Data-driven news discourse analysis with Python
 #
-# **July 2023**
+# **August 2023**
 #
 # This notebook follows the Medium tutorial article, and uses Innovation Sweet Spots' public discourse analysis modules.
 #
