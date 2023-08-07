@@ -15,7 +15,7 @@ _NB: This codebase and documentation is still under development, where some of t
 ## :hammer_and_wrench: Installation (simple instructions for the tutorial)
 Clone this branch of the repo
 ```
-!git clone --branch discourse_tutorial_blog https://github.com/nestauk/innovation_sweet_spots.git
+git clone --branch discourse_tutorial_blog https://github.com/nestauk/innovation_sweet_spots.git
 cd innovation_sweet_spots
 ```
 
