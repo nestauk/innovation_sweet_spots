@@ -13,6 +13,10 @@ By combining insights across several large [datasets](#datasets) that are common
 _NB: This codebase and documentation is still under development, where some of the code is still living in Jupyter notebooks whereas some utilities have already been neatly factored out into modules. Please [contact us](mailto:karlis.kanders@nesta.org.uk) if you're interested in re-using parts of the codebase, and we'll be happy to help._
 
 ## :hammer_and_wrench: Installation (simple instructions for the tutorial)
+Clone this branch of the repo
+```
+!git clone --branch discourse_tutorial_blog https://github.com/nestauk/innovation_sweet_spots.git
+```
 
 Set up a conda environment
 ```
