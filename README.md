@@ -12,7 +12,7 @@ By combining insights across several large [datasets](#datasets) that are common
 
 _NB: This codebase and documentation is still under development, where some of the code is still living in Jupyter notebooks whereas some utilities have already been neatly factored out into modules. Please [contact us](mailto:karlis.kanders@nesta.org.uk) if you're interested in re-using parts of the codebase, and we'll be happy to help._
 
-## :hammer_and_wrench: Installation (simple instructions for the tutorial)
+## :hammer_and_wrench: Installation
 
 Set up a conda environment
 ```
@@ -26,7 +26,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-Open the notebook `innovation_sweet_spots/analysis/examples/tutorials/Data_driven_discourse_analysis.ipynb` in your favourite development environment.
+If you're here for the [public discourse tutorial](https://medium.com/data-analytics-at-nesta/tutorial-data-driven-news-discourse-analysis-with-python-part-1-4fdbf5c23991), open the notebook `innovation_sweet_spots/analysis/examples/tutorials/Data_driven_discourse_analysis.ipynb` in your favourite development environment.
 
 ## :floppy_disk: Datasets
 
